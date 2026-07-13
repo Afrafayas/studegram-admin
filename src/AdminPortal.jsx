@@ -5,7 +5,6 @@ import AdminHeader from './components/AdminHeader';
 // Pages
 import DailyReport from './pages/DailyReport';
 import AdminReport from './pages/AdminReport';
-import CallRecordings from './pages/CallRecordings';
 import Clients from './pages/Clients';
 import SalesOrderStudy from './pages/SalesOrderStudy';
 import SalesOrderTourist from './pages/SalesOrderTourist';
@@ -107,11 +106,6 @@ export default function AdminPortal({ onLogout }) {
     { id: 4, name: 'Aisha', type: 'Agent', email: 'aisha@agents.com', phone: '+44 7946 0958', activeApps: 1, status: 'Active' }
   ]);
 
-  const [recordings, setRecordings] = useState([
-    { id: 1, studentName: 'Shanto Shaju', agentName: 'Salman', date: '2026-07-06', duration: '12m 45s', audioUrl: '#', notes: 'Discussed MSc options at Surrey. Interested in Hotel Management.' },
-    { id: 2, studentName: 'Aneesha Anil', agentName: 'Aisha', date: '2026-07-05', duration: '8m 20s', audioUrl: '#', notes: 'Needs clearance on visa fee details.' }
-  ]);
-
   const handleAddApplication = (newApp) => {
     const randomId = `CAMS${Math.floor(10000 + Math.random() * 90000)}`;
     const freshApp = { ...newApp, camsId: randomId };
@@ -146,10 +140,6 @@ export default function AdminPortal({ onLogout }) {
     
     if (activeTab === 'admin-report') {
       return <AdminReport applications={applications} />;
-    }
-    
-    if (activeTab === 'call-recordings') {
-      return <CallRecordings recordings={recordings} setRecordings={setRecordings} />;
     }
     
     if (activeTab === 'clients') {

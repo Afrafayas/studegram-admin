@@ -18,8 +18,6 @@ export default function AdminHeader({
       if (activeSubTab === 'report-agent') crumbs.push('By Agent');
       if (activeSubTab === 'report-university') crumbs.push('By University');
       if (activeSubTab === 'report-course') crumbs.push('By Course');
-    } else if (activeTab === 'call-recordings') {
-      crumbs.push('Call Recordings');
     } else if (activeTab === 'clients') {
       crumbs.push('Clients');
     } else if (activeTab === 'sales-order') {
