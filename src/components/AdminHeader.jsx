@@ -45,7 +45,7 @@ export default function AdminHeader({
 
   return (
     <header className="flex flex-col select-none z-20 sticky top-0 bg-[#0A0A0F] text-white border-b border-slate-900">
-      {/* 1. Subscription Expiry Warning Banner */}
+      {/* 1. Subscription Expiry Warning Banner (Commented out)
       <div className="bg-[#FFFBEB] border-b border-[#FDE68A] text-[#B45309] text-[11px] font-bold py-2 px-6 flex items-center justify-between shadow-sm animate-pulse-slow">
         <div className="flex items-center gap-2">
           <span>⚠️</span>
@@ -55,6 +55,7 @@ export default function AdminHeader({
           Renew Now
         </button>
       </div>
+      */}
 
       {/* 2. Top Navigation Bar */}
       <div className="h-[64px] min-h-[64px] px-6 flex items-center justify-between">
