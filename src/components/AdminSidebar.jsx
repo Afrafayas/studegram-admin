@@ -35,8 +35,7 @@ export default function AdminSidebar({
         ></div>
       )}
 
-      {/* Sidebar Container */}
-      <aside className={`fixed inset-y-0 left-0 z-50 lg:z-30 lg:static w-[260px] min-w-[260px] bg-[#0F172A] border-r border-[#1E293B] text-slate-300 h-screen lg:h-auto flex flex-col justify-between py-5 select-none transform ${
+      <aside className={`fixed inset-y-0 left-0 z-50 lg:z-30 lg:sticky lg:top-0 w-[260px] min-w-[260px] bg-[#0F172A] border-r border-[#1E293B] text-slate-300 h-screen flex flex-col justify-between py-5 select-none transform ${
         isOpen ? 'translate-x-0' : '-translate-x-full'
       } lg:translate-x-0 transition-transform duration-200 ease-in-out`}>
         
