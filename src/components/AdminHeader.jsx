@@ -22,6 +22,8 @@ export default function AdminHeader({
       crumbs.push('Partners');
     } else if (activeTab === 'students') {
       crumbs.push('Students');
+    } else if (activeTab === 'staff') {
+      crumbs.push('Staff');
     } else if (activeTab === 'sales-order') {
       crumbs.push('Sales Order');
       if (activeSubTab === 'tourist-package') crumbs.push('Tourist Package');

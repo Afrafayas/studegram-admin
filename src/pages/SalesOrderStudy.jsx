@@ -4,6 +4,7 @@ export default function SalesOrderStudy({
   universities, 
   courses, 
   intakes, 
+  staffList = [],
   onAddApplication, 
   onBack 
 }) {
@@ -11,7 +12,7 @@ export default function SalesOrderStudy({
   const [phoneCode, setPhoneCode] = useState('+91');
   const [phoneNumber, setPhoneNumber] = useState('');
   const [dob, setDob] = useState('');
-  const [assignedTo, setAssignedTo] = useState('Super Admin');
+  const [assignedTo, setAssignedTo] = useState(staffList[0]?.name || 'Super Admin');
   const [university, setUniversity] = useState(universities[0] || 'University of Surrey');
   const [course, setCourse] = useState(courses[0] || 'MSc Computer Science');
   const [intake, setIntake] = useState(intakes[0] || 'September/October 2026');
@@ -234,9 +235,17 @@ export default function SalesOrderStudy({
                 onChange={(e) => setAssignedTo(e.target.value)}
                 className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs font-semibold focus:outline-none focus:bg-white focus:ring-1 focus:ring-indigo-500"
               >
-                <option value="Super Admin">Super Admin</option>
-                <option value="Admin 1">Admin 1</option>
-                <option value="Admin 2">Admin 2</option>
+                {staffList && staffList.length > 0 ? (
+                  staffList.map(s => (
+                    <option key={s.id} value={s.name}>{s.name} ({s.role})</option>
+                  ))
+                ) : (
+                  <>
+                    <option value="Super Admin">Super Admin</option>
+                    <option value="Admin 1">Admin 1</option>
+                    <option value="Admin 2">Admin 2</option>
+                  </>
+                )}
               </select>
             </div>
           </div>

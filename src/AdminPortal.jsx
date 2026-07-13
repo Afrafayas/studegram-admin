@@ -7,6 +7,7 @@ import DailyReport from './pages/DailyReport';
 import AdminReport from './pages/AdminReport';
 import Partners from './pages/Partners';
 import Students from './pages/Students';
+import Staff from './pages/Staff';
 import SalesOrderStudy from './pages/SalesOrderStudy';
 import SalesOrderTourist from './pages/SalesOrderTourist';
 import SettingsPortal from './pages/SettingsPortal';
@@ -100,6 +101,12 @@ export default function AdminPortal({ onLogout }) {
     { id: 2, task: 'Send email invitation to referral agent Salman', completed: true }
   ]);
 
+  const [staffList, setStaffList] = useState([
+    { id: 1, name: 'Super Admin', role: 'Administrator', email: 'admin@studegram.com', phone: '+91 9876543210', status: 'Active', dateAdded: '01 Jan 2026', accessLevel: 'Full Access' },
+    { id: 2, name: 'Neha Sharma', role: 'Operations Executive', email: 'neha@studegram.com', phone: '+91 8887776661', status: 'Active', dateAdded: '15 Mar 2026', accessLevel: 'Read & Write' },
+    { id: 3, name: 'Rahul Krishnan', role: 'Visa Consultant', email: 'rahul@studegram.com', phone: '+91 9998887772', status: 'Active', dateAdded: '10 May 2026', accessLevel: 'Read Only' }
+  ]);
+
   const [clients, setClients] = useState([
     { id: 1, name: 'Shanto Shaju', type: 'Student', email: 'shanto@gmail.com', phone: '+91 9876543210', activeApps: 1, status: 'Active', passportNo: 'T1029482', dob: '1999-05-14', dateAdded: '10 Jun 2026', referredBy: 'Salman' },
     { id: 2, name: 'Salman', type: 'Agent', email: 'info@luzidcraft.com', phone: '+91 9998887776', activeApps: 2, status: 'Active', partnerCode: 'PRT-101', dateAdded: '01 Jun 2026' },
@@ -154,6 +161,10 @@ export default function AdminPortal({ onLogout }) {
       return <Students clients={clients} setClients={setClients} applications={applications} />;
     }
     
+    if (activeTab === 'staff') {
+      return <Staff staffList={staffList} setStaffList={setStaffList} applications={applications} />;
+    }
+    
     if (activeTab === 'sales-order') {
       if (activeSubTab === 'tourist-package') {
         return <SalesOrderTourist />;
@@ -164,6 +175,7 @@ export default function AdminPortal({ onLogout }) {
             universities={universities}
             courses={courses}
             intakes={intakes}
+            staffList={staffList}
             onAddApplication={handleAddApplication}
             onBack={() => {
               setActiveTab('daily-report');
