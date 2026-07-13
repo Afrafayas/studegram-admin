@@ -5,7 +5,8 @@ import AdminHeader from './components/AdminHeader';
 // Pages
 import DailyReport from './pages/DailyReport';
 import AdminReport from './pages/AdminReport';
-import Clients from './pages/Clients';
+import Partners from './pages/Partners';
+import Students from './pages/Students';
 import SalesOrderStudy from './pages/SalesOrderStudy';
 import SalesOrderTourist from './pages/SalesOrderTourist';
 import SettingsPortal from './pages/SettingsPortal';
@@ -100,10 +101,10 @@ export default function AdminPortal({ onLogout }) {
   ]);
 
   const [clients, setClients] = useState([
-    { id: 1, name: 'Shanto Shaju', type: 'Student', email: 'shanto@gmail.com', phone: '+91 9876543210', activeApps: 1, status: 'Active' },
-    { id: 2, name: 'Salman', type: 'Agent', email: 'info@luzidcraft.com', phone: '+91 9998887776', activeApps: 2, status: 'Active' },
-    { id: 3, name: 'Aneesha Anil', type: 'Student', email: 'aneesha@gmail.com', phone: '+91 8887776665', activeApps: 1, status: 'Active' },
-    { id: 4, name: 'Aisha', type: 'Agent', email: 'aisha@agents.com', phone: '+44 7946 0958', activeApps: 1, status: 'Active' }
+    { id: 1, name: 'Shanto Shaju', type: 'Student', email: 'shanto@gmail.com', phone: '+91 9876543210', activeApps: 1, status: 'Active', passportNo: 'T1029482', dob: '1999-05-14', dateAdded: '10 Jun 2026', referredBy: 'Salman' },
+    { id: 2, name: 'Salman', type: 'Agent', email: 'info@luzidcraft.com', phone: '+91 9998887776', activeApps: 2, status: 'Active', partnerCode: 'PRT-101', dateAdded: '01 Jun 2026' },
+    { id: 3, name: 'Aneesha Anil', type: 'Student', email: 'aneesha@gmail.com', phone: '+91 8887776665', activeApps: 1, status: 'Active', passportNo: 'T9381048', dob: '2001-08-22', dateAdded: '15 Jun 2026', referredBy: 'Aisha' },
+    { id: 4, name: 'Aisha', type: 'Agent', email: 'aisha@agents.com', phone: '+44 7946 0958', activeApps: 1, status: 'Active', partnerCode: 'PRT-102', dateAdded: '05 Jun 2026' }
   ]);
 
   const handleAddApplication = (newApp) => {
@@ -125,7 +126,10 @@ export default function AdminPortal({ onLogout }) {
             email: `${newApp.studentName.toLowerCase().replace(/\s+/g, '')}@gmail.com`,
             phone: newApp.phone || '+91 9999999999',
             activeApps: 1,
-            status: 'Active'
+            passportNo: newApp.passportNo || 'Pending',
+            dob: newApp.dob || '',
+            dateAdded: newApp.dateAdded || new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
+            referredBy: 'Direct'
           },
           ...prev
         ];
@@ -142,8 +146,12 @@ export default function AdminPortal({ onLogout }) {
       return <AdminReport applications={applications} />;
     }
     
-    if (activeTab === 'clients') {
-      return <Clients clients={clients} setClients={setClients} />;
+    if (activeTab === 'partners') {
+      return <Partners clients={clients} setClients={setClients} applications={applications} />;
+    }
+    
+    if (activeTab === 'students') {
+      return <Students clients={clients} setClients={setClients} applications={applications} />;
     }
     
     if (activeTab === 'sales-order') {

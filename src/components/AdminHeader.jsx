@@ -18,8 +18,10 @@ export default function AdminHeader({
       if (activeSubTab === 'report-agent') crumbs.push('By Agent');
       if (activeSubTab === 'report-university') crumbs.push('By University');
       if (activeSubTab === 'report-course') crumbs.push('By Course');
-    } else if (activeTab === 'clients') {
-      crumbs.push('Clients');
+    } else if (activeTab === 'partners') {
+      crumbs.push('Partners');
+    } else if (activeTab === 'students') {
+      crumbs.push('Students');
     } else if (activeTab === 'sales-order') {
       crumbs.push('Sales Order');
       if (activeSubTab === 'tourist-package') crumbs.push('Tourist Package');
