@@ -63,12 +63,12 @@ export default function SalesOrderStudy({
   const selectedCountry = countries.find(c => c.code === phoneCode) || countries[0];
 
   return (
-    <div className="flex-1 p-6 space-y-6 bg-[#F8FAFC]">
+    <div className="flex-1 p-6 space-y-6 bg-[#F0F2F5]">
       {/* Header with Back Arrow */}
-      <div className="flex items-center gap-4 bg-white border border-[#E2E8F0] p-6 rounded-2xl shadow-xs">
+      <div className="flex items-center gap-4 bg-white border border-[#E2E8F0] border-t-4 border-t-[#D99A1C] p-6 rounded-2xl shadow-xs">
         <button
           onClick={onBack}
-          className="p-2 text-slate-500 hover:text-slate-900 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl transition-all"
+          className="p-2 text-slate-500 hover:text-[#D99A1C] bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl transition-all"
           title="Back to Dashboard"
         >
           <svg className="w-4.5 h-4.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -97,7 +97,7 @@ export default function SalesOrderStudy({
       )}
 
       {/* Card Form */}
-      <form onSubmit={handleSubmit} className="bg-white border border-[#E2E8F0] rounded-2xl shadow-sm p-6 max-w-3xl space-y-6">
+      <form onSubmit={handleSubmit} className="bg-white border border-[#E2E8F0] border-t-4 border-t-[#2563EB] rounded-2xl shadow-sm p-6 max-w-3xl space-y-6">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="space-y-4">
             <h3 className="text-xs font-black text-slate-950 uppercase tracking-wider pb-1 border-b border-slate-100">Client Demographics</h3>
@@ -120,14 +120,14 @@ export default function SalesOrderStudy({
                 required
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
-                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs font-semibold focus:outline-none focus:bg-white focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all text-slate-900"
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs font-semibold focus:outline-none focus:bg-white focus:border-[#D99A1C] focus:ring-1 focus:ring-[#D99A1C] transition-all text-slate-900"
                 placeholder="Enter student first and last name"
               />
             </div>
 
             <div className="space-y-1.5 relative">
               <label className="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">Phone Number <span className="text-rose-500">*</span></label>
-              <div className="flex border border-slate-200 rounded-xl overflow-visible bg-slate-50 focus-within:bg-white focus-within:border-indigo-500 focus-within:ring-1 focus-within:ring-indigo-500 transition-all">
+              <div className="flex border border-slate-200 rounded-xl overflow-visible bg-slate-50 focus-within:bg-white focus-within:border-[#D99A1C] focus-within:ring-1 focus-within:ring-[#D99A1C] transition-all">
                 <button
                   type="button"
                   onClick={() => setIsFlagDropdownOpen(!isFlagDropdownOpen)}
@@ -181,7 +181,7 @@ export default function SalesOrderStudy({
                 required
                 value={dob}
                 onChange={(e) => setDob(e.target.value)}
-                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs font-semibold focus:outline-none focus:bg-white focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all text-slate-900"
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs font-semibold focus:outline-none focus:bg-white focus:border-[#D99A1C] focus:ring-1 focus:ring-[#D99A1C] transition-all text-slate-900"
               />
             </div>
           </div>
@@ -194,7 +194,7 @@ export default function SalesOrderStudy({
               <select
                 value={university}
                 onChange={(e) => setUniversity(e.target.value)}
-                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs font-semibold focus:outline-none focus:bg-white focus:ring-1 focus:ring-indigo-500"
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs font-semibold focus:outline-none focus:bg-white focus:ring-1 focus:ring-[#D99A1C] focus:border-[#D99A1C]"
               >
                 {universities.map(u => (
                   <option key={u} value={u}>{u}</option>
@@ -207,7 +207,7 @@ export default function SalesOrderStudy({
               <select
                 value={course}
                 onChange={(e) => setCourse(e.target.value)}
-                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs font-semibold focus:outline-none focus:bg-white focus:ring-1 focus:ring-indigo-500"
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs font-semibold focus:outline-none focus:bg-white focus:ring-1 focus:ring-[#D99A1C] focus:border-[#D99A1C]"
               >
                 {courses.map(c => (
                   <option key={c} value={c}>{c}</option>
@@ -220,7 +220,7 @@ export default function SalesOrderStudy({
               <select
                 value={intake}
                 onChange={(e) => setIntake(e.target.value)}
-                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs font-semibold focus:outline-none focus:bg-white focus:ring-1 focus:ring-indigo-500"
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs font-semibold focus:outline-none focus:bg-white focus:ring-1 focus:ring-[#D99A1C] focus:border-[#D99A1C]"
               >
                 {intakes.map(i => (
                   <option key={i} value={i}>{i}</option>
@@ -233,7 +233,7 @@ export default function SalesOrderStudy({
               <select
                 value={assignedTo}
                 onChange={(e) => setAssignedTo(e.target.value)}
-                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs font-semibold focus:outline-none focus:bg-white focus:ring-1 focus:ring-indigo-500"
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs font-semibold focus:outline-none focus:bg-white focus:ring-1 focus:ring-[#D99A1C] focus:border-[#D99A1C]"
               >
                 {staffList && staffList.length > 0 ? (
                   staffList.map(s => (
@@ -262,7 +262,7 @@ export default function SalesOrderStudy({
           
           <button
             type="submit"
-            className="px-6 py-2.5 bg-gradient-to-r from-[#6366F1] to-[#06B6D4] hover:scale-[1.01] hover:shadow-lg text-white font-extrabold text-xs rounded-xl transition-all duration-150 shadow-md uppercase tracking-wider"
+            className="px-6 py-2.5 bg-gradient-to-r from-[#D99A1C] to-[#F5B025] hover:scale-[1.01] hover:shadow-lg text-white font-extrabold text-xs rounded-xl transition-all duration-150 shadow-md uppercase tracking-wider"
           >
             Submit Application
           </button>

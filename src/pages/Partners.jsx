@@ -72,16 +72,16 @@ export default function Partners({ clients, setClients }) {
   };
 
   return (
-    <div className="flex-1 p-6 space-y-6 bg-[#F8FAFC]">
+    <div className="flex-1 p-6 space-y-6 bg-[#F0F2F5]">
       {/* Header */}
-      <div className="flex justify-between items-center bg-white border border-[#E2E8F0] p-6 rounded-2xl shadow-xs">
+      <div className="flex justify-between items-center bg-white border border-[#E2E8F0] border-t-4 border-t-[#D99A1C] p-6 rounded-2xl shadow-xs">
         <div className="space-y-1">
           <h1 className="text-xl font-black text-slate-900 tracking-tight">Referral Partners Directory</h1>
           <p className="text-xs text-slate-500 font-medium">Manage B2B Referral Agents, view their details and referred student applications.</p>
         </div>
         <button
           onClick={() => setIsModalOpen(true)}
-          className="bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold text-xs px-4 py-2 rounded-xl transition-all shadow-md inline-flex items-center gap-1.5"
+          className="bg-[#D99A1C] hover:bg-[#F5B025] text-white font-extrabold text-xs px-4 py-2 rounded-xl transition-all shadow-md inline-flex items-center gap-1.5"
         >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
@@ -91,7 +91,7 @@ export default function Partners({ clients, setClients }) {
       </div>
 
       {/* Directory Filters & Search */}
-      <div className="bg-white border border-[#E2E8F0] rounded-2xl p-5 shadow-xs flex flex-col sm:flex-row gap-4 items-center justify-between">
+      <div className="bg-white border border-[#E2E8F0] border-t-4 border-t-[#2563EB] rounded-2xl p-5 shadow-xs flex flex-col sm:flex-row gap-4 items-center justify-between">
         <div className="bg-slate-100 p-1 rounded-xl flex w-full sm:w-auto">
           {['All', 'Active', 'Inactive'].map((status) => (
             <button
@@ -99,7 +99,7 @@ export default function Partners({ clients, setClients }) {
               onClick={() => setStatusFilter(status)}
               className={`flex-1 sm:flex-none px-4 py-1.5 text-xs font-bold rounded-lg transition-all ${
                 statusFilter === status 
-                  ? 'bg-white text-indigo-600 shadow-sm font-black' 
+                  ? 'bg-white text-[#D99A1C] shadow-sm font-black' 
                   : 'text-slate-500 hover:text-slate-900'
               }`}
             >
@@ -118,14 +118,14 @@ export default function Partners({ clients, setClients }) {
             type="text"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-4 py-2.5 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:bg-white focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all font-medium"
+            className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-4 py-2.5 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:bg-white focus:border-[#D99A1C] focus:ring-1 focus:ring-[#D99A1C] transition-all font-medium"
             placeholder="Search by name, code, email, phone..."
           />
         </div>
       </div>
 
       {/* Table Directory */}
-      <div className="bg-white border border-[#E2E8F0] rounded-2xl shadow-xs overflow-hidden">
+      <div className="bg-white border border-[#E2E8F0] border-t-4 border-t-[#D99A1C] rounded-2xl shadow-xs overflow-hidden">
         <div className="px-6 py-4 border-b border-[#E2E8F0]">
           <h2 className="text-xs font-black text-slate-900 uppercase tracking-wider">Registered Agent & Partner channels</h2>
         </div>
@@ -190,7 +190,7 @@ export default function Partners({ clients, setClients }) {
                       {isExpanded && (
                         <tr>
                           <td colSpan="8" className="bg-slate-50/50 p-6 border-t border-b border-slate-100">
-                            <div className="bg-white border border-[#E2E8F0] rounded-xl p-5 shadow-sm space-y-4">
+                            <div className="bg-white border border-[#E2E8F0] border-t-4 border-t-[#2563EB] rounded-xl p-5 shadow-sm space-y-4">
                               <div className="flex flex-col md:flex-row md:items-center justify-between border-b border-slate-100 pb-3 gap-2">
                                 <h3 className="text-xs font-black text-slate-900 uppercase tracking-wider">
                                   Partner Information Sheet — {partner.name}
@@ -270,10 +270,9 @@ export default function Partners({ clients, setClients }) {
         </div>
       </div>
 
-      {/* Invite Partner Modal */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs select-none">
-          <div className="bg-white border border-[#E2E8F0] rounded-2xl p-6 w-full max-w-md shadow-2xl space-y-4 animate-in zoom-in-95 duration-150">
+          <div className="bg-white border border-[#E2E8F0] border-t-4 border-t-[#D99A1C] rounded-2xl p-6 w-full max-w-md shadow-2xl space-y-4 animate-in zoom-in-95 duration-150">
             <div className="flex justify-between items-center pb-2 border-b border-slate-100">
               <div>
                 <h3 className="text-xs font-black text-slate-900 uppercase tracking-wider">Onboard Referral Partner</h3>
@@ -295,7 +294,7 @@ export default function Partners({ clients, setClients }) {
                   required
                   value={newPartnerName}
                   onChange={(e) => setNewPartnerName(e.target.value)}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs font-semibold focus:outline-none focus:bg-white focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all text-slate-900"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs font-semibold focus:outline-none focus:bg-white focus:border-[#D99A1C] focus:ring-1 focus:ring-[#D99A1C] transition-all text-slate-900"
                   placeholder="e.g. Luzidcraft Agency"
                 />
               </div>
@@ -307,7 +306,7 @@ export default function Partners({ clients, setClients }) {
                   required
                   value={newPartnerEmail}
                   onChange={(e) => setNewPartnerEmail(e.target.value)}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs font-semibold focus:outline-none focus:bg-white focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all text-slate-900"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs font-semibold focus:outline-none focus:bg-white focus:border-[#D99A1C] focus:ring-1 focus:ring-[#D99A1C] transition-all text-slate-900"
                   placeholder="e.g. partner@agency.com"
                 />
               </div>
@@ -319,7 +318,7 @@ export default function Partners({ clients, setClients }) {
                   required
                   value={newPartnerPhone}
                   onChange={(e) => setNewPartnerPhone(e.target.value)}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs font-semibold focus:outline-none focus:bg-white focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all text-slate-900"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs font-semibold focus:outline-none focus:bg-white focus:border-[#D99A1C] focus:ring-1 focus:ring-[#D99A1C] transition-all text-slate-900"
                   placeholder="e.g. +91 9998887776"
                 />
               </div>
@@ -334,7 +333,7 @@ export default function Partners({ clients, setClients }) {
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold text-xs rounded-xl transition-all shadow-md"
+                  className="px-4 py-2 bg-[#D99A1C] hover:bg-[#F5B025] text-white font-extrabold text-xs rounded-xl transition-all shadow-md"
                 >
                   Confirm Onboarding
                 </button>

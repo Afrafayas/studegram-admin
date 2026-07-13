@@ -106,13 +106,13 @@ export default function SettingsPortal({
               <h2 className="text-xs font-black text-slate-900 uppercase tracking-wider">Course Documents Configuration</h2>
               <button
                 onClick={() => openAddModal('doc')}
-                className="bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold text-[10px] px-3.5 py-2 rounded-xl transition-all shadow-md uppercase tracking-wider"
+                className="bg-[#D99A1C] hover:bg-[#F5B025] text-white font-extrabold text-[10px] px-3.5 py-2 rounded-xl transition-all shadow-md uppercase tracking-wider"
               >
                 Add New Document Rule
               </button>
             </div>
             
-            <div className="bg-white border border-[#E2E8F0] rounded-2xl shadow-xs overflow-hidden">
+            <div className="bg-white border border-[#E2E8F0] border-t-4 border-t-[#D99A1C] rounded-2xl shadow-xs overflow-hidden">
               <table className="w-full text-left border-collapse">
                 <thead>
                   <tr className="bg-slate-50 border-b border-[#E2E8F0]">
@@ -129,7 +129,7 @@ export default function SettingsPortal({
                     <tr key={doc.siNo} className="hover:bg-slate-50/50 transition-colors">
                       <td className="px-6 py-4 font-bold text-slate-400">{doc.siNo}</td>
                       <td className="px-6 py-4 text-slate-950 font-black">{doc.name}</td>
-                      <td className="px-6 py-4"><span className="bg-indigo-50 border border-indigo-100 text-indigo-700 font-extrabold rounded-md px-2 py-0.5 text-[9px]">{doc.format}</span></td>
+                      <td className="px-6 py-4"><span className="bg-blue-50 border border-blue-100 text-blue-700 font-extrabold rounded-md px-2 py-0.5 text-[9px]">{doc.format}</span></td>
                       <td className="px-6 py-4 text-slate-500">{doc.minSize} MB</td>
                       <td className="px-6 py-4 text-slate-500">{doc.maxSize} MB</td>
                       <td className="px-6 py-4 text-right">
@@ -155,13 +155,13 @@ export default function SettingsPortal({
               <h2 className="text-xs font-black text-slate-900 uppercase tracking-wider">B2B Referral Agents</h2>
               <button
                 onClick={() => openAddModal('agent')}
-                className="bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold text-[10px] px-3.5 py-2 rounded-xl transition-all shadow-md uppercase tracking-wider"
+                className="bg-[#D99A1C] hover:bg-[#F5B025] text-white font-extrabold text-[10px] px-3.5 py-2 rounded-xl transition-all shadow-md uppercase tracking-wider"
               >
                 Invite/Add Agent
               </button>
             </div>
             
-            <div className="bg-white border border-[#E2E8F0] rounded-2xl shadow-xs overflow-hidden">
+            <div className="bg-white border border-[#E2E8F0] border-t-4 border-t-[#D99A1C] rounded-2xl shadow-xs overflow-hidden">
               <table className="w-full text-left border-collapse">
                 <thead>
                   <tr className="bg-slate-50 border-b border-[#E2E8F0]">
@@ -176,7 +176,7 @@ export default function SettingsPortal({
                     <tr key={agent.siNo} className="hover:bg-slate-50/50 transition-colors">
                       <td className="px-6 py-4 font-bold text-slate-400">{agent.siNo}</td>
                       <td className="px-6 py-4 text-slate-950 font-black">{agent.agentName}</td>
-                      <td className="px-6 py-4 text-indigo-600 font-bold">{agent.email}</td>
+                      <td className="px-6 py-4 text-[#2563EB] font-bold">{agent.email}</td>
                       <td className="px-6 py-4 text-right">
                         <button 
                           onClick={() => handleDeleteAgent(agent.siNo)}
@@ -203,17 +203,17 @@ export default function SettingsPortal({
               </div>
               <button
                 onClick={() => openAddModal('stage')}
-                className="bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold text-[10px] px-3.5 py-2 rounded-xl transition-all shadow-md uppercase tracking-wider"
+                className="bg-[#D99A1C] hover:bg-[#F5B025] text-white font-extrabold text-[10px] px-3.5 py-2 rounded-xl transition-all shadow-md uppercase tracking-wider"
               >
                 Add Stage
               </button>
             </div>
 
-            <div className="bg-white border border-[#E2E8F0] p-6 rounded-2xl shadow-xs space-y-4">
+            <div className="bg-white border border-[#E2E8F0] border-t-4 border-t-[#D99A1C] p-6 rounded-2xl shadow-xs space-y-4">
               {stages.map((stage, idx) => (
                 <div 
                   key={stage}
-                  className="flex items-center justify-between p-4 bg-slate-50 border border-slate-200 rounded-xl hover:border-indigo-300 hover:bg-white transition-all group"
+                  className="flex items-center justify-between p-4 bg-slate-50 border border-slate-200 rounded-xl hover:border-[#D99A1C] hover:bg-white transition-all group"
                 >
                   <div className="flex items-center gap-3">
                     <span className="w-6 h-6 rounded-full bg-slate-200 text-slate-700 flex items-center justify-center font-bold text-xs">
@@ -301,14 +301,14 @@ export default function SettingsPortal({
               {listSetter && (
                 <button
                   onClick={() => openAddModal(activeSubTab)}
-                  className="bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold text-[10px] px-3.5 py-2 rounded-xl transition-all shadow-md uppercase tracking-wider"
+                  className="bg-[#D99A1C] hover:bg-[#F5B025] text-white font-extrabold text-[10px] px-3.5 py-2 rounded-xl transition-all shadow-md uppercase tracking-wider"
                 >
                   {addLabel}
                 </button>
               )}
             </div>
 
-            <div className="bg-white border border-[#E2E8F0] p-6 rounded-2xl shadow-xs space-y-3">
+            <div className="bg-white border border-[#E2E8F0] border-t-4 border-t-[#D99A1C] p-6 rounded-2xl shadow-xs space-y-3">
               {list.map((item, idx) => (
                 <div key={item} className="flex items-center justify-between p-3.5 bg-slate-50 border border-slate-200 rounded-xl">
                   <span className="text-xs font-bold text-slate-800">{item}</span>
@@ -329,12 +329,12 @@ export default function SettingsPortal({
   };
 
   return (
-    <div className="flex-1 p-6 bg-[#F8FAFC]">
+    <div className="flex-1 p-6 bg-[#F0F2F5]">
       {renderSettingsView()}
 
       {modalType && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs select-none">
-          <div className="bg-white border border-[#E2E8F0] rounded-2xl p-6 w-full max-w-md shadow-2xl space-y-4 animate-in zoom-in-95 duration-150">
+          <div className="bg-white border border-[#E2E8F0] border-t-4 border-t-[#D99A1C] rounded-2xl p-6 w-full max-w-md shadow-2xl space-y-4 animate-in zoom-in-95 duration-150">
             
             <div className="flex justify-between items-center pb-2 border-b border-slate-100">
               <h3 className="text-xs font-black text-slate-950 uppercase tracking-wider">
@@ -355,7 +355,7 @@ export default function SettingsPortal({
                     required
                     value={docName}
                     onChange={(e) => setDocName(e.target.value)}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs font-semibold focus:outline-none focus:bg-white focus:ring-1 focus:ring-indigo-500 text-slate-950"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs font-semibold focus:outline-none focus:bg-white focus:border-[#D99A1C] focus:ring-1 focus:ring-[#D99A1C] text-slate-950"
                     placeholder="e.g. Post Graduate Degree Marksheet"
                   />
                 </div>
@@ -364,7 +364,7 @@ export default function SettingsPortal({
                   <select
                     value={docFormat}
                     onChange={(e) => setDocFormat(e.target.value)}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs font-semibold focus:outline-none focus:bg-white focus:ring-1 focus:ring-indigo-500"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs font-semibold focus:outline-none focus:bg-white focus:ring-1 focus:ring-[#D99A1C]"
                   >
                     <option value=".pdf">.pdf (Acrobat Reader)</option>
                     <option value=".docx">.docx (MS Word)</option>
@@ -381,7 +381,7 @@ export default function SettingsPortal({
                       required
                       value={docMinSize}
                       onChange={(e) => setDocMinSize(e.target.value)}
-                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs font-semibold focus:outline-none focus:bg-white focus:ring-1 focus:ring-indigo-500"
+                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs font-semibold focus:outline-none focus:bg-white focus:border-[#D99A1C] focus:ring-1 focus:ring-[#D99A1C]"
                     />
                   </div>
                   <div className="space-y-1.5">
@@ -392,14 +392,14 @@ export default function SettingsPortal({
                       required
                       value={docMaxSize}
                       onChange={(e) => setDocMaxSize(e.target.value)}
-                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs font-semibold focus:outline-none focus:bg-white focus:ring-1 focus:ring-indigo-500"
+                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs font-semibold focus:outline-none focus:bg-white focus:border-[#D99A1C] focus:ring-1 focus:ring-[#D99A1C]"
                     />
                   </div>
                 </div>
                 
                 <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
                   <button type="button" onClick={() => setModalType(null)} className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-extrabold text-xs rounded-xl">Cancel</button>
-                  <button type="submit" className="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold text-xs rounded-xl shadow-md">Add Rule</button>
+                  <button type="submit" className="px-5 py-2 bg-[#D99A1C] hover:bg-[#F5B025] text-white font-extrabold text-xs rounded-xl shadow-md">Add Rule</button>
                 </div>
               </form>
             )}
@@ -424,14 +424,14 @@ export default function SettingsPortal({
                     required
                     value={agentEmail}
                     onChange={(e) => setAgentEmail(e.target.value)}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs font-semibold focus:outline-none focus:bg-white focus:ring-1 focus:ring-indigo-500 text-slate-950"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs font-semibold focus:outline-none focus:bg-white focus:border-[#D99A1C] focus:ring-1 focus:ring-[#D99A1C] text-slate-950"
                     placeholder="e.g. onboarding@agency.com"
                   />
                 </div>
                 
                 <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
                   <button type="button" onClick={() => setModalType(null)} className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-extrabold text-xs rounded-xl">Cancel</button>
-                  <button type="submit" className="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold text-xs rounded-xl shadow-md">Add Agent</button>
+                  <button type="submit" className="px-5 py-2 bg-[#D99A1C] hover:bg-[#F5B025] text-white font-extrabold text-xs rounded-xl shadow-md">Add Agent</button>
                 </div>
               </form>
             )}
@@ -445,14 +445,14 @@ export default function SettingsPortal({
                     required
                     value={newItemText}
                     onChange={(e) => setNewItemText(e.target.value)}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs font-semibold focus:outline-none focus:bg-white focus:ring-1 focus:ring-indigo-500 text-slate-950"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs font-semibold focus:outline-none focus:bg-white focus:border-[#D99A1C] focus:ring-1 focus:ring-[#D99A1C] text-slate-950"
                     placeholder="e.g. CAS Clearance Pending"
                   />
                 </div>
                 
                 <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
                   <button type="button" onClick={() => setModalType(null)} className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-extrabold text-xs rounded-xl">Cancel</button>
-                  <button type="submit" className="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold text-xs rounded-xl shadow-md">Add Stage</button>
+                  <button type="submit" className="px-5 py-2 bg-[#D99A1C] hover:bg-[#F5B025] text-white font-extrabold text-xs rounded-xl shadow-md">Add Stage</button>
                 </div>
               </form>
             )}
@@ -478,14 +478,14 @@ export default function SettingsPortal({
                     required
                     value={newItemText}
                     onChange={(e) => setNewItemText(e.target.value)}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs font-semibold focus:outline-none focus:bg-white focus:ring-1 focus:ring-indigo-500 text-slate-950"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs font-semibold focus:outline-none focus:bg-white focus:border-[#D99A1C] focus:ring-1 focus:ring-[#D99A1C] text-slate-950"
                     placeholder="Enter configuration label..."
                   />
                 </div>
                 
                 <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
                   <button type="button" onClick={() => setModalType(null)} className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-extrabold text-xs rounded-xl">Cancel</button>
-                  <button type="submit" className="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold text-xs rounded-xl shadow-md">Add Item</button>
+                  <button type="submit" className="px-5 py-2 bg-[#D99A1C] hover:bg-[#F5B025] text-white font-extrabold text-xs rounded-xl shadow-md">Add Item</button>
                 </div>
               </form>
             )}

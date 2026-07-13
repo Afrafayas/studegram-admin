@@ -35,19 +35,19 @@ export default function AdminSidebar({
         ></div>
       )}
 
-      <aside className={`fixed inset-y-0 left-0 z-50 lg:z-30 lg:sticky lg:top-0 w-[260px] min-w-[260px] bg-[#0F172A] border-r border-[#1E293B] text-slate-300 h-screen flex flex-col justify-between py-5 select-none transform ${
+      <aside className={`fixed inset-y-0 left-0 z-50 lg:z-30 lg:sticky lg:top-0 w-[260px] min-w-[260px] bg-[#0A0A0F] border-r border-slate-900 text-slate-300 h-screen flex flex-col justify-between py-5 select-none transform ${
         isOpen ? 'translate-x-0' : '-translate-x-full'
       } lg:translate-x-0 transition-transform duration-200 ease-in-out`}>
         
         <div className="flex flex-col gap-6 overflow-y-auto px-4 scrollbar-thin">
           {/* Brand Header */}
-          <div className="px-2 pb-4 border-b border-[#1E293B] flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-[#6366F1] to-[#06B6D4] flex items-center justify-center font-extrabold text-white text-base shadow-lg shadow-indigo-500/20">
+          <div className="px-2 pb-4 border-b border-slate-900 flex items-center gap-3">
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-[#D99A1C] to-[#F5B025] flex items-center justify-center font-extrabold text-white text-base shadow-lg shadow-[#D99A1C]/20">
               S
             </div>
             <div className="flex flex-col">
               <span className="font-extrabold text-sm tracking-widest text-white uppercase">STUDEGRAM</span>
-              <span className="text-[9px] text-cyan-400 font-extrabold tracking-wider uppercase -mt-0.5">Admin Portal</span>
+              <span className="text-[9px] text-[#D99A1C] font-extrabold tracking-wider uppercase -mt-0.5">Admin Portal</span>
             </div>
           </div>
 
@@ -58,8 +58,8 @@ export default function AdminSidebar({
               onClick={() => handleTabClick('daily-report')}
               className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left text-xs font-semibold transition-all duration-150 ${
                 activeTab === 'daily-report' && !activeSubTab
-                  ? 'bg-[#1E293B] text-white border-l-2 border-indigo-500 pl-2.5'
-                  : 'hover:bg-slate-800/50 hover:text-white'
+                  ? 'bg-[#161622] text-white border-l-2 border-[#D99A1C] pl-2.5'
+                  : 'hover:bg-[#161622]/50 hover:text-white'
               }`}
             >
               <svg className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -73,7 +73,7 @@ export default function AdminSidebar({
               <button
                 onClick={() => setAdminReportsOpen(!adminReportsOpen)}
                 className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-left text-xs font-semibold transition-all duration-150 ${
-                  activeTab === 'admin-report' ? 'text-white font-bold bg-[#1E293B]/40' : 'hover:bg-slate-800/50 hover:text-white'
+                  activeTab === 'admin-report' ? 'text-white font-bold bg-[#161622]/40' : 'hover:bg-[#161622]/50 hover:text-white'
                 }`}
               >
                 <div className="flex items-center gap-3">
@@ -93,8 +93,8 @@ export default function AdminSidebar({
                     onClick={() => handleSubTabClick('admin-report', 'report-agent')}
                     className={`w-full text-left py-2 px-3 text-[11px] font-semibold rounded-md transition-colors ${
                       activeTab === 'admin-report' && activeSubTab === 'report-agent'
-                        ? 'text-cyan-400 bg-slate-800/40 font-bold'
-                        : 'text-slate-400 hover:text-white'
+                        ? 'text-[#F5B025] bg-[#161622]/60 font-bold'
+                        : 'text-slate-400 hover:text-white hover:bg-[#161622]/30'
                     }`}
                   >
                     Report by Agent
@@ -103,8 +103,8 @@ export default function AdminSidebar({
                     onClick={() => handleSubTabClick('admin-report', 'report-university')}
                     className={`w-full text-left py-2 px-3 text-[11px] font-semibold rounded-md transition-colors ${
                       activeTab === 'admin-report' && activeSubTab === 'report-university'
-                        ? 'text-cyan-400 bg-slate-800/40 font-bold'
-                        : 'text-slate-400 hover:text-white'
+                        ? 'text-[#F5B025] bg-[#161622]/60 font-bold'
+                        : 'text-slate-400 hover:text-white hover:bg-[#161622]/30'
                     }`}
                   >
                     Report by University
@@ -113,8 +113,8 @@ export default function AdminSidebar({
                     onClick={() => handleSubTabClick('admin-report', 'report-course')}
                     className={`w-full text-left py-2 px-3 text-[11px] font-semibold rounded-md transition-colors ${
                       activeTab === 'admin-report' && activeSubTab === 'report-course'
-                        ? 'text-cyan-400 bg-slate-800/40 font-bold'
-                        : 'text-slate-400 hover:text-white'
+                        ? 'text-[#F5B025] bg-[#161622]/60 font-bold'
+                        : 'text-slate-400 hover:text-white hover:bg-[#161622]/30'
                     }`}
                   >
                     Report by Course
@@ -128,8 +128,8 @@ export default function AdminSidebar({
               onClick={() => handleTabClick('partners')}
               className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left text-xs font-semibold transition-all duration-150 ${
                 activeTab === 'partners' && !activeSubTab
-                  ? 'bg-[#1E293B] text-white border-l-2 border-indigo-500 pl-2.5'
-                  : 'hover:bg-slate-800/50 hover:text-white'
+                  ? 'bg-[#161622] text-white border-l-2 border-[#D99A1C] pl-2.5'
+                  : 'hover:bg-[#161622]/50 hover:text-white'
               }`}
             >
               <svg className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -143,8 +143,8 @@ export default function AdminSidebar({
               onClick={() => handleTabClick('students')}
               className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left text-xs font-semibold transition-all duration-150 ${
                 activeTab === 'students' && !activeSubTab
-                  ? 'bg-[#1E293B] text-white border-l-2 border-indigo-500 pl-2.5'
-                  : 'hover:bg-slate-800/50 hover:text-white'
+                  ? 'bg-[#161622] text-white border-l-2 border-[#D99A1C] pl-2.5'
+                  : 'hover:bg-[#161622]/50 hover:text-white'
               }`}
             >
               <svg className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -160,8 +160,8 @@ export default function AdminSidebar({
               onClick={() => handleTabClick('staff')}
               className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left text-xs font-semibold transition-all duration-150 ${
                 activeTab === 'staff' && !activeSubTab
-                  ? 'bg-[#1E293B] text-white border-l-2 border-indigo-500 pl-2.5'
-                  : 'hover:bg-slate-800/50 hover:text-white'
+                  ? 'bg-[#161622] text-white border-l-2 border-[#D99A1C] pl-2.5'
+                  : 'hover:bg-[#161622]/50 hover:text-white'
               }`}
             >
               <svg className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -175,7 +175,7 @@ export default function AdminSidebar({
               <button
                 onClick={() => setSalesOrderOpen(!salesOrderOpen)}
                 className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-left text-xs font-semibold transition-all duration-150 ${
-                  activeTab === 'sales-order' ? 'text-white font-bold bg-[#1E293B]/40' : 'hover:bg-slate-800/50 hover:text-white'
+                  activeTab === 'sales-order' ? 'text-white font-bold bg-[#161622]/40' : 'hover:bg-[#161622]/50 hover:text-white'
                 }`}
               >
                 <div className="flex items-center gap-3">
@@ -195,8 +195,8 @@ export default function AdminSidebar({
                     onClick={() => handleSubTabClick('sales-order', 'tourist-package')}
                     className={`w-full text-left py-2 px-3 text-[11px] font-semibold rounded-md transition-colors ${
                       activeTab === 'sales-order' && activeSubTab === 'tourist-package'
-                        ? 'text-cyan-400 bg-slate-800/40 font-bold'
-                        : 'text-slate-400 hover:text-white'
+                        ? 'text-[#F5B025] bg-[#161622]/60 font-bold'
+                        : 'text-slate-400 hover:text-white hover:bg-[#161622]/30'
                     }`}
                   >
                     Tourist Package
@@ -205,8 +205,8 @@ export default function AdminSidebar({
                     onClick={() => handleSubTabClick('sales-order', 'study')}
                     className={`w-full text-left py-2 px-3 text-[11px] font-semibold rounded-md transition-colors ${
                       activeTab === 'sales-order' && activeSubTab === 'study'
-                        ? 'text-cyan-400 bg-slate-800/40 font-bold'
-                        : 'text-slate-400 hover:text-white'
+                        ? 'text-[#F5B025] bg-[#161622]/60 font-bold'
+                        : 'text-slate-400 hover:text-white hover:bg-[#161622]/30'
                     }`}
                   >
                     Study (Apply)
@@ -220,7 +220,7 @@ export default function AdminSidebar({
               <button
                 onClick={() => setSettingsOpen(!settingsOpen)}
                 className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-left text-xs font-semibold transition-all duration-150 ${
-                  activeTab === 'settings' ? 'text-white font-bold bg-[#1E293B]/40' : 'hover:bg-slate-800/50 hover:text-white'
+                  activeTab === 'settings' ? 'text-white font-bold bg-[#161622]/40' : 'hover:bg-[#161622]/50 hover:text-white'
                 }`}
               >
                 <div className="flex items-center gap-3">
@@ -254,8 +254,8 @@ export default function AdminSidebar({
                       onClick={() => handleSubTabClick('settings', subItem.id)}
                       className={`w-full text-left py-1.5 px-3 text-[11px] font-semibold rounded-md transition-colors ${
                         activeTab === 'settings' && activeSubTab === subItem.id
-                          ? 'text-cyan-400 bg-slate-800/40 font-bold'
-                          : 'text-slate-400 hover:text-white'
+                          ? 'text-[#F5B025] bg-[#161622]/60 font-bold'
+                          : 'text-slate-400 hover:text-white hover:bg-[#161622]/30'
                       }`}
                     >
                       {subItem.label}
@@ -270,8 +270,8 @@ export default function AdminSidebar({
               onClick={() => handleTabClick('todo-list')}
               className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left text-xs font-semibold transition-all duration-150 ${
                 activeTab === 'todo-list' && !activeSubTab
-                  ? 'bg-[#1E293B] text-white border-l-2 border-indigo-500 pl-2.5'
-                  : 'hover:bg-slate-800/50 hover:text-white'
+                  ? 'bg-[#161622] text-white border-l-2 border-[#D99A1C] pl-2.5'
+                  : 'hover:bg-[#161622]/50 hover:text-white'
               }`}
             >
               <svg className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -283,20 +283,19 @@ export default function AdminSidebar({
         </div>
 
         {/* Footer actions inside Sidebar */}
-        <div className="px-4 mt-auto pt-4 border-t border-[#1E293B] flex flex-col gap-2">
+        <div className="px-4 mt-auto pt-4 border-t border-slate-900 flex flex-col gap-2">
           {/* Switch to Student Portal */}
           <a
             href="http://localhost:5173/"
             target="_blank"
             rel="noopener noreferrer"
-            className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-gradient-to-r from-cyan-500/10 to-indigo-500/10 hover:from-cyan-500/20 hover:to-indigo-500/20 text-cyan-400 hover:text-cyan-300 border border-indigo-500/30 rounded-xl text-xs font-bold transition-all text-center"
+            className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-gradient-to-r from-[#D99A1C]/10 to-[#2563EB]/10 hover:from-[#D99A1C]/20 hover:to-[#2563EB]/20 text-[#F5B025] hover:text-[#D99A1C] border border-[#D99A1C]/30 rounded-xl text-xs font-bold transition-all text-center"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
             </svg>
             <span>Studegram Student Portal</span>
           </a>
-
           {/* Logout */}
           <button
             onClick={onLogout}

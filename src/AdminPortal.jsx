@@ -215,7 +215,7 @@ export default function AdminPortal({ onLogout }) {
   };
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] flex flex-col font-sans text-slate-900 select-text">
+    <div className="min-h-screen bg-[#F0F2F5] flex flex-col font-sans text-slate-900 select-text">
       <div className="flex flex-1">
         <AdminSidebar 
           activeTab={activeTab}
@@ -235,7 +235,7 @@ export default function AdminPortal({ onLogout }) {
             onLogout={onLogout}
           />
 
-          <main className="flex-1 flex flex-col pb-16">
+          <main key={`${activeTab}-${activeSubTab}`} className="flex-1 flex flex-col pb-16 animate-fade-in-up">
             {renderActiveTabContent()}
           </main>
         </div>

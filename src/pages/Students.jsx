@@ -82,16 +82,16 @@ export default function Students({ clients, setClients, applications }) {
   };
 
   return (
-    <div className="flex-1 p-6 space-y-6 bg-[#F8FAFC]">
+    <div className="flex-1 p-6 space-y-6 bg-[#F0F2F5]">
       {/* Header */}
-      <div className="flex justify-between items-center bg-white border border-[#E2E8F0] p-6 rounded-2xl shadow-xs">
+      <div className="flex justify-between items-center bg-white border border-[#E2E8F0] border-t-4 border-t-[#D99A1C] p-6 rounded-2xl shadow-xs">
         <div className="space-y-1">
           <h1 className="text-xl font-black text-slate-900 tracking-tight">Students Directory</h1>
           <p className="text-xs text-slate-500 font-medium">Manage Direct and B2B-referred students, view files status and passport records.</p>
         </div>
         <button
           onClick={() => setIsModalOpen(true)}
-          className="bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold text-xs px-4 py-2 rounded-xl transition-all shadow-md inline-flex items-center gap-1.5"
+          className="bg-[#D99A1C] hover:bg-[#F5B025] text-white font-extrabold text-xs px-4 py-2 rounded-xl transition-all shadow-md inline-flex items-center gap-1.5"
         >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
@@ -101,7 +101,7 @@ export default function Students({ clients, setClients, applications }) {
       </div>
 
       {/* Search & Filters */}
-      <div className="bg-white border border-[#E2E8F0] rounded-2xl p-5 shadow-xs flex flex-col sm:flex-row gap-4 items-center justify-between">
+      <div className="bg-white border border-[#E2E8F0] border-t-4 border-t-[#2563EB] rounded-2xl p-5 shadow-xs flex flex-col sm:flex-row gap-4 items-center justify-between">
         <div className="bg-slate-100 p-1 rounded-xl flex w-full sm:w-auto">
           {['All', 'Active', 'Inactive'].map((status) => (
             <button
@@ -109,7 +109,7 @@ export default function Students({ clients, setClients, applications }) {
               onClick={() => setStatusFilter(status)}
               className={`flex-1 sm:flex-none px-4 py-1.5 text-xs font-bold rounded-lg transition-all ${
                 statusFilter === status 
-                  ? 'bg-white text-indigo-600 shadow-sm font-black' 
+                  ? 'bg-white text-[#D99A1C] shadow-sm font-black' 
                   : 'text-slate-500 hover:text-slate-900'
               }`}
             >
@@ -128,14 +128,14 @@ export default function Students({ clients, setClients, applications }) {
             type="text"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-4 py-2.5 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:bg-white focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all font-medium"
+            className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-4 py-2.5 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:bg-white focus:border-[#D99A1C] focus:ring-1 focus:ring-[#D99A1C] transition-all font-medium"
             placeholder="Search by name, passport, email, source..."
           />
         </div>
       </div>
 
       {/* Directory Table */}
-      <div className="bg-white border border-[#E2E8F0] rounded-2xl shadow-xs overflow-hidden">
+      <div className="bg-white border border-[#E2E8F0] border-t-4 border-t-[#D99A1C] rounded-2xl shadow-xs overflow-hidden">
         <div className="px-6 py-4 border-b border-[#E2E8F0]">
           <h2 className="text-xs font-black text-slate-900 uppercase tracking-wider">Registered Student Profiles</h2>
         </div>
@@ -170,7 +170,7 @@ export default function Students({ clients, setClients, applications }) {
                         </td>
                         <td className="px-6 py-4 font-bold text-slate-400">{idx + 1}</td>
                         <td className="px-6 py-4 flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-full flex items-center justify-center font-bold text-white text-xs bg-gradient-to-tr from-indigo-500 to-cyan-400">
+                          <div className="w-8 h-8 rounded-full flex items-center justify-center font-bold text-white text-xs bg-gradient-to-tr from-[#D99A1C] to-[#F5B025]">
                             {student.name.split(' ').map(n=>n[0]).join('')}
                           </div>
                           <div>
@@ -205,7 +205,7 @@ export default function Students({ clients, setClients, applications }) {
                       {isExpanded && (
                         <tr>
                           <td colSpan="8" className="bg-slate-50/50 p-6 border-t border-b border-slate-100">
-                            <div className="bg-white border border-[#E2E8F0] rounded-xl p-5 shadow-sm space-y-4">
+                            <div className="bg-white border border-[#E2E8F0] border-t-4 border-t-[#2563EB] rounded-xl p-5 shadow-sm space-y-4">
                               <div className="flex flex-col md:flex-row md:items-center justify-between border-b border-slate-100 pb-3 gap-2">
                                 <h3 className="text-xs font-black text-slate-900 uppercase tracking-wider">
                                   Student Dossier Profile — {student.name}
@@ -253,7 +253,7 @@ export default function Students({ clients, setClients, applications }) {
                                       <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
                                         {studentApps.map(app => (
                                           <tr key={app.camsId} className="hover:bg-slate-50/30">
-                                            <td className="px-4 py-3 font-mono font-bold text-indigo-600">{app.camsId}</td>
+                                            <td className="px-4 py-3 font-mono font-bold text-[#2563EB]">{app.camsId}</td>
                                             <td className="px-4 py-3 text-slate-900 font-bold">{app.universityName}</td>
                                             <td className="px-4 py-3 text-slate-500 font-semibold">{app.courseName}</td>
                                             <td className="px-4 py-3 text-slate-500">{app.intake}</td>
@@ -302,10 +302,9 @@ export default function Students({ clients, setClients, applications }) {
         </div>
       </div>
 
-      {/* Onboard Student Modal */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs select-none">
-          <div className="bg-white border border-[#E2E8F0] rounded-2xl p-6 w-full max-w-md shadow-2xl space-y-4 animate-in zoom-in-95 duration-150">
+          <div className="bg-white border border-[#E2E8F0] border-t-4 border-t-[#D99A1C] rounded-2xl p-6 w-full max-w-md shadow-2xl space-y-4 animate-in zoom-in-95 duration-150">
             <div className="flex justify-between items-center pb-2 border-b border-slate-100">
               <div>
                 <h3 className="text-xs font-black text-slate-900 uppercase tracking-wider">Onboard Student Profile</h3>
@@ -327,7 +326,7 @@ export default function Students({ clients, setClients, applications }) {
                   required
                   value={newStudentName}
                   onChange={(e) => setNewStudentName(e.target.value)}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs font-semibold focus:outline-none focus:bg-white focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all text-slate-900"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs font-semibold focus:outline-none focus:bg-white focus:border-[#D99A1C] focus:ring-1 focus:ring-[#D99A1C] transition-all text-slate-900"
                   placeholder="e.g. John Doe"
                 />
               </div>
@@ -339,7 +338,7 @@ export default function Students({ clients, setClients, applications }) {
                     type="text"
                     value={newStudentPassport}
                     onChange={(e) => setNewStudentPassport(e.target.value)}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs font-semibold focus:outline-none focus:bg-white focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all text-slate-900 uppercase"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs font-semibold focus:outline-none focus:bg-white focus:border-[#D99A1C] focus:ring-1 focus:ring-[#D99A1C] transition-all text-slate-900 uppercase"
                     placeholder="e.g. Z1234567"
                   />
                 </div>
@@ -349,7 +348,7 @@ export default function Students({ clients, setClients, applications }) {
                     type="date"
                     value={newStudentDob}
                     onChange={(e) => setNewStudentDob(e.target.value)}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs font-semibold focus:outline-none focus:bg-white focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all text-slate-900"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs font-semibold focus:outline-none focus:bg-white focus:border-[#D99A1C] focus:ring-1 focus:ring-[#D99A1C] transition-all text-slate-900"
                   />
                 </div>
               </div>
@@ -361,7 +360,7 @@ export default function Students({ clients, setClients, applications }) {
                   required
                   value={newStudentEmail}
                   onChange={(e) => setNewStudentEmail(e.target.value)}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs font-semibold focus:outline-none focus:bg-white focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all text-slate-900"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs font-semibold focus:outline-none focus:bg-white focus:border-[#D99A1C] focus:ring-1 focus:ring-[#D99A1C] transition-all text-slate-900"
                   placeholder="e.g. student@gmail.com"
                 />
               </div>
@@ -373,7 +372,7 @@ export default function Students({ clients, setClients, applications }) {
                   required
                   value={newStudentPhone}
                   onChange={(e) => setNewStudentPhone(e.target.value)}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs font-semibold focus:outline-none focus:bg-white focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all text-slate-900"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs font-semibold focus:outline-none focus:bg-white focus:border-[#D99A1C] focus:ring-1 focus:ring-[#D99A1C] transition-all text-slate-900"
                   placeholder="e.g. +91 9876543210"
                 />
               </div>
@@ -383,7 +382,7 @@ export default function Students({ clients, setClients, applications }) {
                 <select
                   value={newStudentReferredBy}
                   onChange={(e) => setNewStudentReferredBy(e.target.value)}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs font-semibold focus:outline-none focus:bg-white focus:ring-1 focus:ring-indigo-500"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs font-semibold focus:outline-none focus:bg-white focus:ring-1 focus:ring-[#D99A1C]"
                 >
                   <option value="Direct">Direct Applicant (No Referral)</option>
                   {partners.map(p => (
@@ -402,7 +401,7 @@ export default function Students({ clients, setClients, applications }) {
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold text-xs rounded-xl transition-all shadow-md"
+                  className="px-4 py-2 bg-[#D99A1C] hover:bg-[#F5B025] text-white font-extrabold text-xs rounded-xl transition-all shadow-md"
                 >
                   Confirm Onboarding
                 </button>

@@ -56,52 +56,52 @@ export default function DailyReport({ applications }) {
       {/* Metric Cards Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Card 1 */}
-        <div className="bg-white border border-[#E2E8F0] rounded-2xl p-5 shadow-xs flex flex-col justify-between group hover:border-indigo-200 transition-all duration-150">
+        <div className="bg-white border border-[#E2E8F0] border-t-4 border-t-[#D99A1C] rounded-2xl p-5 shadow-xs flex flex-col justify-between group transition-all duration-150">
           <div className="flex justify-between items-start">
             <span className="text-[10px] font-extrabold uppercase tracking-widest text-slate-400">Applications Filed</span>
-            <span className="text-emerald-600 bg-emerald-50 text-[10px] font-bold px-2 py-0.5 rounded-full border border-emerald-100">+12.4%</span>
+            <span className="text-[#D99A1C] bg-[#D99A1C]/10 text-[10px] font-bold px-2 py-0.5 rounded-full border border-[#D99A1C]/25">+12.4%</span>
           </div>
           <div className="mt-4 flex items-baseline gap-2">
             <span className="text-3xl font-black text-slate-900 tracking-tight">{totalAppsToday}</span>
             <span className="text-[10px] font-bold text-slate-400 uppercase">Today</span>
           </div>
           <div className="mt-4 w-full bg-slate-100 h-1 rounded-full overflow-hidden">
-            <div className="bg-indigo-500 h-full w-[70%]" />
+            <div className="bg-[#D99A1C] h-full w-[70%]" />
           </div>
         </div>
 
         {/* Card 2 */}
-        <div className="bg-white border border-[#E2E8F0] rounded-2xl p-5 shadow-xs flex flex-col justify-between group hover:border-cyan-200 transition-all duration-150">
+        <div className="bg-white border border-[#E2E8F0] border-t-4 border-t-[#2563EB] rounded-2xl p-5 shadow-xs flex flex-col justify-between group transition-all duration-150">
           <div className="flex justify-between items-start">
             <span className="text-[10px] font-extrabold uppercase tracking-widest text-slate-400">Active Leads</span>
-            <span className="text-cyan-600 bg-cyan-50 text-[10px] font-bold px-2 py-0.5 rounded-full border border-cyan-100">+8.1%</span>
+            <span className="text-blue-600 bg-blue-50 text-[10px] font-bold px-2 py-0.5 rounded-full border border-blue-100">+8.1%</span>
           </div>
           <div className="mt-4 flex items-baseline gap-2">
             <span className="text-3xl font-black text-slate-900 tracking-tight">{activeLeads}</span>
             <span className="text-[10px] font-bold text-slate-400 uppercase">Total Files</span>
           </div>
           <div className="mt-4 w-full bg-slate-100 h-1 rounded-full overflow-hidden">
-            <div className="bg-cyan-500 h-full w-[85%]" />
+            <div className="bg-[#2563EB] h-full w-[85%]" />
           </div>
         </div>
 
         {/* Card 3 */}
-        <div className="bg-white border border-[#E2E8F0] rounded-2xl p-5 shadow-xs flex flex-col justify-between hover:border-indigo-200 transition-all duration-150">
+        <div className="bg-white border border-[#E2E8F0] border-t-4 border-t-[#D99A1C] rounded-2xl p-5 shadow-xs flex flex-col justify-between transition-all duration-150">
           <div className="flex justify-between items-start">
             <span className="text-[10px] font-extrabold uppercase tracking-widest text-slate-400">Success Rate</span>
-            <span className="text-indigo-600 bg-indigo-50 text-[10px] font-bold px-2 py-0.5 rounded-full border border-indigo-100">CAS Clear</span>
+            <span className="text-amber-600 bg-amber-50 text-[10px] font-bold px-2 py-0.5 rounded-full border border-amber-100">CAS Clear</span>
           </div>
           <div className="mt-4 flex items-baseline gap-2">
             <span className="text-3xl font-black text-slate-900 tracking-tight">{successRate}</span>
             <span className="text-[10px] font-bold text-slate-400 uppercase">Visa Issued</span>
           </div>
           <div className="mt-4 w-full bg-slate-100 h-1 rounded-full overflow-hidden">
-            <div className="bg-gradient-to-r from-indigo-500 to-cyan-400 h-full w-[94.2%]" />
+            <div className="bg-[#D99A1C] h-full w-[94.2%]" />
           </div>
         </div>
 
         {/* Card 4 */}
-        <div className="bg-white border border-[#EF4444]/20 rounded-2xl p-5 shadow-xs flex flex-col justify-between hover:shadow-md transition-all duration-150 bg-red-50/5">
+        <div className="bg-white border border-[#EF4444]/20 border-t-4 border-t-[#EF4444] rounded-2xl p-5 shadow-xs flex flex-col justify-between transition-all duration-150 bg-red-50/5">
           <div className="flex justify-between items-start">
             <span className="text-[10px] font-extrabold uppercase tracking-widest text-slate-500">Pending Review</span>
             <span className="text-amber-600 bg-amber-50 text-[10px] font-bold px-2 py-0.5 rounded-full border border-amber-100">Immediate Action</span>
@@ -112,7 +112,7 @@ export default function DailyReport({ applications }) {
           </div>
           <div className="mt-4 flex items-center justify-between">
             <span className="text-[9px] font-bold text-[#EF4444]">Requires manual validation</span>
-            <button className="text-[9px] font-extrabold bg-[#EF4444] hover:bg-red-600 text-white px-2 py-1 rounded shadow-xs uppercase">Review</button>
+            <button className="text-[9px] font-extrabold bg-[#EF4444] hover:bg-red-650 text-white px-2 py-1 rounded shadow-xs uppercase">Review</button>
           </div>
         </div>
       </div>

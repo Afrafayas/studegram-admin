@@ -34,9 +34,9 @@ export default function TodoList({ todoList, setTodoList }) {
   const completedCount = todoList.filter(t => t.completed).length;
 
   return (
-    <div className="flex-1 p-6 space-y-6 bg-[#F8FAFC]">
+    <div className="flex-1 p-6 space-y-6 bg-[#F0F2F5]">
       {/* Header */}
-      <div className="flex justify-between items-center bg-white border border-[#E2E8F0] p-6 rounded-2xl shadow-xs">
+      <div className="flex justify-between items-center bg-white border border-[#E2E8F0] border-t-4 border-t-[#D99A1C] p-6 rounded-2xl shadow-xs">
         <div className="space-y-1">
           <h1 className="text-xl font-black text-slate-900 tracking-tight">Operations To-do List</h1>
           <p className="text-xs text-slate-500 font-medium">Daily checklist tasks for application processors and super administrators.</p>
@@ -48,19 +48,19 @@ export default function TodoList({ todoList, setTodoList }) {
       </div>
 
       {/* Form Input & Checklist */}
-      <div className="bg-white border border-[#E2E8F0] rounded-2xl p-6 shadow-xs max-w-2xl space-y-6">
+      <div className="bg-white border border-[#E2E8F0] border-t-4 border-t-[#2563EB] rounded-2xl p-6 shadow-xs max-w-2xl space-y-6">
         <form onSubmit={handleAddTask} className="flex gap-2">
           <input
             type="text"
             required
             value={newTask}
             onChange={(e) => setNewTask(e.target.value)}
-            className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-xs font-semibold focus:outline-none focus:bg-white focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all text-slate-950"
+            className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-xs font-semibold focus:outline-none focus:bg-white focus:border-[#D99A1C] focus:ring-1 focus:ring-[#D99A1C] transition-all text-slate-950"
             placeholder="Add a new checklist operations task..."
           />
           <button
             type="submit"
-            className="bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold text-xs px-5 py-2.5 rounded-xl transition-all shadow-md shrink-0 uppercase tracking-wider"
+            className="bg-[#D99A1C] hover:bg-[#F5B025] text-white font-extrabold text-xs px-5 py-2.5 rounded-xl transition-all shadow-md shrink-0 uppercase tracking-wider"
           >
             Add Task
           </button>
@@ -74,7 +74,7 @@ export default function TodoList({ todoList, setTodoList }) {
                 className={`flex items-center justify-between p-3.5 border rounded-xl transition-all ${
                   item.completed 
                     ? 'bg-slate-50 border-slate-100 opacity-60' 
-                    : 'bg-white border-slate-200 hover:border-indigo-200'
+                    : 'bg-white border-slate-200 hover:border-[#D99A1C]/40'
                 }`}
               >
                 <div className="flex items-center gap-3 select-none flex-1">
@@ -82,7 +82,7 @@ export default function TodoList({ todoList, setTodoList }) {
                     type="checkbox"
                     checked={item.completed}
                     onChange={() => toggleTask(item.id)}
-                    className="w-4.5 h-4.5 text-indigo-600 border-slate-300 rounded focus:ring-indigo-500 cursor-pointer"
+                    className="w-4.5 h-4.5 text-[#D99A1C] border-slate-300 rounded focus:ring-[#D99A1C] cursor-pointer"
                   />
                   <span className={`text-xs font-semibold ${
                     item.completed ? 'line-through text-slate-400 font-medium' : 'text-slate-950 font-bold'

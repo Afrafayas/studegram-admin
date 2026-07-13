@@ -39,16 +39,16 @@ export default function AdminReport({ applications }) {
   };
 
   return (
-    <div className="flex-1 p-6 space-y-6 bg-[#F8FAFC]">
+    <div className="flex-1 p-6 space-y-6 bg-[#F0F2F5]">
       {/* Header */}
-      <div className="flex justify-between items-center bg-white border border-[#E2E8F0] p-6 rounded-2xl shadow-xs">
+      <div className="flex justify-between items-center bg-white border border-[#E2E8F0] border-t-4 border-t-[#D99A1C] p-6 rounded-2xl shadow-xs">
         <div className="space-y-1">
           <h1 className="text-xl font-black text-slate-900 tracking-tight">Admin-Report Generator</h1>
           <p className="text-xs text-slate-500 font-medium">Query B2B referrals and filter details by university, course, and agent channel.</p>
         </div>
         <button
           onClick={handleExport}
-          className="bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold text-xs px-4 py-2 rounded-xl transition-all shadow-md inline-flex items-center gap-1.5"
+          className="bg-[#D99A1C] hover:bg-[#F5B025] text-white font-extrabold text-xs px-4 py-2 rounded-xl transition-all shadow-md inline-flex items-center gap-1.5"
         >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
@@ -58,13 +58,13 @@ export default function AdminReport({ applications }) {
       </div>
 
       {/* Query Filters */}
-      <div className="bg-white border border-[#E2E8F0] rounded-2xl p-5 shadow-xs grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="bg-white border border-[#E2E8F0] border-t-4 border-t-[#2563EB] rounded-2xl p-5 shadow-xs grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="space-y-1.5">
           <label className="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">Referral Agent</label>
           <select 
             value={selectedAgent} 
             onChange={(e) => setSelectedAgent(e.target.value)}
-            className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-semibold focus:outline-none focus:bg-white focus:ring-1 focus:ring-indigo-500"
+            className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-semibold focus:outline-none focus:bg-white focus:ring-1 focus:ring-[#D99A1C] focus:border-[#D99A1C]"
           >
             <option value="All">All Agents</option>
             <option value="Salman">Salman</option>
@@ -78,7 +78,7 @@ export default function AdminReport({ applications }) {
           <select 
             value={selectedUniversity} 
             onChange={(e) => setSelectedUniversity(e.target.value)}
-            className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-semibold focus:outline-none focus:bg-white focus:ring-1 focus:ring-indigo-500"
+            className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-semibold focus:outline-none focus:bg-white focus:ring-1 focus:ring-[#D99A1C] focus:border-[#D99A1C]"
           >
             <option value="All">All Universities</option>
             <option value="Surrey">University of Surrey</option>
@@ -93,7 +93,7 @@ export default function AdminReport({ applications }) {
           <select 
             value={selectedCourse} 
             onChange={(e) => setSelectedCourse(e.target.value)}
-            className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-semibold focus:outline-none focus:bg-white focus:ring-1 focus:ring-indigo-500"
+            className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-semibold focus:outline-none focus:bg-white focus:ring-1 focus:ring-[#D99A1C] focus:border-[#D99A1C]"
           >
             <option value="All">All Courses</option>
             <option value="Hotel">MSc International Hotel Management</option>
@@ -105,7 +105,7 @@ export default function AdminReport({ applications }) {
       </div>
 
       {/* Query Results Table */}
-      <div className="bg-white border border-[#E2E8F0] rounded-2xl shadow-xs overflow-hidden">
+      <div className="bg-white border border-[#E2E8F0] border-t-4 border-t-[#D99A1C] rounded-2xl shadow-xs overflow-hidden">
         <div className="px-6 py-4 border-b border-[#E2E8F0] flex justify-between items-center">
           <h2 className="text-xs font-black text-slate-900 uppercase tracking-wider">Query Results ({filteredApps.length} entries)</h2>
           <span className="text-[10px] font-bold text-slate-400">Filters: Agent={selectedAgent}, Univ={selectedUniversity}, Course={selectedCourse}</span>
@@ -127,7 +127,7 @@ export default function AdminReport({ applications }) {
               <tbody className="divide-y divide-slate-100 text-xs font-semibold text-slate-700">
                 {filteredApps.map((app) => (
                   <tr key={app.camsId} className="hover:bg-[#F8FAFC] transition-colors duration-100">
-                    <td className="px-6 py-4 font-bold text-indigo-600">{app.camsId}</td>
+                    <td className="px-6 py-4 font-bold text-[#2563EB]">{app.camsId}</td>
                     <td className="px-6 py-4 text-slate-950 font-black">{app.name}</td>
                     <td className="px-6 py-4">{app.agent}</td>
                     <td className="px-6 py-4">{app.university}</td>

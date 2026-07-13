@@ -20,24 +20,38 @@ export default function SalesOrderTourist() {
       {/* Grid of Tourist Packages */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {packages.map((pkg) => (
-          <div key={pkg.id} className="bg-white border border-[#E2E8F0] rounded-2xl overflow-hidden flex flex-col justify-between hover:shadow-lg transition-all duration-200 group hover:border-indigo-300">
-            <div className="p-6 space-y-3">
-              <div className="flex justify-between items-start">
-                <span className="text-[10px] font-extrabold text-[#6366F1] bg-indigo-50 border border-indigo-100 rounded-full px-2 py-0.5 uppercase tracking-wider">{pkg.duration}</span>
-                <span className="text-sm font-black text-slate-900">{pkg.price}</span>
+          <div key={pkg.id} className={`bg-white border border-[#E2E8F0] rounded-2xl overflow-hidden flex flex-col justify-between hover:shadow-lg transition-all duration-200 group border-t-4 ${pkg.id % 2 === 1 ? 'border-t-[#D99A1C]' : 'border-t-[#2563EB]'}`}>
+            <div className="h-24 bg-slate-950 p-4 flex flex-col justify-between border-b border-slate-900 text-white">
+              <div className="flex justify-between items-center">
+                <span className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full border uppercase tracking-wider ${
+                  pkg.id % 2 === 1 
+                    ? 'text-[#F5B025] bg-[#F5B025]/10 border-[#F5B025]/20' 
+                    : 'text-blue-400 bg-blue-500/10 border-blue-500/20'
+                }`}>{pkg.duration}</span>
+                <div className="w-10 h-10 rounded-full bg-white/10 border border-white/15 flex items-center justify-center text-xs font-extrabold text-white select-none shrink-0">
+                  {pkg.name.split(' ').map(n=>n[0]).join('')}
+                </div>
               </div>
-              <h3 className="text-sm font-black text-slate-950 uppercase tracking-tight group-hover:text-[#6366F1] transition-colors">{pkg.name}</h3>
-              <p className="text-[11px] text-slate-400 font-bold">{pkg.locations}</p>
-              <p className="text-[11px] text-slate-600 font-semibold leading-relaxed pt-2">{pkg.desc}</p>
+              <div className="flex justify-between items-end gap-2">
+                <h3 className="text-xs font-black uppercase tracking-tight text-white truncate max-w-[150px]">{pkg.name}</h3>
+                <span className={`text-xs font-black ${pkg.id % 2 === 1 ? 'text-[#F5B025]' : 'text-blue-400'}`}>{pkg.price}</span>
+              </div>
             </div>
-            
-            <div className="p-6 pt-0">
-              <button 
-                onClick={() => alert(`Initiating sales request details for ${pkg.name}...`)}
-                className="w-full bg-slate-50 hover:bg-indigo-600 text-slate-700 hover:text-white font-extrabold text-xs py-2.5 rounded-xl border border-slate-200 hover:border-indigo-600 transition-all uppercase tracking-wider shadow-2xs"
-              >
-                Inquire Package
-              </button>
+
+            <div className="p-4 flex-1 flex flex-col justify-between space-y-3">
+              <div>
+                <p className="text-[10px] text-slate-400 font-extrabold uppercase tracking-wider">{pkg.locations}</p>
+                <p className="text-[11px] text-slate-600 font-semibold leading-relaxed pt-1.5">{pkg.desc}</p>
+              </div>
+              
+              <div className="pt-2">
+                <button 
+                  onClick={() => alert(`Initiating sales request details for ${pkg.name}...`)}
+                  className="w-full bg-white border border-slate-200 hover:border-slate-300 hover:bg-slate-50 text-slate-700 text-xs font-bold py-2.5 rounded-xl transition-all uppercase tracking-wider"
+                >
+                  Inquire Package
+                </button>
+              </div>
             </div>
           </div>
         ))}
