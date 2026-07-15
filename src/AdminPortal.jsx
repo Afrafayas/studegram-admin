@@ -123,6 +123,19 @@ export default function AdminPortal({ onLogout }) {
     'Master Degree'
   ]);
 
+  const [verificationDocuments, setVerificationDocuments] = useState([
+    'Basic Passport Copy',
+    'English Proficiency Result',
+    'Academic Reference Letter',
+    'Statement of Purpose (SOP)'
+  ]);
+
+  const [stagedActions, setStagedActions] = useState([
+    'Send Automated Verification Email',
+    'Assign Visa Coordinator',
+    'Generate Admission Invoice'
+  ]);
+
   const [todoList, setTodoList] = useState([
     { id: 1, task: 'Verify Shanto Shaju passport document', completed: false },
     { id: 2, task: 'Send email invitation to referral agent Salman', completed: true }
@@ -249,6 +262,7 @@ export default function AdminPortal({ onLogout }) {
       return (
         <SettingsPortal 
           activeSubTab={activeSubTab}
+          setActiveSubTab={setActiveSubTab}
           universities={universities} setUniversities={setUniversities}
           courses={courses} setCourses={setCourses}
           intakes={intakes} setIntakes={setIntakes}
@@ -257,6 +271,8 @@ export default function AdminPortal({ onLogout }) {
           referralAgents={referralAgents} setReferralAgents={setReferralAgents}
           stages={stages} setStages={setStages}
           qualifications={qualifications} setQualifications={setQualifications}
+          verificationDocuments={verificationDocuments} setVerificationDocuments={setVerificationDocuments}
+          stagedActions={stagedActions} setStagedActions={setStagedActions}
         />
       );
     }

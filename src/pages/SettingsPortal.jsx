@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
+import { useAuth } from '../context/AuthContext';
 
 export default function SettingsPortal({ 
   activeSubTab,
+  setActiveSubTab,
   universities, setUniversities,
   courses, setCourses,
   intakes, setIntakes,
@@ -9,7 +11,9 @@ export default function SettingsPortal({
   courseDocuments, setCourseDocuments,
   referralAgents, setReferralAgents,
   stages, setStages,
-  qualifications, setQualifications
+  qualifications, setQualifications,
+  verificationDocuments, setVerificationDocuments,
+  stagedActions, setStagedActions
 }) {
   const { currentUser, addAuditLog } = useAuth();
   const isWritable = currentUser?.role === 'Director';
@@ -139,7 +143,7 @@ export default function SettingsPortal({
               <h2 className="text-xs font-black text-slate-900 uppercase tracking-wider">Course Documents Configuration</h2>
               <button
                 onClick={() => openAddModal('doc')}
-                className="bg-[#D99A1C] hover:bg-[#F5B025] text-white font-extrabold text-[10px] px-3.5 py-2 rounded-xl transition-all shadow-md uppercase tracking-wider"
+                className="bg-[#D99A1C] hover:bg-[#F5B025] text-white font-extrabold text-[10px] px-3.5 py-2 rounded-xl transition-all shadow-md uppercase tracking-wider cursor-pointer"
               >
                 Add New Document Rule
               </button>
@@ -167,8 +171,8 @@ export default function SettingsPortal({
                       <td className="px-6 py-4 text-slate-500">{doc.maxSize} MB</td>
                       <td className="px-6 py-4 text-right">
                         <button 
-                          onClick={() => handleDeleteDoc(doc.siNo)}
-                          className="text-rose-600 hover:text-rose-900 font-bold"
+                          onClick={() => handleDeleteDoc(doc.siNo, doc.name)}
+                          className="text-rose-600 hover:text-rose-900 font-bold cursor-pointer"
                         >
                           Delete
                         </button>
@@ -188,7 +192,7 @@ export default function SettingsPortal({
               <h2 className="text-xs font-black text-slate-900 uppercase tracking-wider">B2B Referral Agents</h2>
               <button
                 onClick={() => openAddModal('agent')}
-                className="bg-[#D99A1C] hover:bg-[#F5B025] text-white font-extrabold text-[10px] px-3.5 py-2 rounded-xl transition-all shadow-md uppercase tracking-wider"
+                className="bg-[#D99A1C] hover:bg-[#F5B025] text-white font-extrabold text-[10px] px-3.5 py-2 rounded-xl transition-all shadow-md uppercase tracking-wider cursor-pointer"
               >
                 Invite/Add Agent
               </button>
@@ -212,8 +216,8 @@ export default function SettingsPortal({
                       <td className="px-6 py-4 text-[#2563EB] font-bold">{agent.email}</td>
                       <td className="px-6 py-4 text-right">
                         <button 
-                          onClick={() => handleDeleteAgent(agent.siNo)}
-                          className="text-rose-600 hover:text-rose-900 font-bold"
+                          onClick={() => handleDeleteAgent(agent.siNo, agent.agentName)}
+                          className="text-rose-600 hover:text-rose-900 font-bold cursor-pointer"
                         >
                           Revoke Access
                         </button>
@@ -236,7 +240,7 @@ export default function SettingsPortal({
               </div>
               <button
                 onClick={() => openAddModal('stage')}
-                className="bg-[#D99A1C] hover:bg-[#F5B025] text-white font-extrabold text-[10px] px-3.5 py-2 rounded-xl transition-all shadow-md uppercase tracking-wider"
+                className="bg-[#D99A1C] hover:bg-[#F5B025] text-white font-extrabold text-[10px] px-3.5 py-2 rounded-xl transition-all shadow-md uppercase tracking-wider cursor-pointer"
               >
                 Add Stage
               </button>
@@ -259,22 +263,74 @@ export default function SettingsPortal({
                     <button 
                       onClick={() => moveStage(idx, 'up')}
                       disabled={idx === 0}
-                      className="p-1.5 bg-white text-slate-400 hover:text-slate-950 border border-slate-200 rounded-lg hover:shadow-2xs disabled:opacity-30 disabled:pointer-events-none"
+                      className="p-1.5 bg-white text-slate-400 hover:text-slate-950 border border-slate-200 rounded-lg hover:shadow-2xs disabled:opacity-30 disabled:pointer-events-none cursor-pointer"
                     >
                       ▲
                     </button>
                     <button 
                       onClick={() => moveStage(idx, 'down')}
                       disabled={idx === stages.length - 1}
-                      className="p-1.5 bg-white text-slate-400 hover:text-slate-950 border border-slate-200 rounded-lg hover:shadow-2xs disabled:opacity-30 disabled:pointer-events-none"
+                      className="p-1.5 bg-white text-slate-400 hover:text-slate-950 border border-slate-200 rounded-lg hover:shadow-2xs disabled:opacity-30 disabled:pointer-events-none cursor-pointer"
                     >
                       ▼
                     </button>
                     <button 
-                      onClick={() => handleDeleteItem(stage, setStages)}
-                      className="p-1.5 bg-rose-50 hover:bg-rose-100 text-rose-500 rounded-lg"
+                      onClick={() => handleDeleteItem(stage, setStages, 'stage')}
+                      className="p-1.5 bg-rose-50 hover:bg-rose-100 text-rose-500 rounded-lg cursor-pointer"
                     >
                       ✕
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+
+      case null:
+      case undefined:
+      case '':
+        const configCards = [
+          { id: 'settings-university', title: 'Universities Directory', desc: 'Configure partner institutions, logos, and regional parameters.', count: universities.length, icon: '🏛️' },
+          { id: 'settings-course', title: 'Academic Programs', desc: 'Add or modify degrees, course codes, and catalog details.', count: courses.length, icon: '🎓' },
+          { id: 'settings-intake', title: 'Intake Seasons', desc: 'Define active application calendar seasons and milestones.', count: intakes.length, icon: '📅' },
+          { id: 'settings-formats', title: 'Allowed Extensions', desc: 'Restrict candidate documents to specific file types.', count: fileFormats.length, icon: '📎' },
+          { id: 'settings-course-docs', title: 'Document Checklist Rules', desc: 'Define naming structures and size parameters for certificates.', count: courseDocuments.length, icon: '📑' },
+          { id: 'settings-documents', title: 'Verification Requirements', desc: 'Manage dynamic student core compliance documents checklists.', count: verificationDocuments?.length || 0, icon: '✔️' },
+          { id: 'settings-agent', title: 'Referral Agent Channels', desc: 'Authorize agent access credentials and track channels.', count: referralAgents.length, icon: '🤝' },
+          { id: 'settings-stages', title: 'Stages Pipeline', desc: 'Customize application stages and operational status names.', count: stages.length, icon: '🔄' },
+          { id: 'settings-actions', title: 'Staged Actions', desc: 'Configure tasks triggered upon stage modifications.', count: stagedActions?.length || 0, icon: '⚡' },
+          { id: 'settings-qualifications', title: 'Qualification Levels', desc: 'Modify accepted qualification tiers and criteria.', count: qualifications.length, icon: '🏫' }
+        ];
+
+        return (
+          <div className="space-y-6">
+            <div className="bg-white border border-[#E2E8F0] border-t-4 border-t-[#D99A1C] p-6 rounded-2xl shadow-xs">
+              <h2 className="text-sm font-black text-slate-900 uppercase tracking-wider">System Settings Directory</h2>
+              <p className="text-xs text-slate-500 font-semibold mt-1">Select a settings card below to customize active portal configurations, workflows, and master metadata lists.</p>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+              {configCards.map((card) => (
+                <div key={card.id} className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-xs flex flex-col justify-between hover:border-[#D99A1C] transition-all group hover:shadow-sm">
+                  <div className="space-y-2">
+                    <div className="flex justify-between items-start">
+                      <span className="text-2xl">{card.icon}</span>
+                      <span className="px-2 py-0.5 bg-slate-100 border border-slate-200 text-slate-500 rounded-full text-[9px] font-bold">
+                        {card.count} Items
+                      </span>
+                    </div>
+                    <div>
+                      <h3 className="text-xs font-black text-slate-900 uppercase tracking-tight group-hover:text-[#D99A1C] transition-colors">{card.title}</h3>
+                      <p className="text-[11px] text-slate-400 font-medium mt-1 leading-relaxed">{card.desc}</p>
+                    </div>
+                  </div>
+                  <div className="pt-4 border-t border-slate-50 mt-4">
+                    <button
+                      onClick={() => setActiveSubTab && setActiveSubTab(card.id)}
+                      className="w-full bg-slate-50 border border-slate-200 hover:bg-slate-100 text-slate-700 text-[10px] font-extrabold py-2 rounded-xl transition-all uppercase tracking-wider cursor-pointer"
+                    >
+                      Open Configuration
                     </button>
                   </div>
                 </div>
@@ -293,13 +349,13 @@ export default function SettingsPortal({
         if (activeSubTab === 'settings-university') {
           list = universities;
           listSetter = setUniversities;
-          title = 'Universities Config';
+          title = 'Universities Master List';
           addLabel = 'Add University';
           inputPlaceholder = 'e.g. University of Exeter';
         } else if (activeSubTab === 'settings-course') {
           list = courses;
           listSetter = setCourses;
-          title = 'Courses Config';
+          title = 'Courses Master List';
           addLabel = 'Add Academic Course';
           inputPlaceholder = 'e.g. MBA General Management';
         } else if (activeSubTab === 'settings-intake') {
@@ -320,11 +376,18 @@ export default function SettingsPortal({
           title = 'Qualifications Level';
           addLabel = 'Add Qualification Tier';
           inputPlaceholder = 'e.g. Diploma';
-        } else if (activeSubTab === 'settings-documents' || activeSubTab === 'settings-actions') {
-          list = ['Basic Passport Copy', 'English Proficiency Result'];
-          title = 'Verification Requirements';
-          addLabel = 'Add Custom Item';
-          inputPlaceholder = 'Enter label';
+        } else if (activeSubTab === 'settings-documents') {
+          list = verificationDocuments;
+          listSetter = setVerificationDocuments;
+          title = 'Verification Checklist Documents';
+          addLabel = 'Add Document Requirement';
+          inputPlaceholder = 'e.g. Statement of Purpose (SOP)';
+        } else if (activeSubTab === 'settings-actions') {
+          list = stagedActions;
+          listSetter = setStagedActions;
+          title = 'Staged Automation Actions';
+          addLabel = 'Add Automation Action';
+          inputPlaceholder = 'e.g. Send SMS Welcome Template';
         }
 
         return (
@@ -334,7 +397,7 @@ export default function SettingsPortal({
               {listSetter && (
                 <button
                   onClick={() => openAddModal(activeSubTab)}
-                  className="bg-[#D99A1C] hover:bg-[#F5B025] text-white font-extrabold text-[10px] px-3.5 py-2 rounded-xl transition-all shadow-md uppercase tracking-wider"
+                  className="bg-[#D99A1C] hover:bg-[#F5B025] text-white font-extrabold text-[10px] px-3.5 py-2 rounded-xl transition-all shadow-md uppercase tracking-wider cursor-pointer"
                 >
                   {addLabel}
                 </button>
@@ -347,8 +410,8 @@ export default function SettingsPortal({
                   <span className="text-xs font-bold text-slate-800">{item}</span>
                   {listSetter && (
                     <button
-                      onClick={() => handleDeleteItem(item, listSetter)}
-                      className="text-rose-500 hover:text-rose-700 font-extrabold text-xs"
+                      onClick={() => handleDeleteItem(item, listSetter, activeSubTab.replace('settings-', ''))}
+                      className="text-rose-500 hover:text-rose-700 font-extrabold text-xs cursor-pointer"
                     >
                       Delete
                     </button>
@@ -427,7 +490,7 @@ export default function SettingsPortal({
                     <label className="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">Max Size (MB)</label>
                     <input
                       type="number"
-                      step="1"
+                      step="0.01"
                       required
                       value={docMaxSize}
                       onChange={(e) => setDocMaxSize(e.target.value)}
@@ -476,7 +539,7 @@ export default function SettingsPortal({
             )}
 
             {modalType === 'stage' && (
-              <form onSubmit={(e) => handleAddSimpleItem(e, setStages, stages)} className="space-y-4">
+              <form onSubmit={(e) => handleAddSimpleItem(e, setStages, stages, 'stage')} className="space-y-4">
                 <div className="space-y-1.5">
                   <label className="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">Stage Label</label>
                   <input
@@ -501,12 +564,15 @@ export default function SettingsPortal({
                 onSubmit={(e) => {
                   let setter = null;
                   let lst = [];
-                  if (modalType === 'settings-university') { setter = setUniversities; lst = universities; }
-                  if (modalType === 'settings-course') { setter = setCourses; lst = courses; }
-                  if (modalType === 'settings-intake') { setter = setIntakes; lst = intakes; }
-                  if (modalType === 'settings-formats') { setter = setFileFormats; lst = fileFormats; }
-                  if (modalType === 'settings-qualifications') { setter = setQualifications; lst = qualifications; }
-                  handleAddSimpleItem(e, setter, lst);
+                  let lbl = '';
+                  if (modalType === 'settings-university') { setter = setUniversities; lst = universities; lbl = 'university'; }
+                  if (modalType === 'settings-course') { setter = setCourses; lst = courses; lbl = 'course'; }
+                  if (modalType === 'settings-intake') { setter = setIntakes; lst = intakes; lbl = 'intake'; }
+                  if (modalType === 'settings-formats') { setter = setFileFormats; lst = fileFormats; lbl = 'formats'; }
+                  if (modalType === 'settings-qualifications') { setter = setQualifications; lst = qualifications; lbl = 'qualifications'; }
+                  if (modalType === 'settings-documents') { setter = setVerificationDocuments; lst = verificationDocuments; lbl = 'documents'; }
+                  if (modalType === 'settings-actions') { setter = setStagedActions; lst = stagedActions; lbl = 'actions'; }
+                  handleAddSimpleItem(e, setter, lst, lbl);
                 }} 
                 className="space-y-4"
               >
