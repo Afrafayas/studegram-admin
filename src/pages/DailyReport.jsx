@@ -1,13 +1,17 @@
 import React, { useState } from 'react';
+import { useAuth } from '../context/AuthContext';
 
 export default function DailyReport({ applications }) {
+  const { currentUser } = useAuth();
   const [hoveredBarIndex, setHoveredBarIndex] = useState(null);
   const [hoveredPoint, setHoveredPoint] = useState(null);
 
-  const totalAppsToday = applications ? applications.length + 40 : 42;
-  const activeLeads = 318;
-  const successRate = "94.2%";
-  const pendingVerification = 18;
+  // Compute stats dynamically based on scoped applications to demonstrate RBAC scoping
+  const isGlobal = ['Director', 'COO', 'Finance'].includes(currentUser?.role);
+  const totalAppsToday = applications ? (isGlobal ? applications.length + 39 : applications.length) : 0;
+  const activeLeads = isGlobal ? 318 : (currentUser?.role === 'Country Head' ? 84 : 12);
+  const successRate = isGlobal ? "94.2%" : "96.5%";
+  const pendingVerification = applications ? applications.filter(a => a.secondaryStatus === 'Pending' || a.secondaryStatus === 'Document Verification').length : 0;
 
   const timelineData = [
     { day: 'Wed', count: 12 },
@@ -39,13 +43,76 @@ export default function DailyReport({ applications }) {
   const linePath = points.map((p, idx) => `${idx === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ');
   const areaPath = `${linePath} L ${points[points.length - 1].x} ${height - padding} L ${points[0].x} ${height - padding} Z`;
 
+  if (currentUser?.role === 'Finance') {
+    return (
+      <div className="flex-1 p-6 space-y-6 bg-[#F8FAFC]">
+        {/* Welcome Banner */}
+        <div className="flex justify-between items-center bg-white border border-[#E2E8F0] p-6 rounded-2xl shadow-xs">
+          <div className="space-y-1">
+            <h1 className="text-xl font-black text-slate-900 tracking-tight">Financial Operations Console</h1>
+            <p className="text-xs text-slate-500 font-semibold">
+              Logged in as <span className="text-emerald-600 font-extrabold">{currentUser?.role}</span> (Scope: {currentUser?.country}/{currentUser?.team})
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="h-2 w-2 bg-emerald-500 rounded-full animate-ping"></span>
+            <span className="text-[10px] text-emerald-500 font-extrabold uppercase tracking-wider">Financial Scoping</span>
+          </div>
+        </div>
+
+        {/* Finance Metric Cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="bg-white border border-[#E2E8F0] border-t-4 border-t-indigo-500 rounded-2xl p-5 shadow-xs flex flex-col justify-between">
+            <span className="text-[10px] font-extrabold uppercase tracking-widest text-slate-400">Total volume tracked</span>
+            <div className="mt-4 flex items-baseline gap-2">
+              <span className="text-2xl font-black text-slate-900 tracking-tight">£86,500</span>
+              <span className="text-[9px] font-bold text-slate-400 uppercase">GBP</span>
+            </div>
+          </div>
+          <div className="bg-white border border-[#E2E8F0] border-t-4 border-t-emerald-500 rounded-2xl p-5 shadow-xs flex flex-col justify-between">
+            <span className="text-[10px] font-extrabold uppercase tracking-widest text-slate-400">Paid Commissions</span>
+            <div className="mt-4 flex items-baseline gap-2">
+              <span className="text-2xl font-black text-slate-900 tracking-tight">£2,775</span>
+              <span className="text-[9px] font-bold text-emerald-500 uppercase">Cleared</span>
+            </div>
+          </div>
+          <div className="bg-white border border-[#E2E8F0] border-t-4 border-t-amber-500 rounded-2xl p-5 shadow-xs flex flex-col justify-between">
+            <span className="text-[10px] font-extrabold uppercase tracking-widest text-slate-400">Pending Payables</span>
+            <div className="mt-4 flex items-baseline gap-2">
+              <span className="text-2xl font-black text-slate-900 tracking-tight">£3,460</span>
+              <span className="text-[9px] font-bold text-amber-500 uppercase">In Pipeline</span>
+            </div>
+          </div>
+          <div className="bg-white border border-[#E2E8F0] border-t-4 border-t-rose-500 rounded-2xl p-5 shadow-xs flex flex-col justify-between">
+            <span className="text-[10px] font-extrabold uppercase tracking-widest text-slate-400">Disputed/Under Review</span>
+            <div className="mt-4 flex items-baseline gap-2">
+              <span className="text-2xl font-black text-slate-900 tracking-tight">£2,640</span>
+              <span className="text-[9px] font-bold text-rose-500 uppercase">Held</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Finance Info Card */}
+        <div className="bg-white border border-[#E2E8F0] rounded-2xl p-8 text-center max-w-md mx-auto shadow-sm space-y-4">
+          <span className="text-4xl">📊</span>
+          <h2 className="text-sm font-black text-slate-900 uppercase">Financial Management Hub</h2>
+          <p className="text-xs text-slate-500 font-semibold leading-relaxed">
+            As a member of the Finance Team, your dashboard displays only financial analytics and commission payouts. Use the sidebar to go to Commission Management to approve agent invoices and export financial CSV statements.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex-1 p-6 space-y-6 bg-[#F8FAFC]">
       {/* Welcome Banner */}
       <div className="flex justify-between items-center bg-white border border-[#E2E8F0] p-6 rounded-2xl shadow-xs">
         <div className="space-y-1">
-          <h1 className="text-xl font-black text-slate-900 tracking-tight">Daily Operations Report</h1>
-          <p className="text-xs text-slate-500 font-medium">Real-time performance analytics and application statistics</p>
+          <h1 className="text-xl font-black text-slate-900 tracking-tight">Welcome back, {currentUser?.name}!</h1>
+          <p className="text-xs text-slate-500 font-semibold">
+            Logged in as <span className="text-[#D99A1C] font-extrabold">{currentUser?.role}</span> (Scope: {currentUser?.country}/{currentUser?.team})
+          </p>
         </div>
         <div className="flex items-center gap-2">
           <span className="h-2 w-2 bg-[#10B981] rounded-full animate-ping"></span>

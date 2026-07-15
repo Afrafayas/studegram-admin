@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useAuth } from '../context/AuthContext';
 
 export default function AdminSidebar({ 
   activeTab, 
@@ -9,6 +10,7 @@ export default function AdminSidebar({
   isOpen,
   onClose
 }) {
+  const { currentUser, hasPermission } = useAuth();
   const [salesOrderOpen, setSalesOrderOpen] = useState(true);
   const [settingsOpen, setSettingsOpen] = useState(true);
   const [adminReportsOpen, setAdminReportsOpen] = useState(false);
@@ -69,201 +71,245 @@ export default function AdminSidebar({
             </button>
 
             {/* Admin-Report Collapsible */}
-            <div>
-              <button
-                onClick={() => setAdminReportsOpen(!adminReportsOpen)}
-                className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-left text-xs font-semibold transition-all duration-150 ${
-                  activeTab === 'admin-report' ? 'text-white font-bold bg-[#161622]/40' : 'hover:bg-[#161622]/50 hover:text-white'
-                }`}
-              >
-                <div className="flex items-center gap-3">
-                  <svg className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.907c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.907a1 1 0 00.95-.69l1.519-4.674z" />
+            {(currentUser.role === 'Director' || currentUser.role === 'COO' || currentUser.role === 'Country Head') && (
+              <div>
+                <button
+                  onClick={() => setAdminReportsOpen(!adminReportsOpen)}
+                  className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-left text-xs font-semibold transition-all duration-150 ${
+                    activeTab === 'admin-report' ? 'text-white font-bold bg-[#161622]/40' : 'hover:bg-[#161622]/50 hover:text-white'
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <svg className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.907c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.907a1 1 0 00.95-.69l1.519-4.674z" />
+                    </svg>
+                    <span>Admin-Report</span>
+                  </div>
+                  <svg className={`w-3.5 h-3.5 transform transition-transform duration-200 ${adminReportsOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
                   </svg>
-                  <span>Admin-Report</span>
-                </div>
-                <svg className={`w-3.5 h-3.5 transform transition-transform duration-200 ${adminReportsOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
-                </svg>
-              </button>
+                </button>
 
-              {adminReportsOpen && (
-                <div className="pl-7 mt-1.5 space-y-1 border-l border-slate-800 ml-5">
-                  <button
-                    onClick={() => handleSubTabClick('admin-report', 'report-agent')}
-                    className={`w-full text-left py-2 px-3 text-[11px] font-semibold rounded-md transition-colors ${
-                      activeTab === 'admin-report' && activeSubTab === 'report-agent'
-                        ? 'text-[#F5B025] bg-[#161622]/60 font-bold'
-                        : 'text-slate-400 hover:text-white hover:bg-[#161622]/30'
-                    }`}
-                  >
-                    Report by Agent
-                  </button>
-                  <button
-                    onClick={() => handleSubTabClick('admin-report', 'report-university')}
-                    className={`w-full text-left py-2 px-3 text-[11px] font-semibold rounded-md transition-colors ${
-                      activeTab === 'admin-report' && activeSubTab === 'report-university'
-                        ? 'text-[#F5B025] bg-[#161622]/60 font-bold'
-                        : 'text-slate-400 hover:text-white hover:bg-[#161622]/30'
-                    }`}
-                  >
-                    Report by University
-                  </button>
-                  <button
-                    onClick={() => handleSubTabClick('admin-report', 'report-course')}
-                    className={`w-full text-left py-2 px-3 text-[11px] font-semibold rounded-md transition-colors ${
-                      activeTab === 'admin-report' && activeSubTab === 'report-course'
-                        ? 'text-[#F5B025] bg-[#161622]/60 font-bold'
-                        : 'text-slate-400 hover:text-white hover:bg-[#161622]/30'
-                    }`}
-                  >
-                    Report by Course
-                  </button>
-                </div>
-              )}
-            </div>
-
-            {/* Partners */}
-            <button
-              onClick={() => handleTabClick('partners')}
-              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left text-xs font-semibold transition-all duration-150 ${
-                activeTab === 'partners' && !activeSubTab
-                  ? 'bg-[#161622] text-white border-l-2 border-[#D99A1C] pl-2.5'
-                  : 'hover:bg-[#161622]/50 hover:text-white'
-              }`}
-            >
-              <svg className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-              </svg>
-              <span>Partners</span>
-            </button>
-
-            {/* Students */}
-            <button
-              onClick={() => handleTabClick('students')}
-              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left text-xs font-semibold transition-all duration-150 ${
-                activeTab === 'students' && !activeSubTab
-                  ? 'bg-[#161622] text-white border-l-2 border-[#D99A1C] pl-2.5'
-                  : 'hover:bg-[#161622]/50 hover:text-white'
-              }`}
-            >
-              <svg className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 14l9-5-9-5-9 5 9 5z" />
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 14l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14z" />
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 14v6" />
-              </svg>
-              <span>Students</span>
-            </button>
-
-            {/* Staff */}
-            <button
-              onClick={() => handleTabClick('staff')}
-              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left text-xs font-semibold transition-all duration-150 ${
-                activeTab === 'staff' && !activeSubTab
-                  ? 'bg-[#161622] text-white border-l-2 border-[#D99A1C] pl-2.5'
-                  : 'hover:bg-[#161622]/50 hover:text-white'
-              }`}
-            >
-              <svg className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
-              </svg>
-              <span>Staff Management</span>
-            </button>
-
-            {/* Sales Order Dropdown */}
-            <div>
-              <button
-                onClick={() => setSalesOrderOpen(!salesOrderOpen)}
-                className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-left text-xs font-semibold transition-all duration-150 ${
-                  activeTab === 'sales-order' ? 'text-white font-bold bg-[#161622]/40' : 'hover:bg-[#161622]/50 hover:text-white'
-                }`}
-              >
-                <div className="flex items-center gap-3">
-                  <svg className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
-                  </svg>
-                  <span>Sales Order</span>
-                </div>
-                <svg className={`w-3.5 h-3.5 transform transition-transform duration-200 ${salesOrderOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
-                </svg>
-              </button>
-
-              {salesOrderOpen && (
-                <div className="pl-7 mt-1.5 space-y-1 border-l border-slate-800 ml-5">
-                  <button
-                    onClick={() => handleSubTabClick('sales-order', 'tourist-package')}
-                    className={`w-full text-left py-2 px-3 text-[11px] font-semibold rounded-md transition-colors ${
-                      activeTab === 'sales-order' && activeSubTab === 'tourist-package'
-                        ? 'text-[#F5B025] bg-[#161622]/60 font-bold'
-                        : 'text-slate-400 hover:text-white hover:bg-[#161622]/30'
-                    }`}
-                  >
-                    Tourist Package
-                  </button>
-                  <button
-                    onClick={() => handleSubTabClick('sales-order', 'study')}
-                    className={`w-full text-left py-2 px-3 text-[11px] font-semibold rounded-md transition-colors ${
-                      activeTab === 'sales-order' && activeSubTab === 'study'
-                        ? 'text-[#F5B025] bg-[#161622]/60 font-bold'
-                        : 'text-slate-400 hover:text-white hover:bg-[#161622]/30'
-                    }`}
-                  >
-                    Study (Apply)
-                  </button>
-                </div>
-              )}
-            </div>
-
-            {/* Application Portal Settings Dropdown */}
-            <div>
-              <button
-                onClick={() => setSettingsOpen(!settingsOpen)}
-                className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-left text-xs font-semibold transition-all duration-150 ${
-                  activeTab === 'settings' ? 'text-white font-bold bg-[#161622]/40' : 'hover:bg-[#161622]/50 hover:text-white'
-                }`}
-              >
-                <div className="flex items-center gap-3">
-                  <svg className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                  </svg>
-                  <span>Portal Settings</span>
-                </div>
-                <svg className={`w-3.5 h-3.5 transform transition-transform duration-200 ${settingsOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
-                </svg>
-              </button>
-
-              {settingsOpen && (
-                <div className="pl-7 mt-1.5 space-y-1 border-l border-slate-800 ml-5">
-                  {[
-                    { id: 'settings-university', label: 'University' },
-                    { id: 'settings-course', label: 'Course' },
-                    { id: 'settings-intake', label: 'Intake' },
-                    { id: 'settings-formats', label: 'File Formats' },
-                    { id: 'settings-course-docs', label: 'Course Documents' },
-                    { id: 'settings-documents', label: 'Documents' },
-                    { id: 'settings-agent', label: 'Referral Agent' },
-                    { id: 'settings-stages', label: 'Stages' },
-                    { id: 'settings-actions', label: 'Staged Actions' },
-                    { id: 'settings-qualifications', label: 'Qualifications' },
-                  ].map((subItem) => (
+                {adminReportsOpen && (
+                  <div className="pl-7 mt-1.5 space-y-1 border-l border-slate-800 ml-5">
                     <button
-                      key={subItem.id}
-                      onClick={() => handleSubTabClick('settings', subItem.id)}
-                      className={`w-full text-left py-1.5 px-3 text-[11px] font-semibold rounded-md transition-colors ${
-                        activeTab === 'settings' && activeSubTab === subItem.id
+                      onClick={() => handleSubTabClick('admin-report', 'report-agent')}
+                      className={`w-full text-left py-2 px-3 text-[11px] font-semibold rounded-md transition-colors ${
+                        activeTab === 'admin-report' && activeSubTab === 'report-agent'
                           ? 'text-[#F5B025] bg-[#161622]/60 font-bold'
                           : 'text-slate-400 hover:text-white hover:bg-[#161622]/30'
                       }`}
                     >
-                      {subItem.label}
+                      Report by Agent
                     </button>
-                  ))}
-                </div>
-              )}
-            </div>
+                    <button
+                      onClick={() => handleSubTabClick('admin-report', 'report-university')}
+                      className={`w-full text-left py-2 px-3 text-[11px] font-semibold rounded-md transition-colors ${
+                        activeTab === 'admin-report' && activeSubTab === 'report-university'
+                          ? 'text-[#F5B025] bg-[#161622]/60 font-bold'
+                          : 'text-slate-400 hover:text-white hover:bg-[#161622]/30'
+                      }`}
+                    >
+                      Report by University
+                    </button>
+                    <button
+                      onClick={() => handleSubTabClick('admin-report', 'report-course')}
+                      className={`w-full text-left py-2 px-3 text-[11px] font-semibold rounded-md transition-colors ${
+                        activeTab === 'admin-report' && activeSubTab === 'report-course'
+                          ? 'text-[#F5B025] bg-[#161622]/60 font-bold'
+                          : 'text-slate-400 hover:text-white hover:bg-[#161622]/30'
+                      }`}
+                    >
+                      Report by Course
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Partners */}
+            {hasPermission('partners:view') && (
+              <button
+                onClick={() => handleTabClick('partners')}
+                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left text-xs font-semibold transition-all duration-150 ${
+                  activeTab === 'partners' && !activeSubTab
+                    ? 'bg-[#161622] text-white border-l-2 border-[#D99A1C] pl-2.5'
+                    : 'hover:bg-[#161622]/50 hover:text-white'
+                }`}
+              >
+                <svg className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                </svg>
+                <span>Partners</span>
+              </button>
+            )}
+
+            {/* Students */}
+            {hasPermission('students:view') && (
+              <button
+                onClick={() => handleTabClick('students')}
+                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left text-xs font-semibold transition-all duration-150 ${
+                  activeTab === 'students' && !activeSubTab
+                    ? 'bg-[#161622] text-white border-l-2 border-[#D99A1C] pl-2.5'
+                    : 'hover:bg-[#161622]/50 hover:text-white'
+                }`}
+              >
+                <svg className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 14l9-5-9-5-9 5 9 5z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 14l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 14v6" />
+                </svg>
+                <span>Students</span>
+              </button>
+            )}
+
+            {/* Commission Management */}
+            {(hasPermission('commissions:view') || currentUser.role === 'Country Head') && (
+              <button
+                onClick={() => handleTabClick('commissions')}
+                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left text-xs font-semibold transition-all duration-150 ${
+                  activeTab === 'commissions' && !activeSubTab
+                    ? 'bg-[#161622] text-white border-l-2 border-[#D99A1C] pl-2.5'
+                    : 'hover:bg-[#161622]/50 hover:text-white'
+                }`}
+              >
+                <svg className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <span>Commissions</span>
+              </button>
+            )}
+
+            {/* Staff */}
+            {hasPermission('staff:view') && (
+              <button
+                onClick={() => handleTabClick('staff')}
+                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left text-xs font-semibold transition-all duration-150 ${
+                  activeTab === 'staff' && !activeSubTab
+                    ? 'bg-[#161622] text-white border-l-2 border-[#D99A1C] pl-2.5'
+                    : 'hover:bg-[#161622]/50 hover:text-white'
+                }`}
+              >
+                <svg className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+                </svg>
+                <span>Staff Management</span>
+              </button>
+            )}
+
+            {/* Sales Order Dropdown */}
+            {(currentUser.role !== 'Finance' && currentUser.role !== 'Executive') && (
+              <div>
+                <button
+                  onClick={() => setSalesOrderOpen(!salesOrderOpen)}
+                  className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-left text-xs font-semibold transition-all duration-150 ${
+                    activeTab === 'sales-order' ? 'text-white font-bold bg-[#161622]/40' : 'hover:bg-[#161622]/50 hover:text-white'
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <svg className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+                    </svg>
+                    <span>Sales Order</span>
+                  </div>
+                  <svg className={`w-3.5 h-3.5 transform transition-transform duration-200 ${salesOrderOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+
+                {salesOrderOpen && (
+                  <div className="pl-7 mt-1.5 space-y-1 border-l border-slate-800 ml-5">
+                    <button
+                      onClick={() => handleSubTabClick('sales-order', 'tourist-package')}
+                      className={`w-full text-left py-2 px-3 text-[11px] font-semibold rounded-md transition-colors ${
+                        activeTab === 'sales-order' && activeSubTab === 'tourist-package'
+                          ? 'text-[#F5B025] bg-[#161622]/60 font-bold'
+                          : 'text-slate-400 hover:text-white hover:bg-[#161622]/30'
+                      }`}
+                    >
+                      Tourist Package
+                    </button>
+                    <button
+                      onClick={() => handleSubTabClick('sales-order', 'study')}
+                      className={`w-full text-left py-2 px-3 text-[11px] font-semibold rounded-md transition-colors ${
+                        activeTab === 'sales-order' && activeSubTab === 'study'
+                          ? 'text-[#F5B025] bg-[#161622]/60 font-bold'
+                          : 'text-slate-400 hover:text-white hover:bg-[#161622]/30'
+                      }`}
+                    >
+                      Study (Apply)
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Security & Roles */}
+            <button
+              onClick={() => handleTabClick('role-hierarchy')}
+              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left text-xs font-semibold transition-all duration-150 ${
+                activeTab === 'role-hierarchy' && !activeSubTab
+                  ? 'bg-[#161622] text-white border-l-2 border-[#D99A1C] pl-2.5'
+                  : 'hover:bg-[#161622]/50 hover:text-white'
+              }`}
+            >
+              <svg className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+              </svg>
+              <span>Security & Roles</span>
+            </button>
+
+            {/* Application Portal Settings Dropdown */}
+            {hasPermission('settings:view') && (
+              <div>
+                <button
+                  onClick={() => setSettingsOpen(!settingsOpen)}
+                  className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-left text-xs font-semibold transition-all duration-150 ${
+                    activeTab === 'settings' ? 'text-white font-bold bg-[#161622]/40' : 'hover:bg-[#161622]/50 hover:text-white'
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <svg className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                    <span>Portal Settings</span>
+                  </div>
+                  <svg className={`w-3.5 h-3.5 transform transition-transform duration-200 ${settingsOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+
+                {settingsOpen && (
+                  <div className="pl-7 mt-1.5 space-y-1 border-l border-slate-800 ml-5">
+                    {[
+                      { id: 'settings-university', label: 'University' },
+                      { id: 'settings-course', label: 'Course' },
+                      { id: 'settings-intake', label: 'Intake' },
+                      { id: 'settings-formats', label: 'File Formats' },
+                      { id: 'settings-course-docs', label: 'Course Documents' },
+                      { id: 'settings-documents', label: 'Documents' },
+                      { id: 'settings-agent', label: 'Referral Agent' },
+                      { id: 'settings-stages', label: 'Stages' },
+                      { id: 'settings-actions', label: 'Staged Actions' },
+                      { id: 'settings-qualifications', label: 'Qualifications' },
+                    ].map((subItem) => (
+                      <button
+                        key={subItem.id}
+                        onClick={() => handleSubTabClick('settings', subItem.id)}
+                        className={`w-full text-left py-1.5 px-3 text-[11px] font-semibold rounded-md transition-colors ${
+                          activeTab === 'settings' && activeSubTab === subItem.id
+                            ? 'text-[#F5B025] bg-[#161622]/60 font-bold'
+                            : 'text-slate-400 hover:text-white hover:bg-[#161622]/30'
+                        }`}
+                      >
+                        {subItem.label}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* To-do List */}
             <button

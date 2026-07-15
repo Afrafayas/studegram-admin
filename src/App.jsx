@@ -1,17 +1,22 @@
-import React, { useState } from 'react';
+import React from 'react';
+import { AuthProvider, useAuth } from './context/AuthContext';
 import Login from './pages/Login';
 import AdminPortal from './AdminPortal';
 
-export default function App() {
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
+function AppContent() {
+  const { currentUser, logout } = useAuth();
 
-  const handleLogout = () => {
-    setIsLoggedIn(false);
-  };
-
-  if (!isLoggedIn) {
-    return <Login onLoginSuccess={() => setIsLoggedIn(true)} />;
+  if (!currentUser) {
+    return <Login onLoginSuccess={() => {}} />;
   }
 
-  return <AdminPortal onLogout={handleLogout} />;
+  return <AdminPortal onLogout={logout} />;
+}
+
+export default function App() {
+  return (
+    <AuthProvider>
+      <AppContent />
+    </AuthProvider>
+  );
 }

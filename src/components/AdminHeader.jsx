@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useAuth } from '../context/AuthContext';
 
 export default function AdminHeader({ 
   activeTab, 
@@ -6,6 +7,7 @@ export default function AdminHeader({
   onToggleSidebar, 
   onLogout
 }) {
+  const { currentUser } = useAuth();
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
 
   const getBreadcrumbs = () => {
@@ -22,6 +24,10 @@ export default function AdminHeader({
       crumbs.push('Partners');
     } else if (activeTab === 'students') {
       crumbs.push('Students');
+    } else if (activeTab === 'commissions') {
+      crumbs.push('Commission Management');
+    } else if (activeTab === 'role-hierarchy') {
+      crumbs.push('Security & Role Hierarchy');
     } else if (activeTab === 'staff') {
       crumbs.push('Staff');
     } else if (activeTab === 'sales-order') {
@@ -108,8 +114,8 @@ export default function AdminHeader({
         {/* Right Side: Profile Dropdown */}
         <div className="flex items-center gap-3 relative">
           <div className="text-right hidden sm:block">
-            <p className="text-xs font-bold text-white">Super Admin</p>
-            <p className="text-[10px] text-slate-400 font-medium">admin@studegram.com</p>
+            <p className="text-xs font-bold text-white">{currentUser?.name || 'Super Admin'}</p>
+            <p className="text-[10px] text-slate-400 font-medium">{currentUser?.role || 'Administrator'} ({currentUser?.country || 'Global'})</p>
           </div>
 
           <button
@@ -117,7 +123,7 @@ export default function AdminHeader({
             className="relative cursor-pointer group focus:outline-none"
           >
             <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-[#D99A1C] to-[#F5B025] flex items-center justify-center font-bold text-white text-xs shadow-md border-2 border-white group-hover:border-[#D99A1C] transition-all">
-              SA
+              {currentUser?.avatar || 'SA'}
             </div>
             <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-emerald-500 rounded-full ring-2 ring-white"></span>
           </button>
@@ -131,10 +137,11 @@ export default function AdminHeader({
                 className="fixed inset-0 z-10"
               ></div>
               
-              <div className="absolute right-0 top-11 w-48 bg-[#0A0A0F] border border-slate-800 rounded-xl shadow-2xl py-2 z-20 animate-in fade-in slide-in-from-top-2 duration-150">
+              <div className="absolute right-0 top-11 w-52 bg-[#0A0A0F] border border-slate-800 rounded-xl shadow-2xl py-2 z-20 animate-in fade-in slide-in-from-top-2 duration-150">
                 <div className="px-4 py-2 border-b border-slate-900">
-                  <p className="text-xs font-bold text-white">Super Admin</p>
-                  <p className="text-[10px] text-slate-400 truncate">admin@studegram.com</p>
+                  <p className="text-xs font-bold text-white">{currentUser?.name}</p>
+                  <p className="text-[9px] text-[#D99A1C] font-black uppercase mt-0.5">{currentUser?.role}</p>
+                  <p className="text-[10px] text-slate-400 truncate">{currentUser?.email}</p>
                 </div>
                 <a
                   href="http://localhost:5173/"

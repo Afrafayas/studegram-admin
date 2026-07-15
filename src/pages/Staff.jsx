@@ -1,6 +1,9 @@
 import React, { useState } from 'react';
+import { useAuth } from '../context/AuthContext';
 
 export default function Staff({ staffList, setStaffList, applications }) {
+  const { currentUser, hasPermission, addAuditLog } = useAuth();
+  
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
   const [expandedId, setExpandedId] = useState(null);
@@ -10,12 +13,27 @@ export default function Staff({ staffList, setStaffList, applications }) {
   const [newStaffName, setNewStaffName] = useState('');
   const [newStaffEmail, setNewStaffEmail] = useState('');
   const [newStaffPhone, setNewStaffPhone] = useState('');
-  const [newStaffRole, setNewStaffRole] = useState('Operations Executive');
+  const [newStaffRole, setNewStaffRole] = useState('Executive');
   const [newStaffAccess, setNewStaffAccess] = useState('Read & Write');
   const [newStaffStatus, setNewStaffStatus] = useState('Active');
 
-  // Filter staff
-  const filteredStaff = staffList.filter(s => {
+  // Permission Guard
+  if (!hasPermission('staff:view')) {
+    return (
+      <div className="flex-1 p-6 flex items-center justify-center bg-[#F0F2F5]">
+        <div className="bg-white border border-rose-200 border-t-4 border-t-rose-500 p-8 rounded-2xl shadow-md max-w-md text-center">
+          <span className="text-4xl">🚫</span>
+          <h2 className="text-sm font-black text-rose-900 uppercase mt-4">Access Denied</h2>
+          <p className="text-[11px] text-slate-500 mt-2 font-semibold">
+            You do not have the required permissions to access Staff Management. This incident has been logged.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  // Filter staff based on searching and status
+  const baseFiltered = staffList.filter(s => {
     const name = s.name || '';
     const email = s.email || '';
     const role = s.role || '';
@@ -31,6 +49,15 @@ export default function Staff({ staffList, setStaffList, applications }) {
     return searchMatch && statusMatch;
   });
 
+  // Apply scope filtering (Country Head only sees regional staff)
+  const filteredStaff = baseFiltered.filter(s => {
+    if (currentUser.role === 'Director' || currentUser.role === 'COO') return true;
+    if (currentUser.role === 'Country Head') {
+      return s.country === currentUser.country;
+    }
+    return false;
+  });
+
   const toggleExpand = (id) => {
     setExpandedId(expandedId === id ? null : id);
   };
@@ -42,6 +69,16 @@ export default function Staff({ staffList, setStaffList, applications }) {
       return;
     }
 
+    // Role Hierarchy Validation
+    const userRoleHierarchy = { 'Director': 1, 'COO': 2, 'Finance': 3, 'Country Head': 4, 'BDM': 5, 'Executive': 6 };
+    const currentUserLevel = userRoleHierarchy[currentUser.role] || 6;
+    const targetStaffLevel = userRoleHierarchy[newStaffRole] || 6;
+
+    if (targetStaffLevel <= currentUserLevel) {
+      alert(`Permission Denied: You cannot onboard a user with equal or higher clearance level (${newStaffRole}) than your role (${currentUser.role}).`);
+      return;
+    }
+
     const newStaff = {
       id: Date.now(),
       name: newStaffName,
@@ -49,17 +86,19 @@ export default function Staff({ staffList, setStaffList, applications }) {
       email: newStaffEmail,
       phone: newStaffPhone,
       status: newStaffStatus,
-      accessLevel: newStaffAccess,
+      accessLevel: `${newStaffRole} (${newStaffAccess})`,
+      country: currentUser.role === 'Country Head' ? currentUser.country : (currentUser.role === 'Director' || currentUser.role === 'COO' ? 'India' : 'India'),
       dateAdded: new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
     };
 
     setStaffList(prev => [...prev, newStaff]);
+    addAuditLog('ONBOARD_STAFF', 'Staff', newStaff.id, `Onboarded ${newStaffName} as ${newStaffRole} (Scope: ${newStaff.country})`);
 
     // Reset form & close modal
     setNewStaffName('');
     setNewStaffEmail('');
     setNewStaffPhone('');
-    setNewStaffRole('Operations Executive');
+    setNewStaffRole('Executive');
     setNewStaffAccess('Read & Write');
     setNewStaffStatus('Active');
     setIsModalOpen(false);
@@ -69,7 +108,7 @@ export default function Staff({ staffList, setStaffList, applications }) {
 
   // Find applications assigned to this staff member
   const getAssignedApplications = (staffName) => {
-    return applications.filter(app => (app.assignedTo || '').toLowerCase() === staffName.toLowerCase());
+    return applications.filter(app => (app.assignedTo || app.assignedExecutive || '').toLowerCase() === staffName.toLowerCase());
   };
 
   return (
@@ -330,10 +369,19 @@ export default function Staff({ staffList, setStaffList, applications }) {
                     onChange={(e) => setNewStaffRole(e.target.value)}
                     className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs font-semibold focus:outline-none focus:bg-white focus:ring-1 focus:ring-[#D99A1C]"
                   >
-                    <option value="Operations Executive">Operations Executive</option>
-                    <option value="Visa Consultant">Visa Consultant</option>
-                    <option value="Counselor">Counselor</option>
-                    <option value="Administrator">Administrator</option>
+                    {currentUser.role === 'Director' && <option value="COO">Operations Head / COO</option>}
+                    {(currentUser.role === 'Director' || currentUser.role === 'COO') && (
+                      <>
+                        <option value="Finance">Finance Team</option>
+                        <option value="Country Head">Country Head</option>
+                      </>
+                    )}
+                    {(currentUser.role === 'Director' || currentUser.role === 'COO' || currentUser.role === 'Country Head') && (
+                      <>
+                        <option value="BDM">BDM</option>
+                        <option value="Executive">Executive</option>
+                      </>
+                    )}
                   </select>
                 </div>
 

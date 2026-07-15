@@ -1,6 +1,9 @@
 import React, { useState } from 'react';
+import { useAuth } from '../context/AuthContext';
 
 export default function Students({ clients, setClients, applications }) {
+  const { currentUser, addAuditLog } = useAuth();
+  
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
   const [expandedId, setExpandedId] = useState(null);
@@ -13,6 +16,8 @@ export default function Students({ clients, setClients, applications }) {
   const [newStudentPassport, setNewStudentPassport] = useState('');
   const [newStudentDob, setNewStudentDob] = useState('');
   const [newStudentReferredBy, setNewStudentReferredBy] = useState('Direct');
+
+  const canOnboard = currentUser?.role !== 'Executive';
 
   // Extract students (type === 'Student')
   const students = clients.filter(c => c.type === 'Student');
@@ -43,6 +48,7 @@ export default function Students({ clients, setClients, applications }) {
 
   const handleOnboardStudent = (e) => {
     e.preventDefault();
+    if (!canOnboard) return;
     if (!newStudentName || !newStudentEmail || !newStudentPhone) {
       alert("Please fill out required fields.");
       return;
@@ -59,10 +65,12 @@ export default function Students({ clients, setClients, applications }) {
       status: 'Active',
       activeApps: 0,
       referredBy: newStudentReferredBy,
+      country: currentUser.role === 'Country Head' || currentUser.role === 'BDM' ? currentUser.country : 'India',
       dateAdded: new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
     };
 
     setClients(prev => [newStudent, ...prev]);
+    addAuditLog('ONBOARD_STUDENT', 'Student', newStudent.name, `Onboarded student: ${newStudentName} (Scope: ${newStudent.country})`);
 
     // Reset fields & close modal
     setNewStudentName('');
@@ -89,15 +97,17 @@ export default function Students({ clients, setClients, applications }) {
           <h1 className="text-xl font-black text-slate-900 tracking-tight">Students Directory</h1>
           <p className="text-xs text-slate-500 font-medium">Manage Direct and B2B-referred students, view files status and passport records.</p>
         </div>
-        <button
-          onClick={() => setIsModalOpen(true)}
-          className="bg-[#D99A1C] hover:bg-[#F5B025] text-white font-extrabold text-xs px-4 py-2 rounded-xl transition-all shadow-md inline-flex items-center gap-1.5"
-        >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
-          </svg>
-          <span>Onboard Student</span>
-        </button>
+        {canOnboard && (
+          <button
+            onClick={() => setIsModalOpen(true)}
+            className="bg-[#D99A1C] hover:bg-[#F5B025] text-white font-extrabold text-xs px-4 py-2 rounded-xl transition-all shadow-md inline-flex items-center gap-1.5"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
+            </svg>
+            <span>Onboard Student</span>
+          </button>
+        )}
       </div>
 
       {/* Search & Filters */}

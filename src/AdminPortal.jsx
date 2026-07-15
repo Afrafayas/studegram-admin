@@ -12,13 +12,20 @@ import SalesOrderStudy from './pages/SalesOrderStudy';
 import SalesOrderTourist from './pages/SalesOrderTourist';
 import SettingsPortal from './pages/SettingsPortal';
 import TodoList from './pages/TodoList';
+import CommissionManagement from './pages/CommissionManagement';
+import RoleHierarchy from './pages/RoleHierarchy';
+
+// Auth
+import { useAuth } from './context/AuthContext';
 
 export default function AdminPortal({ onLogout }) {
+  const { currentUser, checkScope } = useAuth();
+  
   const [activeTab, setActiveTab] = useState('daily-report');
   const [activeSubTab, setActiveSubTab] = useState(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  // States with mock databases
+  // States with mock databases (enriched with scoping details for RBAC evaluation)
   const [applications, setApplications] = useState([
     {
       camsId: 'CAMS10204',
@@ -28,7 +35,10 @@ export default function AdminPortal({ onLogout }) {
       courseName: 'MSc International Hotel Management',
       intake: 'September 2026',
       secondaryStatus: 'Offer Issued',
-      dateAdded: '10 Jun 2026'
+      dateAdded: '10 Jun 2026',
+      country: 'India',
+      assignedBdm: 'Amit Patel',
+      assignedExecutive: 'Rahul Krishnan'
     },
     {
       camsId: 'CAMS10492',
@@ -38,7 +48,23 @@ export default function AdminPortal({ onLogout }) {
       courseName: 'MSc Human Resources Management',
       intake: 'January 2027',
       secondaryStatus: 'Pending',
-      dateAdded: '15 Jun 2026'
+      dateAdded: '15 Jun 2026',
+      country: 'India',
+      assignedBdm: 'Amit Patel',
+      assignedExecutive: 'Rahul Krishnan'
+    },
+    {
+      camsId: 'CAMS10599',
+      studentName: 'David Miller',
+      passportNo: 'U9998822',
+      universityName: 'Anglia Ruskin University',
+      courseName: 'BSc Computer Science',
+      intake: 'September 2026',
+      secondaryStatus: 'Visa Pending',
+      dateAdded: '01 Jun 2026',
+      country: 'United Kingdom',
+      assignedBdm: 'Marcus Vance',
+      assignedExecutive: 'Sarah Jenkins'
     }
   ]);
 
@@ -49,8 +75,9 @@ export default function AdminPortal({ onLogout }) {
   ]);
 
   const [referralAgents, setReferralAgents] = useState([
-    { siNo: 1, agentName: 'Salman', email: 'info@luzidcraft.com' },
-    { siNo: 2, agentName: 'Aisha', email: 'aisha@agents.com' }
+    { siNo: 1, agentName: 'Salman', email: 'info@luzidcraft.com', country: 'India' },
+    { siNo: 2, agentName: 'Aisha', email: 'aisha@agents.com', country: 'India' },
+    { siNo: 3, agentName: 'Global Study Group', email: 'uk@globalstudy.com', country: 'United Kingdom' }
   ]);
 
   const [stages, setStages] = useState([
@@ -102,21 +129,31 @@ export default function AdminPortal({ onLogout }) {
   ]);
 
   const [staffList, setStaffList] = useState([
-    { id: 1, name: 'Super Admin', role: 'Administrator', email: 'admin@studegram.com', phone: '+91 9876543210', status: 'Active', dateAdded: '01 Jan 2026', accessLevel: 'Full Access' },
-    { id: 2, name: 'Neha Sharma', role: 'Operations Executive', email: 'neha@studegram.com', phone: '+91 8887776661', status: 'Active', dateAdded: '15 Mar 2026', accessLevel: 'Read & Write' },
-    { id: 3, name: 'Rahul Krishnan', role: 'Visa Consultant', email: 'rahul@studegram.com', phone: '+91 9998887772', status: 'Active', dateAdded: '10 May 2026', accessLevel: 'Read Only' }
+    { id: 101, name: 'Elena Rostova', role: 'Director', email: 'director@studegram.com', phone: '+44 7911 123456', status: 'Active', dateAdded: '01 Jan 2026', accessLevel: 'Director (Level 1)' },
+    { id: 102, name: 'Marcus Vance', role: 'COO', email: 'coo@studegram.com', phone: '+44 7911 654321', status: 'Active', dateAdded: '15 Mar 2026', accessLevel: 'COO (Level 2)' },
+    { id: 103, name: 'Sarah Jenkins', role: 'Finance', email: 'finance@studegram.com', phone: '+44 7911 987654', status: 'Active', dateAdded: '10 May 2026', accessLevel: 'Finance (Level 3)' },
+    { id: 104, name: 'Rajesh Kumar', role: 'Country Head', email: 'countryhead.in@studegram.com', phone: '+91 98765 43210', status: 'Active', dateAdded: '01 Apr 2026', accessLevel: 'Country Head (Level 4 - India)' },
+    { id: 105, name: 'Amit Patel', role: 'BDM', email: 'bdm.india@studegram.com', phone: '+91 99988 77766', status: 'Active', dateAdded: '20 Apr 2026', accessLevel: 'BDM (Level 5 - North India)' },
+    { id: 106, name: 'Rahul Krishnan', role: 'Executive', email: 'rahul@studegram.com', phone: '+91 99988 87772', status: 'Active', dateAdded: '01 May 2026', accessLevel: 'Executive (Level 6)' }
   ]);
 
   const [clients, setClients] = useState([
-    { id: 1, name: 'Shanto Shaju', type: 'Student', email: 'shanto@gmail.com', phone: '+91 9876543210', activeApps: 1, status: 'Active', passportNo: 'T1029482', dob: '1999-05-14', dateAdded: '10 Jun 2026', referredBy: 'Salman' },
-    { id: 2, name: 'Salman', type: 'Agent', email: 'info@luzidcraft.com', phone: '+91 9998887776', activeApps: 2, status: 'Active', partnerCode: 'PRT-101', dateAdded: '01 Jun 2026' },
-    { id: 3, name: 'Aneesha Anil', type: 'Student', email: 'aneesha@gmail.com', phone: '+91 8887776665', activeApps: 1, status: 'Active', passportNo: 'T9381048', dob: '2001-08-22', dateAdded: '15 Jun 2026', referredBy: 'Aisha' },
-    { id: 4, name: 'Aisha', type: 'Agent', email: 'aisha@agents.com', phone: '+44 7946 0958', activeApps: 1, status: 'Active', partnerCode: 'PRT-102', dateAdded: '05 Jun 2026' }
+    { id: 1, name: 'Shanto Shaju', type: 'Student', email: 'shanto@gmail.com', phone: '+91 9876543210', activeApps: 1, status: 'Active', passportNo: 'T1029482', dob: '1999-05-14', dateAdded: '10 Jun 2026', referredBy: 'Salman', country: 'India' },
+    { id: 2, name: 'Salman', type: 'Agent', email: 'info@luzidcraft.com', phone: '+91 9998887776', activeApps: 2, status: 'Active', partnerCode: 'PRT-101', dateAdded: '01 Jun 2026', country: 'India' },
+    { id: 3, name: 'Aneesha Anil', type: 'Student', email: 'aneesha@gmail.com', phone: '+91 8887776665', activeApps: 1, status: 'Active', passportNo: 'T9381048', dob: '2001-08-22', dateAdded: '15 Jun 2026', referredBy: 'Aisha', country: 'India' },
+    { id: 4, name: 'Aisha', type: 'Agent', email: 'aisha@agents.com', phone: '+44 7946 0958', activeApps: 1, status: 'Active', partnerCode: 'PRT-102', dateAdded: '05 Jun 2026', country: 'India' },
+    { id: 5, name: 'David Miller', type: 'Student', email: 'david@gmail.com', phone: '+44 7999 112233', activeApps: 1, status: 'Active', passportNo: 'U9998822', dob: '2000-03-12', dateAdded: '01 Jun 2026', referredBy: 'Global Study Group', country: 'United Kingdom' }
   ]);
 
   const handleAddApplication = (newApp) => {
     const randomId = `CAMS${Math.floor(10000 + Math.random() * 90000)}`;
-    const freshApp = { ...newApp, camsId: randomId };
+    const freshApp = { 
+      ...newApp, 
+      camsId: randomId,
+      country: newApp.country || currentUser.country || 'India',
+      assignedBdm: newApp.assignedBdm || (currentUser.role === 'BDM' ? currentUser.name : 'Amit Patel'),
+      assignedExecutive: newApp.assignedExecutive || 'Rahul Krishnan'
+    };
     
     setApplications(prev => [freshApp, ...prev]);
 
@@ -136,7 +173,8 @@ export default function AdminPortal({ onLogout }) {
             passportNo: newApp.passportNo || 'Pending',
             dob: newApp.dob || '',
             dateAdded: newApp.dateAdded || new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
-            referredBy: 'Direct'
+            referredBy: newApp.referredBy || 'Direct',
+            country: newApp.country || currentUser.country || 'India'
           },
           ...prev
         ];
@@ -144,25 +182,46 @@ export default function AdminPortal({ onLogout }) {
     });
   };
 
+  // Scoped lists depending on the current user's role scoping rules
+  const scopedApplications = applications.filter(app => 
+    checkScope(app.country, app.assignedBdm, app.assignedExecutive)
+  );
+
+  const scopedClients = clients.filter(client => {
+    if (['Director', 'COO', 'Finance'].includes(currentUser.role)) return true;
+    if (currentUser.role === 'Country Head') return client.country === currentUser.country;
+    if (currentUser.role === 'BDM') return client.country === currentUser.country;
+    if (currentUser.role === 'Executive') return client.country === currentUser.country && client.type === 'Student';
+    return false;
+  });
+
   const renderActiveTabContent = () => {
     if (activeTab === 'daily-report') {
-      return <DailyReport applications={applications} />;
+      return <DailyReport applications={scopedApplications} />;
     }
     
     if (activeTab === 'admin-report') {
-      return <AdminReport applications={applications} />;
+      return <AdminReport applications={scopedApplications} />;
     }
     
     if (activeTab === 'partners') {
-      return <Partners clients={clients} setClients={setClients} applications={applications} />;
+      return <Partners clients={scopedClients} setClients={setClients} applications={scopedApplications} />;
     }
     
     if (activeTab === 'students') {
-      return <Students clients={clients} setClients={setClients} applications={applications} />;
+      return <Students clients={scopedClients} setClients={setClients} applications={scopedApplications} />;
     }
     
     if (activeTab === 'staff') {
       return <Staff staffList={staffList} setStaffList={setStaffList} applications={applications} />;
+    }
+
+    if (activeTab === 'commissions') {
+      return <CommissionManagement />;
+    }
+
+    if (activeTab === 'role-hierarchy') {
+      return <RoleHierarchy />;
     }
     
     if (activeTab === 'sales-order') {

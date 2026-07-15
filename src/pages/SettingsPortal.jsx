@@ -11,6 +11,9 @@ export default function SettingsPortal({
   stages, setStages,
   qualifications, setQualifications
 }) {
+  const { currentUser, addAuditLog } = useAuth();
+  const isWritable = currentUser?.role === 'Director';
+
   const [modalType, setModalType] = useState(null);
   
   const [docName, setDocName] = useState('');
@@ -24,6 +27,10 @@ export default function SettingsPortal({
   const [newItemText, setNewItemText] = useState('');
 
   const openAddModal = (type) => {
+    if (!isWritable) {
+      alert("Permission Denied: System configurations can only be modified by the Director.");
+      return;
+    }
     setModalType(type);
     setNewItemText('');
     setDocName('');
@@ -36,6 +43,7 @@ export default function SettingsPortal({
 
   const handleAddDocumentRule = (e) => {
     e.preventDefault();
+    if (!isWritable) return;
     if (!docName || !docMinSize || !docMaxSize) return;
 
     const newRule = {
@@ -46,11 +54,13 @@ export default function SettingsPortal({
       maxSize: parseFloat(docMaxSize)
     };
     setCourseDocuments(prev => [...prev, newRule]);
+    addAuditLog('ADD_SETTING_DOC_RULE', 'Settings', docName, `Added document configuration rule: ${docName}`);
     setModalType(null);
   };
 
   const handleAddReferralAgent = (e) => {
     e.preventDefault();
+    if (!isWritable) return;
     if (!agentName || !agentEmail) return;
 
     const newAgent = {
@@ -59,33 +69,55 @@ export default function SettingsPortal({
       email: agentEmail
     };
     setReferralAgents(prev => [...prev, newAgent]);
+    addAuditLog('ADD_SETTING_AGENT', 'Settings', agentName, `Added referral agent setting: ${agentName}`);
     setModalType(null);
   };
 
-  const handleAddSimpleItem = (e, listStateSetter, list) => {
+  const handleAddSimpleItem = (e, listStateSetter, list, typeLabel) => {
     e.preventDefault();
+    if (!isWritable) return;
     if (!newItemText) return;
     if (list.includes(newItemText)) {
       alert("This item already exists.");
       return;
     }
     listStateSetter(prev => [...prev, newItemText]);
+    addAuditLog(`ADD_SETTING_${(typeLabel || 'ITEM').toUpperCase()}`, 'Settings', newItemText, `Added ${typeLabel || 'item'}: ${newItemText}`);
     setModalType(null);
   };
 
-  const handleDeleteItem = (itemToDelete, listStateSetter) => {
+  const handleDeleteItem = (itemToDelete, listStateSetter, typeLabel) => {
+    if (!isWritable) {
+      alert("Permission Denied: System configurations can only be modified by the Director.");
+      return;
+    }
     listStateSetter(prev => prev.filter(item => item !== itemToDelete));
+    addAuditLog(`DELETE_SETTING_${(typeLabel || 'ITEM').toUpperCase()}`, 'Settings', itemToDelete, `Deleted ${typeLabel || 'item'}: ${itemToDelete}`);
   };
 
-  const handleDeleteDoc = (siNo) => {
+  const handleDeleteDoc = (siNo, docName) => {
+    if (!isWritable) {
+      alert("Permission Denied: System configurations can only be modified by the Director.");
+      return;
+    }
     setCourseDocuments(prev => prev.filter(doc => doc.siNo !== siNo).map((doc, idx) => ({ ...doc, siNo: idx + 1 })));
+    addAuditLog('DELETE_SETTING_DOC_RULE', 'Settings', docName || siNo, `Deleted doc rule: ${docName || siNo}`);
   };
 
-  const handleDeleteAgent = (siNo) => {
+  const handleDeleteAgent = (siNo, agentName) => {
+    if (!isWritable) {
+      alert("Permission Denied: System configurations can only be modified by the Director.");
+      return;
+    }
     setReferralAgents(prev => prev.filter(agent => agent.siNo !== siNo).map((agent, idx) => ({ ...agent, siNo: idx + 1 })));
+    addAuditLog('DELETE_SETTING_AGENT', 'Settings', agentName || siNo, `Deleted agent setting: ${agentName || siNo}`);
   };
 
   const moveStage = (index, direction) => {
+    if (!isWritable) {
+      alert("Permission Denied: System configurations can only be modified by the Director.");
+      return;
+    }
     if (direction === 'up' && index === 0) return;
     if (direction === 'down' && index === stages.length - 1) return;
 
@@ -95,6 +127,7 @@ export default function SettingsPortal({
     newStages[index] = newStages[swapIdx];
     newStages[swapIdx] = temp;
     setStages(newStages);
+    addAuditLog('MOVE_SETTING_STAGE', 'Settings', temp, `Reordered pipeline stages (moved ${temp} ${direction})`);
   };
 
   const renderSettingsView = () => {
@@ -330,6 +363,12 @@ export default function SettingsPortal({
 
   return (
     <div className="flex-1 p-6 bg-[#F0F2F5]">
+      {!isWritable && (
+        <div className="bg-blue-50 border border-blue-200 text-blue-700 text-[11.5px] font-bold py-2.5 px-4 rounded-xl flex items-center gap-2 shadow-xs mb-5">
+          <span>ℹ️</span>
+          <span>View-Only Mode: You are logged in as {currentUser?.role}. Portal configuration changes are reserved for the Director role.</span>
+        </div>
+      )}
       {renderSettingsView()}
 
       {modalType && (

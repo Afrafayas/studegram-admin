@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
+import { useAuth, PRESET_USERS } from '../context/AuthContext';
 
 export default function Login({ onLoginSuccess }) {
+  const { login } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [rememberMe, setRememberMe] = useState(false);
@@ -43,9 +45,27 @@ export default function Login({ onLoginSuccess }) {
     setIsLoading(true);
 
     setTimeout(() => {
+      const res = login(email, password);
       setIsLoading(false);
-      onLoginSuccess();
-    }, 1000);
+      if (res.success) {
+        onLoginSuccess();
+      } else {
+        setPasswordError(res.message);
+      }
+    }, 800);
+  };
+
+  const handleQuickLogin = (preset) => {
+    setEmail(preset.email);
+    setPassword(preset.password);
+    setIsLoading(true);
+    setTimeout(() => {
+      const res = login(preset.email, preset.password);
+      setIsLoading(false);
+      if (res.success) {
+        onLoginSuccess();
+      }
+    }, 600);
   };
 
   return (
@@ -112,6 +132,27 @@ export default function Login({ onLoginSuccess }) {
           <div className="text-left space-y-1">
             <h1 className="text-2xl font-bold tracking-tight text-[#0F172A]">Studegram Admin Portal</h1>
             <p className="text-xs text-[#64748B] font-semibold">Sign in with administrator credentials to continue</p>
+          </div>
+
+          <div className="bg-slate-50 border border-slate-200/60 p-4.5 rounded-2xl space-y-3">
+            <h2 className="text-[9px] font-black text-slate-500 uppercase tracking-widest flex items-center justify-between">
+              <span>Quick Demo Role Presets</span>
+              <span className="text-[8px] text-[#D99A1C] uppercase font-bold tracking-wider px-1.5 py-0.5 bg-amber-50 rounded-full border border-amber-100">RBAC Demo</span>
+            </h2>
+            <div className="grid grid-cols-2 gap-2">
+              {PRESET_USERS.map((preset) => (
+                <button
+                  key={preset.id}
+                  type="button"
+                  onClick={() => handleQuickLogin(preset)}
+                  disabled={isLoading}
+                  className="bg-white hover:bg-slate-50 active:scale-95 border border-slate-200/80 hover:border-[#D99A1C] p-2 rounded-xl text-left transition-all duration-150 shadow-xs flex flex-col cursor-pointer group"
+                >
+                  <span className="text-[10px] font-black text-slate-800 group-hover:text-[#D99A1C] transition-colors truncate">{preset.name}</span>
+                  <span className="text-[8.5px] font-bold text-slate-400 mt-0.5">{preset.role}</span>
+                </button>
+              ))}
+            </div>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-5">
