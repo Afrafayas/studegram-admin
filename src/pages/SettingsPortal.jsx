@@ -19,6 +19,23 @@ export default function SettingsPortal({
   const isWritable = currentUser?.role === 'Director';
 
   const [modalType, setModalType] = useState(null);
+
+  // University Add State
+  const [univName, setUnivName] = useState('');
+  const [univCountry, setUnivCountry] = useState('United Kingdom');
+  const [univSelectedCourses, setUnivSelectedCourses] = useState([]);
+
+  // Course Add State
+  const [courseTitle, setCourseTitle] = useState('');
+  const [courseUniv, setCourseUniv] = useState('');
+  const [courseSelectedIntakes, setCourseSelectedIntakes] = useState([]);
+  const [courseDegreeLevel, setCourseDegreeLevel] = useState('Bachelor');
+  const [courseDuration, setCourseDuration] = useState('3 Years');
+  const [courseFee, setCourseFee] = useState('');
+
+  // Intake Add State
+  const [intakeTitle, setIntakeTitle] = useState('');
+  const [intakeDesc, setIntakeDesc] = useState('');
   
   const [docName, setDocName] = useState('');
   const [docFormat, setDocFormat] = useState('.pdf');
@@ -77,6 +94,161 @@ export default function SettingsPortal({
     setModalType(null);
   };
 
+  const handleAddUniversity = async (e) => {
+    e.preventDefault();
+    if (!isWritable) return;
+    if (!univName || !univCountry) {
+      alert("Please fill in required fields.");
+      return;
+    }
+
+    const token = localStorage.getItem('admin_token');
+    const newUnivData = {
+      name: univName,
+      country: univCountry,
+      courses: univSelectedCourses
+    };
+
+    try {
+      if (token && token !== 'mock-admin-token-12345') {
+        const response = await fetch('/api/universities', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify(newUnivData)
+        });
+        const resData = await response.json();
+        if (response.ok && resData.success) {
+          setUniversities(prev => [...prev, resData.data]);
+          addAuditLog('ADD_SETTING_UNIVERSITY', 'Settings', univName, `Added university setting: ${univName}`);
+        } else {
+          throw new Error(resData.message || 'Failed to save university');
+        }
+      } else {
+        const mockUniv = {
+          _id: `univ-${Date.now()}`,
+          name: univName,
+          country: univCountry,
+          courses: univSelectedCourses
+        };
+        setUniversities(prev => [...prev, mockUniv]);
+        addAuditLog('ADD_SETTING_UNIVERSITY', 'Settings', univName, `Added mock university setting: ${univName}`);
+      }
+      setUnivName('');
+      setUnivSelectedCourses([]);
+      setModalType(null);
+    } catch (err) {
+      alert(err.message);
+    }
+  };
+
+  const handleAddCourse = async (e) => {
+    e.preventDefault();
+    if (!isWritable) return;
+    if (!courseTitle || !courseUniv) {
+      alert("Please fill in course title and select university.");
+      return;
+    }
+
+    const token = localStorage.getItem('admin_token');
+    const newCourseData = {
+      title: courseTitle,
+      university: courseUniv,
+      degreeLevel: courseDegreeLevel,
+      duration: courseDuration,
+      tuitionFee: courseFee,
+      intakes: courseSelectedIntakes
+    };
+
+    try {
+      if (token && token !== 'mock-admin-token-12345') {
+        const response = await fetch('/api/courses', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify(newCourseData)
+        });
+        const resData = await response.json();
+        if (response.ok && resData.success) {
+          setCourses(prev => [...prev, resData.data]);
+          addAuditLog('ADD_SETTING_COURSE', 'Settings', courseTitle, `Added course setting: ${courseTitle}`);
+        } else {
+          throw new Error(resData.message || 'Failed to save course');
+        }
+      } else {
+        const mockCourse = {
+          _id: `course-${Date.now()}`,
+          title: courseTitle,
+          university: courseUniv,
+          degreeLevel: courseDegreeLevel,
+          duration: courseDuration,
+          tuitionFee: courseFee,
+          intakes: courseSelectedIntakes
+        };
+        setCourses(prev => [...prev, mockCourse]);
+        addAuditLog('ADD_SETTING_COURSE', 'Settings', courseTitle, `Added mock course setting: ${courseTitle}`);
+      }
+      setCourseTitle('');
+      setCourseUniv('');
+      setCourseSelectedIntakes([]);
+      setModalType(null);
+    } catch (err) {
+      alert(err.message);
+    }
+  };
+
+  const handleAddIntake = async (e) => {
+    e.preventDefault();
+    if (!isWritable) return;
+    if (!intakeTitle) {
+      alert("Please enter intake title.");
+      return;
+    }
+
+    const token = localStorage.getItem('admin_token');
+    const newIntakeData = {
+      title: intakeTitle,
+      description: intakeDesc
+    };
+
+    try {
+      if (token && token !== 'mock-admin-token-12345') {
+        const response = await fetch('/api/intakes', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify(newIntakeData)
+        });
+        const resData = await response.json();
+        if (response.ok && resData.success) {
+          setIntakes(prev => [...prev, resData.data]);
+          addAuditLog('ADD_SETTING_INTAKE', 'Settings', intakeTitle, `Added intake setting: ${intakeTitle}`);
+        } else {
+          throw new Error(resData.message || 'Failed to save intake');
+        }
+      } else {
+        const mockIntake = {
+          _id: `intake-${Date.now()}`,
+          title: intakeTitle,
+          description: intakeDesc
+        };
+        setIntakes(prev => [...prev, mockIntake]);
+        addAuditLog('ADD_SETTING_INTAKE', 'Settings', intakeTitle, `Added mock intake setting: ${intakeTitle}`);
+      }
+      setIntakeTitle('');
+      setIntakeDesc('');
+      setModalType(null);
+    } catch (err) {
+      alert(err.message);
+    }
+  };
+
   const handleAddSimpleItem = (e, listStateSetter, list, typeLabel) => {
     e.preventDefault();
     if (!isWritable) return;
@@ -88,6 +260,52 @@ export default function SettingsPortal({
     listStateSetter(prev => [...prev, newItemText]);
     addAuditLog(`ADD_SETTING_${(typeLabel || 'ITEM').toUpperCase()}`, 'Settings', newItemText, `Added ${typeLabel || 'item'}: ${newItemText}`);
     setModalType(null);
+  };
+
+  const handleDeleteSettingItem = async (itemToDelete, listStateSetter, typeLabel) => {
+    if (!isWritable) {
+      alert("Permission Denied: System configurations can only be modified by the Director.");
+      return;
+    }
+
+    const token = localStorage.getItem('admin_token');
+    const itemId = typeof itemToDelete === 'object' ? itemToDelete._id : null;
+    const itemLabel = typeof itemToDelete === 'object' 
+      ? (itemToDelete.name || itemToDelete.title) 
+      : itemToDelete;
+
+    try {
+      if (token && token !== 'mock-admin-token-12345' && itemId) {
+        let endpoint = '';
+        if (typeLabel === 'university') endpoint = `/api/universities/${itemId}`;
+        if (typeLabel === 'course') endpoint = `/api/courses/${itemId}`;
+        if (typeLabel === 'intake') endpoint = `/api/intakes/${itemId}`;
+
+        if (endpoint) {
+          const response = await fetch(endpoint, {
+            method: 'DELETE',
+            headers: {
+              'Authorization': `Bearer ${token}`
+            }
+          });
+          const resData = await response.json();
+          if (!response.ok || !resData.success) {
+            throw new Error(resData.message || 'Deletion failed');
+          }
+        }
+      }
+
+      listStateSetter(prev => prev.filter(item => {
+        if (typeof item === 'object') {
+          return item._id !== itemId;
+        }
+        return item !== itemToDelete;
+      }));
+
+      addAuditLog(`DELETE_SETTING_${(typeLabel || 'ITEM').toUpperCase()}`, 'Settings', itemLabel, `Deleted ${typeLabel || 'item'}: ${itemLabel}`);
+    } catch (err) {
+      alert(err.message);
+    }
   };
 
   const handleDeleteItem = (itemToDelete, listStateSetter, typeLabel) => {
@@ -405,19 +623,43 @@ export default function SettingsPortal({
             </div>
 
             <div className="bg-white border border-[#E2E8F0] border-t-4 border-t-[#D99A1C] p-6 rounded-2xl shadow-xs space-y-3">
-              {list.map((item, idx) => (
-                <div key={item} className="flex items-center justify-between p-3.5 bg-slate-50 border border-slate-200 rounded-xl">
-                  <span className="text-xs font-bold text-slate-800">{item}</span>
-                  {listSetter && (
-                    <button
-                      onClick={() => handleDeleteItem(item, listSetter, activeSubTab.replace('settings-', ''))}
-                      className="text-rose-500 hover:text-rose-700 font-extrabold text-xs cursor-pointer"
-                    >
-                      Delete
-                    </button>
-                  )}
-                </div>
-              ))}
+              {list.map((item, idx) => {
+                const itemId = typeof item === 'object' ? item._id : item;
+                
+                let displayName = '';
+                let detailsLabel = '';
+
+                if (activeSubTab === 'settings-university') {
+                  displayName = typeof item === 'object' ? item.name : item;
+                  detailsLabel = typeof item === 'object' ? `Country: ${item.country}` : '';
+                } else if (activeSubTab === 'settings-course') {
+                  displayName = typeof item === 'object' ? item.title : item;
+                  const uniName = typeof item === 'object' ? (item.university?.name || 'Assigned') : '';
+                  detailsLabel = typeof item === 'object' ? `${item.degreeLevel || 'Master'} Degree | University: ${uniName}` : '';
+                } else if (activeSubTab === 'settings-intake') {
+                  displayName = typeof item === 'object' ? item.title : item;
+                  detailsLabel = typeof item === 'object' ? item.description : '';
+                } else {
+                  displayName = item;
+                }
+
+                return (
+                  <div key={itemId || idx} className="flex items-center justify-between p-3.5 bg-slate-50 border border-slate-200 rounded-xl hover:border-slate-350 transition-colors">
+                    <div>
+                      <p className="text-xs font-bold text-slate-800">{displayName}</p>
+                      {detailsLabel && <p className="text-[10px] text-slate-400 font-semibold mt-0.5">{detailsLabel}</p>}
+                    </div>
+                    {listSetter && (
+                      <button
+                        onClick={() => handleDeleteSettingItem(item, listSetter, activeSubTab.replace('settings-', ''))}
+                        className="text-rose-500 hover:text-rose-700 font-extrabold text-xs cursor-pointer bg-white px-2.5 py-1 border border-slate-200 rounded-lg hover:border-rose-200 hover:bg-rose-50/20 transition-all shadow-3xs"
+                      >
+                        Delete
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           </div>
         );
@@ -559,15 +801,168 @@ export default function SettingsPortal({
               </form>
             )}
 
-            {modalType !== 'doc' && modalType !== 'agent' && modalType !== 'stage' && (
+            {modalType === 'settings-university' && (
+              <form onSubmit={handleAddUniversity} className="space-y-4">
+                <div className="space-y-1.5">
+                  <label className="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">University Name</label>
+                  <input
+                    type="text"
+                    required
+                    value={univName}
+                    onChange={(e) => setUnivName(e.target.value)}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs font-semibold focus:outline-none focus:bg-white focus:border-[#D99A1C] focus:ring-1 focus:ring-[#D99A1C] text-slate-950"
+                    placeholder="e.g. University of Surrey"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">Country Location</label>
+                  <select
+                    value={univCountry}
+                    onChange={(e) => setUnivCountry(e.target.value)}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs font-semibold focus:outline-none focus:bg-white focus:ring-1 focus:ring-[#D99A1C]"
+                  >
+                    <option value="United Kingdom">United Kingdom</option>
+                    <option value="Canada">Canada</option>
+                    <option value="United States">United States</option>
+                    <option value="Australia">Australia</option>
+                    <option value="India">India</option>
+                  </select>
+                </div>
+                
+                <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
+                  <button type="button" onClick={() => setModalType(null)} className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-extrabold text-xs rounded-xl">Cancel</button>
+                  <button type="submit" className="px-5 py-2 bg-[#D99A1C] hover:bg-[#F5B025] text-white font-extrabold text-xs rounded-xl shadow-md">Add University</button>
+                </div>
+              </form>
+            )}
+
+            {modalType === 'settings-course' && (
+              <form onSubmit={handleAddCourse} className="space-y-4">
+                <div className="space-y-1.5">
+                  <label className="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">Course Program Title</label>
+                  <input
+                    type="text"
+                    required
+                    value={courseTitle}
+                    onChange={(e) => setCourseTitle(e.target.value)}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs font-semibold focus:outline-none focus:bg-white focus:border-[#D99A1C] focus:ring-1 focus:ring-[#D99A1C] text-slate-950"
+                    placeholder="e.g. MSc Data Science"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">Assign University</label>
+                  <select
+                    required
+                    value={courseUniv}
+                    onChange={(e) => setCourseUniv(e.target.value)}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs font-semibold focus:outline-none focus:bg-white focus:ring-1 focus:ring-[#D99A1C]"
+                  >
+                    <option value="">-- Select University --</option>
+                    {universities.map(u => {
+                      const uId = typeof u === 'object' ? u._id : u;
+                      const uName = typeof u === 'object' ? u.name : u;
+                      return <option key={uId} value={uId}>{uName}</option>;
+                    })}
+                  </select>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <label className="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">Degree Level</label>
+                    <select
+                      value={courseDegreeLevel}
+                      onChange={(e) => setCourseDegreeLevel(e.target.value)}
+                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs font-semibold focus:outline-none focus:bg-white focus:ring-1 focus:ring-[#D99A1C]"
+                    >
+                      <option value="Bachelor">Bachelor</option>
+                      <option value="Master">Master</option>
+                      <option value="PhD">PhD</option>
+                      <option value="Diploma">Diploma</option>
+                    </select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">Tuition Fee</label>
+                    <input
+                      type="text"
+                      value={courseFee}
+                      onChange={(e) => setCourseFee(e.target.value)}
+                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs font-semibold focus:outline-none focus:bg-white focus:border-[#D99A1C]"
+                      placeholder="e.g. £16,500/yr"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">Multi-Select Intakes</label>
+                  <div className="max-h-24 overflow-y-auto border border-slate-200 rounded-xl p-2.5 space-y-1 bg-slate-50">
+                    {intakes.map(int => {
+                      const intId = typeof int === 'object' ? int._id : int;
+                      const intTitle = typeof int === 'object' ? int.title : int;
+                      const isChecked = courseSelectedIntakes.includes(intId);
+                      return (
+                        <label key={intId} className="flex items-center gap-2 text-[10px] font-bold text-slate-700 cursor-pointer">
+                          <input 
+                            type="checkbox"
+                            checked={isChecked}
+                            onChange={() => {
+                              if (isChecked) {
+                                setCourseSelectedIntakes(prev => prev.filter(id => id !== intId));
+                              } else {
+                                setCourseSelectedIntakes(prev => [...prev, intId]);
+                              }
+                            }}
+                          />
+                          <span>{intTitle}</span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                </div>
+                
+                <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
+                  <button type="button" onClick={() => setModalType(null)} className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-extrabold text-xs rounded-xl">Cancel</button>
+                  <button type="submit" className="px-5 py-2 bg-[#D99A1C] hover:bg-[#F5B025] text-white font-extrabold text-xs rounded-xl shadow-md">Add Course</button>
+                </div>
+              </form>
+            )}
+
+            {modalType === 'settings-intake' && (
+              <form onSubmit={handleAddIntake} className="space-y-4">
+                <div className="space-y-1.5">
+                  <label className="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">Intake Title</label>
+                  <input
+                    type="text"
+                    required
+                    value={intakeTitle}
+                    onChange={(e) => setIntakeTitle(e.target.value)}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs font-semibold focus:outline-none focus:bg-white focus:border-[#D99A1C] focus:ring-1 focus:ring-[#D99A1C] text-slate-950"
+                    placeholder="e.g. September intake"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">Intake Description</label>
+                  <input
+                    type="text"
+                    value={intakeDesc}
+                    onChange={(e) => setIntakeDesc(e.target.value)}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs font-semibold focus:outline-none focus:bg-white focus:border-[#D99A1C] text-slate-950"
+                    placeholder="e.g. Fall intake starts in September"
+                  />
+                </div>
+                
+                <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
+                  <button type="button" onClick={() => setModalType(null)} className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-extrabold text-xs rounded-xl">Cancel</button>
+                  <button type="submit" className="px-5 py-2 bg-[#D99A1C] hover:bg-[#F5B025] text-white font-extrabold text-xs rounded-xl shadow-md">Add Intake</button>
+                </div>
+              </form>
+            )}
+
+            {modalType !== 'doc' && modalType !== 'agent' && modalType !== 'stage' && 
+             modalType !== 'settings-university' && modalType !== 'settings-course' && modalType !== 'settings-intake' && (
               <form 
                 onSubmit={(e) => {
                   let setter = null;
                   let lst = [];
                   let lbl = '';
-                  if (modalType === 'settings-university') { setter = setUniversities; lst = universities; lbl = 'university'; }
-                  if (modalType === 'settings-course') { setter = setCourses; lst = courses; lbl = 'course'; }
-                  if (modalType === 'settings-intake') { setter = setIntakes; lst = intakes; lbl = 'intake'; }
                   if (modalType === 'settings-formats') { setter = setFileFormats; lst = fileFormats; lbl = 'formats'; }
                   if (modalType === 'settings-qualifications') { setter = setQualifications; lst = qualifications; lbl = 'qualifications'; }
                   if (modalType === 'settings-documents') { setter = setVerificationDocuments; lst = verificationDocuments; lbl = 'documents'; }

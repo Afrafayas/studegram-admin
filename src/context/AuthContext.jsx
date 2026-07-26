@@ -155,28 +155,120 @@ export function AuthProvider({ children }) {
     setAuditLogs(prev => [newLog, ...prev]);
   };
 
-  const login = (email, password) => {
-    const user = PRESET_USERS.find(
-      u => u.email.toLowerCase() === email.toLowerCase() && u.password === password
-    );
-    if (user) {
-      setCurrentUser(user);
-      localStorage.setItem('studegram_user', JSON.stringify(user));
-      // Log login success
-      const newLog = {
-        id: Date.now(),
-        timestamp: new Date().toISOString(),
-        userName: user.name,
-        userRole: user.role,
-        action: 'LOGIN_SUCCESS',
-        targetType: 'Session',
-        targetId: 'SYS-AUTH',
-        details: `Successful login as ${user.role} (Scope: ${user.country}/${user.team})`
-      };
-      setAuditLogs(prev => [newLog, ...prev]);
-      return { success: true };
+  const login = async (email, password) => {
+    try {
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ email, password })
+      });
+
+      const resData = await response.json();
+      if (response.ok && resData.success) {
+        const token = resData.token;
+        const dbUser = resData.data;
+
+        // Map backend roles to frontend preset user roles
+        let mappedRole = 'Executive';
+        let mappedLevel = 6;
+        let mappedCountry = 'India';
+        let mappedTeam = 'North India';
+
+        if (dbUser.role === 'SuperAdmin') {
+          mappedRole = 'Director';
+          mappedLevel = 1;
+          mappedCountry = 'All';
+          mappedTeam = 'All';
+        } else if (dbUser.role === 'Admin') {
+          mappedRole = 'COO';
+          mappedLevel = 2;
+          mappedCountry = 'All';
+          mappedTeam = 'All';
+        } else if (dbUser.role === 'Manager') {
+          if (dbUser.email.includes('finance')) {
+            mappedRole = 'Finance';
+            mappedLevel = 3;
+            mappedCountry = 'All';
+            mappedTeam = 'All';
+          } else {
+            mappedRole = 'Country Head';
+            mappedLevel = 4;
+            mappedCountry = 'India';
+            mappedTeam = 'All';
+          }
+        } else if (dbUser.role === 'Executive') {
+          if (dbUser.email.includes('bdm')) {
+            mappedRole = 'BDM';
+            mappedLevel = 5;
+            mappedCountry = 'India';
+            mappedTeam = 'North India';
+          } else {
+            mappedRole = 'Executive';
+            mappedLevel = 6;
+            mappedCountry = 'India';
+            mappedTeam = 'North India';
+          }
+        }
+
+        const userObj = {
+          id: dbUser.id || dbUser._id,
+          name: dbUser.name,
+          email: dbUser.email,
+          role: mappedRole,
+          level: mappedLevel,
+          country: mappedCountry,
+          team: mappedTeam,
+          phone: dbUser.phone || '',
+          avatar: dbUser.name ? dbUser.name.split(' ').map(n=>n[0]).join('') : 'U'
+        };
+
+        setCurrentUser(userObj);
+        localStorage.setItem('studegram_user', JSON.stringify(userObj));
+        localStorage.setItem('admin_token', token);
+
+        const newLog = {
+          id: Date.now(),
+          timestamp: new Date().toISOString(),
+          userName: userObj.name,
+          userRole: userObj.role,
+          action: 'LOGIN_SUCCESS',
+          targetType: 'Session',
+          targetId: 'SYS-AUTH',
+          details: `Successful login as ${userObj.role} via API (Scope: ${userObj.country}/${userObj.team})`
+        };
+        setAuditLogs(prev => [newLog, ...prev]);
+        return { success: true };
+      } else {
+        throw new Error(resData.message || 'Invalid credentials');
+      }
+    } catch (err) {
+      console.warn('API login failed, falling back to preset local credentials:', err.message);
+      
+      const user = PRESET_USERS.find(
+        u => u.email.toLowerCase() === email.toLowerCase() && u.password === password
+      );
+      if (user) {
+        setCurrentUser(user);
+        localStorage.setItem('studegram_user', JSON.stringify(user));
+        localStorage.setItem('admin_token', 'mock-admin-token-12345');
+        
+        const newLog = {
+          id: Date.now(),
+          timestamp: new Date().toISOString(),
+          userName: user.name,
+          userRole: user.role,
+          action: 'LOGIN_SUCCESS',
+          targetType: 'Session',
+          targetId: 'SYS-AUTH',
+          details: `Successful login as ${user.role} via local mock (Scope: ${user.country}/${user.team})`
+        };
+        setAuditLogs(prev => [newLog, ...prev]);
+        return { success: true };
+      }
+      return { success: false, message: err.message || 'Invalid email or password' };
     }
-    return { success: false, message: 'Invalid email or password' };
   };
 
   const logout = () => {
@@ -185,6 +277,7 @@ export function AuthProvider({ children }) {
     }
     setCurrentUser(null);
     localStorage.removeItem('studegram_user');
+    localStorage.removeItem('admin_token');
   };
 
   // Permission validation

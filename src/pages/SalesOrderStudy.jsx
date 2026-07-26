@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 
 export default function SalesOrderStudy({ 
-  universities, 
-  courses, 
-  intakes, 
+  universities = [], 
+  courses = [], 
+  intakes = [], 
+  partners = [],
   staffList = [],
   onAddApplication, 
   onBack 
@@ -13,9 +14,17 @@ export default function SalesOrderStudy({
   const [phoneNumber, setPhoneNumber] = useState('');
   const [dob, setDob] = useState('');
   const [assignedTo, setAssignedTo] = useState(staffList[0]?.name || 'Super Admin');
-  const [university, setUniversity] = useState(universities[0] || 'University of Surrey');
-  const [course, setCourse] = useState(courses[0] || 'MSc Computer Science');
-  const [intake, setIntake] = useState(intakes[0] || 'September/October 2026');
+  
+  // Set default values based on whether items are objects or strings
+  const getInitialId = (items) => {
+    if (!items || items.length === 0) return '';
+    return typeof items[0] === 'object' ? items[0]._id : items[0];
+  };
+
+  const [university, setUniversity] = useState(() => getInitialId(universities));
+  const [course, setCourse] = useState(() => getInitialId(courses));
+  const [intake, setIntake] = useState(() => getInitialId(intakes));
+  const [partner, setPartner] = useState('');
   
   const [isFlagDropdownOpen, setIsFlagDropdownOpen] = useState(false);
   const [successMessage, setSuccessMessage] = useState(false);
@@ -35,14 +44,27 @@ export default function SalesOrderStudy({
       return;
     }
 
+    const selectedUniv = universities.find(u => (typeof u === 'object' ? u._id : u) === university);
+    const selectedCourse = courses.find(c => (typeof c === 'object' ? c._id : c) === course);
+    const selectedIntake = intakes.find(i => (typeof i === 'object' ? i._id : i) === intake);
+
+    const uName = typeof selectedUniv === 'object' ? selectedUniv.name : selectedUniv;
+    const cName = typeof selectedCourse === 'object' ? selectedCourse.title : selectedCourse;
+    const iName = typeof selectedIntake === 'object' ? selectedIntake.title : selectedIntake;
+
     const newApp = {
       studentName: fullName,
+      studentEmail: `${fullName.toLowerCase().replace(/\s+/g, '')}@gmail.com`,
       phone: `${phoneCode} ${phoneNumber}`,
       dob,
       assignedTo,
-      universityName: university,
-      courseName: course,
-      intake,
+      universityId: university,
+      universityName: uName,
+      courseId: course,
+      courseName: cName,
+      intakeId: intake,
+      intake: iName,
+      partnerId: partner || null,
       passportNo: `T${Math.floor(1000000 + Math.random() * 9000000)}`,
       secondaryStatus: 'Pending',
       dateAdded: new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
@@ -54,6 +76,7 @@ export default function SalesOrderStudy({
     setFullName('');
     setPhoneNumber('');
     setDob('');
+    setPartner('');
 
     setTimeout(() => {
       setSuccessMessage(false);
@@ -196,9 +219,11 @@ export default function SalesOrderStudy({
                 onChange={(e) => setUniversity(e.target.value)}
                 className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs font-semibold focus:outline-none focus:bg-white focus:ring-1 focus:ring-[#D99A1C] focus:border-[#D99A1C]"
               >
-                {universities.map(u => (
-                  <option key={u} value={u}>{u}</option>
-                ))}
+                {universities.map(u => {
+                  const value = typeof u === 'object' ? u._id : u;
+                  const label = typeof u === 'object' ? u.name : u;
+                  return <option key={value} value={value}>{label}</option>;
+                })}
               </select>
             </div>
 
@@ -209,9 +234,11 @@ export default function SalesOrderStudy({
                 onChange={(e) => setCourse(e.target.value)}
                 className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs font-semibold focus:outline-none focus:bg-white focus:ring-1 focus:ring-[#D99A1C] focus:border-[#D99A1C]"
               >
-                {courses.map(c => (
-                  <option key={c} value={c}>{c}</option>
-                ))}
+                {courses.map(c => {
+                  const value = typeof c === 'object' ? c._id : c;
+                  const label = typeof c === 'object' ? c.title : c;
+                  return <option key={value} value={value}>{label}</option>;
+                })}
               </select>
             </div>
 
@@ -222,9 +249,27 @@ export default function SalesOrderStudy({
                 onChange={(e) => setIntake(e.target.value)}
                 className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs font-semibold focus:outline-none focus:bg-white focus:ring-1 focus:ring-[#D99A1C] focus:border-[#D99A1C]"
               >
-                {intakes.map(i => (
-                  <option key={i} value={i}>{i}</option>
-                ))}
+                {intakes.map(i => {
+                  const value = typeof i === 'object' ? i._id : i;
+                  const label = typeof i === 'object' ? i.title : i;
+                  return <option key={value} value={value}>{label}</option>;
+                })}
+              </select>
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">B2B Referral Partner</label>
+              <select
+                value={partner}
+                onChange={(e) => setPartner(e.target.value)}
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs font-semibold focus:outline-none focus:bg-white focus:ring-1 focus:ring-[#D99A1C] focus:border-[#D99A1C]"
+              >
+                <option value="">Direct (No Partner)</option>
+                {partners.map(p => {
+                  const value = typeof p === 'object' ? p._id : p.id;
+                  const label = typeof p === 'object' ? p.name : p.name;
+                  return <option key={value} value={value}>{label}</option>;
+                })}
               </select>
             </div>
 

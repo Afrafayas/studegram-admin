@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import AdminSidebar from './components/AdminSidebar';
 import AdminHeader from './components/AdminHeader';
 
@@ -20,6 +20,114 @@ import { useAuth } from './context/AuthContext';
 
 export default function AdminPortal({ onLogout }) {
   const { currentUser, checkScope } = useAuth();
+
+  const adminToken = localStorage.getItem('admin_token');
+
+  const fetchInitialData = async () => {
+    if (!adminToken) return;
+    try {
+      // 1. Fetch Intakes
+      const intakeRes = await fetch('/api/intakes', {
+        headers: { 'Authorization': `Bearer ${adminToken}` }
+      });
+      const intakeData = await intakeRes.json();
+      if (intakeData.success) {
+        setIntakes(intakeData.data);
+      }
+
+      // 2. Fetch Universities
+      const univRes = await fetch('/api/universities', {
+        headers: { 'Authorization': `Bearer ${adminToken}` }
+      });
+      const univData = await univRes.json();
+      if (univData.success) {
+        setUniversities(univData.data);
+      }
+
+      // 3. Fetch Courses
+      const courseRes = await fetch('/api/courses', {
+        headers: { 'Authorization': `Bearer ${adminToken}` }
+      });
+      const courseData = await courseRes.json();
+      if (courseData.success) {
+        setCourses(courseData.data);
+      }
+
+      // 4. Fetch Partners
+      const partnerRes = await fetch('/api/partners', {
+        headers: { 'Authorization': `Bearer ${adminToken}` }
+      });
+      const partnerData = await partnerRes.json();
+      if (partnerData.success) {
+        setReferralAgents(partnerData.data);
+        
+        const mappedAgents = partnerData.data.map(agent => ({
+          id: agent._id,
+          name: agent.name,
+          type: 'Agent',
+          email: agent.email,
+          phone: agent.phone || '',
+          activeApps: 0,
+          partnerCode: agent.partnerCode || `PRT-${agent._id.substring(agent._id.length - 4).toUpperCase()}`,
+          dateAdded: new Date(agent.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
+          country: agent.country || 'India',
+          status: agent.status || 'Active'
+        }));
+        
+        const studentRes = await fetch('/api/students', {
+          headers: { 'Authorization': `Bearer ${adminToken}` }
+        });
+        const studentData = await studentRes.json();
+        let mappedStudents = [];
+        if (studentData.success) {
+          mappedStudents = studentData.data.map(student => ({
+            id: student._id,
+            name: student.name,
+            type: 'Student',
+            email: student.email,
+            phone: student.phone || '',
+            activeApps: 0,
+            passportNo: student.passportNo || 'Pending',
+            dob: student.dob || '',
+            dateAdded: new Date(student.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
+            referredBy: student.referredBy || 'Direct',
+            country: student.country || 'India',
+            status: student.status || 'Active'
+          }));
+        }
+
+        setClients([...mappedAgents, ...mappedStudents]);
+      }
+
+      // 5. Fetch Applications
+      const appRes = await fetch('/api/applications', {
+        headers: { 'Authorization': `Bearer ${adminToken}` }
+      });
+      const appData = await appRes.json();
+      if (appData.success) {
+        const mapped = appData.data.map(app => ({
+          camsId: app._id,
+          studentName: app.student?.name || 'N/A',
+          passportNo: app.student?.passportNo || 'N/A',
+          universityName: app.university?.name || 'N/A',
+          courseName: app.course?.title || 'N/A',
+          intake: app.course?.intakes?.[0]?.title || 'September 2026',
+          secondaryStatus: app.status || 'Pending',
+          dateAdded: new Date(app.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
+          country: app.university?.country || 'India',
+          assignedBdm: app.partner?.name || 'Direct',
+          assignedExecutive: 'Rahul Krishnan'
+        }));
+        setApplications(mapped);
+      }
+    } catch (err) {
+      console.warn('Backend API connection failed, using local mock data store:', err.message);
+    }
+  };
+
+  useEffect(() => {
+    fetchInitialData();
+  }, [adminToken]);
   
   const [activeTab, setActiveTab] = useState('daily-report');
   const [activeSubTab, setActiveSubTab] = useState(null);
@@ -158,41 +266,99 @@ export default function AdminPortal({ onLogout }) {
     { id: 5, name: 'David Miller', type: 'Student', email: 'david@gmail.com', phone: '+44 7999 112233', activeApps: 1, status: 'Active', passportNo: 'U9998822', dob: '2000-03-12', dateAdded: '01 Jun 2026', referredBy: 'Global Study Group', country: 'United Kingdom' }
   ]);
 
-  const handleAddApplication = (newApp) => {
-    const randomId = `CAMS${Math.floor(10000 + Math.random() * 90000)}`;
-    const freshApp = { 
-      ...newApp, 
-      camsId: randomId,
-      country: newApp.country || currentUser.country || 'India',
-      assignedBdm: newApp.assignedBdm || (currentUser.role === 'BDM' ? currentUser.name : 'Amit Patel'),
-      assignedExecutive: newApp.assignedExecutive || 'Rahul Krishnan'
-    };
-    
-    setApplications(prev => [freshApp, ...prev]);
-
-    setClients(prev => {
-      const exists = prev.find(c => c.name.toLowerCase() === newApp.studentName.toLowerCase());
-      if (exists) {
-        return prev.map(c => c.id === exists.id ? { ...c, activeApps: c.activeApps + 1 } : c);
-      } else {
-        return [
-          {
-            id: Date.now(),
-            name: newApp.studentName,
-            type: 'Student',
-            email: `${newApp.studentName.toLowerCase().replace(/\s+/g, '')}@gmail.com`,
-            phone: newApp.phone || '+91 9999999999',
-            activeApps: 1,
-            passportNo: newApp.passportNo || 'Pending',
-            dob: newApp.dob || '',
-            dateAdded: newApp.dateAdded || new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
-            referredBy: newApp.referredBy || 'Direct',
-            country: newApp.country || currentUser.country || 'India'
+  const handleAddApplication = async (newApp) => {
+    const token = localStorage.getItem('admin_token');
+    try {
+      if (token && token !== 'mock-admin-token-12345') {
+        // 1. Create student
+        const studentResponse = await fetch('/api/students', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
           },
-          ...prev
-        ];
+          body: JSON.stringify({
+            name: newApp.studentName,
+            email: newApp.studentEmail,
+            phone: newApp.phone,
+            passportNo: newApp.passportNo,
+            dob: newApp.dob,
+            referredBy: newApp.partnerId ? 'Agent' : 'Direct'
+          })
+        });
+        const studentResult = await studentResponse.json();
+        if (!studentResponse.ok || !studentResult.success) {
+          throw new Error(studentResult.message || 'Failed to create student profile');
+        }
+
+        const studentId = studentResult.data._id;
+
+        // 2. Create application
+        const appPayload = {
+          student: studentId,
+          university: newApp.universityId,
+          course: newApp.courseId,
+          status: 'Pending'
+        };
+        if (newApp.partnerId) {
+          appPayload.partner = newApp.partnerId;
+        }
+
+        const appResponse = await fetch('/api/applications', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify(appPayload)
+        });
+        const appResult = await appResponse.json();
+        if (!appResponse.ok || !appResult.success) {
+          throw new Error(appResult.message || 'Failed to create student application');
+        }
+
+        alert('Application successfully created in database!');
+        fetchInitialData(); // Refresh list
+      } else {
+        // Mock fallback
+        const randomId = `CAMS${Math.floor(10000 + Math.random() * 90000)}`;
+        const freshApp = { 
+          ...newApp, 
+          camsId: randomId,
+          country: newApp.country || currentUser.country || 'India',
+          assignedBdm: newApp.assignedBdm || (currentUser.role === 'BDM' ? currentUser.name : 'Amit Patel'),
+          assignedExecutive: newApp.assignedExecutive || 'Rahul Krishnan'
+        };
+        
+        setApplications(prev => [freshApp, ...prev]);
+
+        setClients(prev => {
+          const exists = prev.find(c => c.name.toLowerCase() === newApp.studentName.toLowerCase());
+          if (exists) {
+            return prev.map(c => c.id === exists.id ? { ...c, activeApps: c.activeApps + 1 } : c);
+          } else {
+            return [
+              {
+                id: Date.now(),
+                name: newApp.studentName,
+                type: 'Student',
+                email: newApp.studentEmail,
+                phone: newApp.phone || '+91 9999999999',
+                activeApps: 1,
+                passportNo: newApp.passportNo || 'Pending',
+                dob: newApp.dob || '',
+                dateAdded: newApp.dateAdded || new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
+                referredBy: newApp.partnerId ? 'Agent' : 'Direct',
+                country: newApp.country || currentUser.country || 'India'
+              },
+              ...prev
+            ];
+          }
+        });
       }
-    });
+    } catch (err) {
+      alert(err.message);
+    }
   };
 
   // Scoped lists depending on the current user's role scoping rules
@@ -247,6 +413,7 @@ export default function AdminPortal({ onLogout }) {
             universities={universities}
             courses={courses}
             intakes={intakes}
+            partners={referralAgents}
             staffList={staffList}
             onAddApplication={handleAddApplication}
             onBack={() => {

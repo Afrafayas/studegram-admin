@@ -1,11 +1,14 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
+import ApplicationChatDrawer from '../components/ApplicationChatDrawer';
 
 export default function Students({ clients, setClients, applications }) {
   const { currentUser, addAuditLog } = useAuth();
+  const [selectedChatApp, setSelectedChatApp] = useState(null);
   
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
+  const [partnerFilter, setPartnerFilter] = useState('All');
   const [expandedId, setExpandedId] = useState(null);
   
   // Onboard Student Modal State
@@ -38,8 +41,10 @@ export default function Students({ clients, setClients, applications }) {
                         ref.toLowerCase().includes(searchTerm.toLowerCase());
                         
     const statusMatch = statusFilter === 'All' || s.status === statusFilter;
+
+    const partnerMatch = partnerFilter === 'All' || s.referredBy === partnerFilter;
     
-    return searchMatch && statusMatch;
+    return searchMatch && statusMatch && partnerMatch;
   });
 
   const toggleExpand = (id) => {
@@ -128,19 +133,33 @@ export default function Students({ clients, setClients, applications }) {
           ))}
         </div>
 
-        <div className="relative w-full sm:max-w-xs">
-          <span className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-slate-400">
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-            </svg>
-          </span>
-          <input
-            type="text"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-4 py-2.5 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:bg-white focus:border-[#D99A1C] focus:ring-1 focus:ring-[#D99A1C] transition-all font-medium"
-            placeholder="Search by name, passport, email, source..."
-          />
+        <div className="flex w-full sm:w-auto items-center gap-3">
+          <select
+            value={partnerFilter}
+            onChange={(e) => setPartnerFilter(e.target.value)}
+            className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs text-slate-900 focus:outline-none focus:border-[#D99A1C] focus:ring-1 focus:ring-[#D99A1C] font-semibold cursor-pointer"
+          >
+            <option value="All">All Partners / Channels</option>
+            <option value="Direct">Direct Applications</option>
+            {partners.map(p => (
+              <option key={p.id} value={p.name}>{p.name}</option>
+            ))}
+          </select>
+
+          <div className="relative w-full sm:max-w-xs">
+            <span className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-slate-400">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+            </span>
+            <input
+              type="text"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-4 py-2.5 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:bg-white focus:border-[#D99A1C] focus:ring-1 focus:ring-[#D99A1C] transition-all font-medium"
+              placeholder="Search by name, passport, email, referral..."
+            />
+          </div>
         </div>
       </div>
 
@@ -257,7 +276,8 @@ export default function Students({ clients, setClients, applications }) {
                                           <th className="px-4 py-2.5 text-slate-400 font-extrabold uppercase tracking-wider">Program Course</th>
                                           <th className="px-4 py-2.5 text-slate-400 font-extrabold uppercase tracking-wider">Intake Season</th>
                                           <th className="px-4 py-2.5 text-slate-400 font-extrabold uppercase tracking-wider">Date Added</th>
-                                          <th className="px-4 py-2.5 text-slate-400 font-extrabold uppercase tracking-wider text-right">Workflow Status</th>
+                                          <th className="px-4 py-2.5 text-slate-400 font-extrabold uppercase tracking-wider text-center">Workflow Status</th>
+                                          <th className="px-4 py-2.5 text-slate-400 font-extrabold uppercase tracking-wider text-right">Action</th>
                                         </tr>
                                       </thead>
                                       <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
@@ -268,7 +288,7 @@ export default function Students({ clients, setClients, applications }) {
                                             <td className="px-4 py-3 text-slate-500 font-semibold">{app.courseName}</td>
                                             <td className="px-4 py-3 text-slate-500">{app.intake}</td>
                                             <td className="px-4 py-3 text-slate-400">{app.dateAdded}</td>
-                                            <td className="px-4 py-3 text-right">
+                                            <td className="px-4 py-3 text-center">
                                               <span className={`px-2 py-0.5 border rounded-full text-[9px] font-extrabold ${
                                                 app.secondaryStatus === 'Offer Issued'
                                                   ? 'bg-emerald-50 text-emerald-700 border-emerald-100'
@@ -278,6 +298,23 @@ export default function Students({ clients, setClients, applications }) {
                                               }`}>
                                                 {app.secondaryStatus}
                                               </span>
+                                            </td>
+                                            <td className="px-4 py-3 text-right">
+                                              <button 
+                                                onClick={(e) => {
+                                                  e.stopPropagation();
+                                                  setSelectedChatApp({
+                                                    ...app,
+                                                    referredBy: student.referredBy
+                                                  });
+                                                }}
+                                                className="bg-indigo-50 hover:bg-indigo-100 text-indigo-650 hover:text-indigo-800 font-extrabold text-[10px] px-2.5 py-1 rounded-lg transition-all border border-indigo-200 inline-flex items-center gap-1 shadow-xs"
+                                              >
+                                                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                                                </svg>
+                                                <span>Chat</span>
+                                              </button>
                                             </td>
                                           </tr>
                                         ))}
@@ -419,6 +456,13 @@ export default function Students({ clients, setClients, applications }) {
             </form>
           </div>
         </div>
+      )}
+
+      {selectedChatApp && (
+        <ApplicationChatDrawer 
+          app={selectedChatApp} 
+          onClose={() => setSelectedChatApp(null)} 
+        />
       )}
     </div>
   );

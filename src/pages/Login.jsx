@@ -44,8 +44,8 @@ export default function Login({ onLoginSuccess }) {
 
     setIsLoading(true);
 
-    setTimeout(() => {
-      const res = login(email, password);
+    setTimeout(async () => {
+      const res = await login(email, password);
       setIsLoading(false);
       if (res.success) {
         onLoginSuccess();
@@ -59,8 +59,8 @@ export default function Login({ onLoginSuccess }) {
     setEmail(preset.email);
     setPassword(preset.password);
     setIsLoading(true);
-    setTimeout(() => {
-      const res = login(preset.email, preset.password);
+    setTimeout(async () => {
+      const res = await login(preset.email, preset.password);
       setIsLoading(false);
       if (res.success) {
         onLoginSuccess();
