@@ -828,6 +828,33 @@ export default function SettingsPortal({
                     <option value="India">India</option>
                   </select>
                 </div>
+
+                <div className="space-y-1.5">
+                  <label className="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">Multi-Select Courses</label>
+                  <div className="max-h-24 overflow-y-auto border border-slate-200 rounded-xl p-2.5 space-y-1 bg-slate-50">
+                    {courses.map(course => {
+                      const courseId = typeof course === 'object' ? course._id : course;
+                      const courseTitle = typeof course === 'object' ? course.title : course;
+                      const isChecked = univSelectedCourses.includes(courseId);
+                      return (
+                        <label key={courseId} className="flex items-center gap-2 text-[10px] font-bold text-slate-700 cursor-pointer">
+                          <input 
+                            type="checkbox"
+                            checked={isChecked}
+                            onChange={() => {
+                              if (isChecked) {
+                                setUnivSelectedCourses(prev => prev.filter(id => id !== courseId));
+                              } else {
+                                setUnivSelectedCourses(prev => [...prev, courseId]);
+                              }
+                            }}
+                          />
+                          <span>{courseTitle}</span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                </div>
                 
                 <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
                   <button type="button" onClick={() => setModalType(null)} className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-extrabold text-xs rounded-xl">Cancel</button>

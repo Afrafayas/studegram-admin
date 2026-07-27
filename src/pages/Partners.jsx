@@ -5,6 +5,7 @@ export default function Partners({ clients, setClients }) {
   const [statusFilter, setStatusFilter] = useState('All');
   const [locationFilter, setLocationFilter] = useState('All');
   const [expandedId, setExpandedId] = useState(null);
+  const [partnerSubTabs, setPartnerSubTabs] = useState({});
   
   // Modal State for adding new Partner
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -263,72 +264,108 @@ export default function Partners({ clients, setClients }) {
                       </tr>
                       
                       {/* Expanded Section for partner details */}
-                      {isExpanded && (
-                        <tr>
-                          <td colSpan="8" className="bg-slate-50/50 p-6 border-t border-b border-slate-100">
-                            <div className="bg-white border border-[#E2E8F0] border-t-4 border-t-[#2563EB] rounded-xl p-5 shadow-sm space-y-4">
-                              <div className="flex flex-col md:flex-row md:items-center justify-between border-b border-slate-100 pb-3 gap-2">
-                                <h3 className="text-xs font-black text-slate-900 uppercase tracking-wider">
-                                  Partner Information Sheet — {partner.name}
-                                </h3>
-                                <p className="text-[10px] text-slate-400 font-semibold">
-                                  Joined On: {partner.dateAdded || 'N/A'}
-                                </p>
-                              </div>
-                              
-                              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-[11px] font-semibold text-slate-600">
-                                <div>
-                                  <span className="text-[9px] font-extrabold uppercase text-slate-400 block tracking-wider">Agency Code</span>
-                                  <span className="text-slate-900 font-bold text-xs">{partner.partnerCode}</span>
-                                </div>
-                                <div>
-                                  <span className="text-[9px] font-extrabold uppercase text-slate-400 block tracking-wider">Direct Phone Line</span>
-                                  <span className="text-slate-900 font-medium text-xs">{partner.phone}</span>
-                                </div>
-                                <div>
-                                  <span className="text-[9px] font-extrabold uppercase text-slate-400 block tracking-wider">Primary Email Address</span>
-                                  <span className="text-indigo-600 font-bold text-xs">{partner.email}</span>
-                                </div>
-                              </div>
-                              
-                              {/* Referred Students Table */}
-                              <div className="space-y-2 pt-2">
-                                <h4 className="text-[10px] font-black text-slate-500 uppercase tracking-wider">Referred Students ({referredStudents.length})</h4>
-                                {referredStudents.length > 0 ? (
-                                  <div className="border border-slate-150 rounded-xl overflow-hidden">
-                                    <table className="w-full text-left border-collapse text-[11px]">
-                                      <thead>
-                                        <tr className="bg-slate-50 border-b border-slate-150">
-                                          <th className="px-4 py-2 text-slate-400 font-extrabold uppercase tracking-wider">Student Name</th>
-                                          <th className="px-4 py-2 text-slate-400 font-extrabold uppercase tracking-wider">Email Address</th>
-                                          <th className="px-4 py-2 text-slate-400 font-extrabold uppercase tracking-wider">Phone</th>
-                                          <th className="px-4 py-2 text-slate-400 font-extrabold uppercase tracking-wider">Files / Status</th>
-                                        </tr>
-                                      </thead>
-                                      <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
-                                        {referredStudents.map(student => (
-                                          <tr key={student.id} className="hover:bg-slate-50/30">
-                                            <td className="px-4 py-2.5 font-bold text-slate-900">{student.name}</td>
-                                            <td className="px-4 py-2.5 text-slate-500">{student.email}</td>
-                                            <td className="px-4 py-2.5 text-slate-500">{student.phone}</td>
-                                            <td className="px-4 py-2.5">
-                                              <span className="px-2 py-0.5 bg-indigo-50 text-indigo-700 rounded-md text-[9px] font-extrabold border border-indigo-100">
-                                                Active ({student.activeApps})
-                                              </span>
-                                            </td>
-                                          </tr>
-                                        ))}
-                                      </tbody>
-                                    </table>
+                      {isExpanded && (() => {
+                        const currentSubTab = partnerSubTabs[partner.id] || 'overview';
+                        const setSubTab = (tab) => {
+                          setPartnerSubTabs(prev => ({ ...prev, [partner.id]: tab }));
+                        };
+
+                        return (
+                          <tr>
+                            <td colSpan="8" className="bg-slate-50/50 p-6 border-t border-b border-slate-100">
+                              <div className="bg-white border border-[#E2E8F0] border-t-4 border-t-[#2563EB] rounded-xl p-5 shadow-sm space-y-4">
+                                
+                                {/* Sub tabs header */}
+                                <div className="flex justify-between items-center border-b border-slate-150 pb-2">
+                                  <div className="flex gap-4">
+                                    <button 
+                                      onClick={() => setSubTab('overview')}
+                                      className={`pb-1 text-xs font-black uppercase tracking-wider transition-all border-b-2 cursor-pointer ${
+                                        currentSubTab === 'overview' 
+                                          ? 'border-[#D99A1C] text-[#D99A1C]' 
+                                          : 'border-transparent text-slate-400 hover:text-slate-700'
+                                      }`}
+                                    >
+                                      Overview
+                                    </button>
+                                    <button 
+                                      onClick={() => setSubTab('applications')}
+                                      className={`pb-1 text-xs font-black uppercase tracking-wider transition-all border-b-2 cursor-pointer ${
+                                        currentSubTab === 'applications' 
+                                          ? 'border-[#D99A1C] text-[#D99A1C]' 
+                                          : 'border-transparent text-slate-400 hover:text-slate-700'
+                                      }`}
+                                    >
+                                      Applications ({referredStudents.length})
+                                    </button>
                                   </div>
-                                ) : (
-                                  <p className="text-[10px] text-slate-400 font-medium italic">No students have been referred by this partner yet.</p>
+                                  <p className="text-[10px] text-slate-400 font-semibold">
+                                    Joined On: {partner.dateAdded || 'N/A'}
+                                  </p>
+                                </div>
+
+                                {currentSubTab === 'overview' && (
+                                  <div className="space-y-4 animate-in fade-in duration-100">
+                                    <h3 className="text-xs font-black text-slate-900 uppercase tracking-wider">
+                                      Partner Information Sheet — {partner.name}
+                                    </h3>
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-[11px] font-semibold text-slate-600">
+                                      <div>
+                                        <span className="text-[9px] font-extrabold uppercase text-slate-400 block tracking-wider">Agency Code</span>
+                                        <span className="text-slate-900 font-bold text-xs">{partner.partnerCode}</span>
+                                      </div>
+                                      <div>
+                                        <span className="text-[9px] font-extrabold uppercase text-slate-400 block tracking-wider">Direct Phone Line</span>
+                                        <span className="text-slate-900 font-medium text-xs">{partner.phone}</span>
+                                      </div>
+                                      <div>
+                                        <span className="text-[9px] font-extrabold uppercase text-slate-400 block tracking-wider">Primary Email Address</span>
+                                        <span className="text-indigo-600 font-bold text-xs">{partner.email}</span>
+                                      </div>
+                                    </div>
+                                  </div>
+                                )}
+
+                                {currentSubTab === 'applications' && (
+                                  <div className="space-y-2 animate-in fade-in duration-100">
+                                    <h4 className="text-[10px] font-black text-slate-500 uppercase tracking-wider">Referred Students ({referredStudents.length})</h4>
+                                    {referredStudents.length > 0 ? (
+                                      <div className="border border-slate-150 rounded-xl overflow-hidden">
+                                        <table className="w-full text-left border-collapse text-[11px]">
+                                          <thead>
+                                            <tr className="bg-slate-50 border-b border-slate-150">
+                                              <th className="px-4 py-2 text-slate-400 font-extrabold uppercase tracking-wider">Student Name</th>
+                                              <th className="px-4 py-2 text-slate-400 font-extrabold uppercase tracking-wider">Email Address</th>
+                                              <th className="px-4 py-2 text-slate-400 font-extrabold uppercase tracking-wider">Phone</th>
+                                              <th className="px-4 py-2 text-slate-400 font-extrabold uppercase tracking-wider">Files / Status</th>
+                                            </tr>
+                                          </thead>
+                                          <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
+                                            {referredStudents.map(student => (
+                                              <tr key={student.id} className="hover:bg-slate-50/30">
+                                                <td className="px-4 py-2.5 font-bold text-slate-900">{student.name}</td>
+                                                <td className="px-4 py-2.5 text-slate-500">{student.email}</td>
+                                                <td className="px-4 py-2.5 text-slate-500">{student.phone}</td>
+                                                <td className="px-4 py-2.5">
+                                                  <span className="px-2 py-0.5 bg-indigo-50 text-indigo-700 rounded-md text-[9px] font-extrabold border border-indigo-100">
+                                                    Active ({student.activeApps})
+                                                  </span>
+                                                </td>
+                                              </tr>
+                                            ))}
+                                          </tbody>
+                                        </table>
+                                      </div>
+                                    ) : (
+                                      <p className="text-[10px] text-slate-400 font-medium italic">No students have been referred by this partner yet.</p>
+                                    )}
+                                  </div>
                                 )}
                               </div>
-                            </div>
-                          </td>
-                        </tr>
-                      )}
+                            </td>
+                          </tr>
+                        );
+                      })()}
                     </React.Fragment>
                   );
                 })}
