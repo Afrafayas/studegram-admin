@@ -69,6 +69,23 @@ export default function AdminSidebar({
               </svg>
               <span>Daily Report</span>
             </button>
+            
+            {/* Applications */}
+            {currentUser.role !== 'Finance' && (
+              <button
+                onClick={() => handleTabClick('applications')}
+                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left text-xs font-semibold transition-all duration-150 ${
+                  activeTab === 'applications' && !activeSubTab
+                    ? 'bg-[#161622] text-white border-l-2 border-[#D99A1C] pl-2.5'
+                    : 'hover:bg-[#161622]/50 hover:text-white'
+                }`}
+              >
+                <svg className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                <span>Applications</span>
+              </button>
+            )}
 
             {/* Admin-Report Collapsible */}
             {(currentUser.role === 'Director' || currentUser.role === 'COO' || currentUser.role === 'Country Head') && (

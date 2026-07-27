@@ -8,6 +8,7 @@ import AdminReport from './pages/AdminReport';
 import Partners from './pages/Partners';
 import Students from './pages/Students';
 import Staff from './pages/Staff';
+import Applications from './pages/Applications';
 import SalesOrderStudy from './pages/SalesOrderStudy';
 import SalesOrderTourist from './pages/SalesOrderTourist';
 import SettingsPortal from './pages/SettingsPortal';
@@ -377,6 +378,19 @@ export default function AdminPortal({ onLogout }) {
   const renderActiveTabContent = () => {
     if (activeTab === 'daily-report') {
       return <DailyReport applications={scopedApplications} />;
+    }
+
+    if (activeTab === 'applications') {
+      return (
+        <Applications 
+          applications={scopedApplications} 
+          referralAgents={referralAgents}
+          onAddClick={() => {
+            setActiveTab('sales-order');
+            setActiveSubTab('study');
+          }}
+        />
+      );
     }
     
     if (activeTab === 'admin-report') {
