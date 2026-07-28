@@ -42,7 +42,7 @@ export default function Applications({ applications, referralAgents, onAddClick,
 
     setIsUpdating(true);
     try {
-      const appId = statusModalApp.id || statusModalApp._id || statusModalApp.camsId;
+      const appId = statusModalApp.id || statusModalApp._id;
       const res = await API.put(`/applications/${appId}`, {
         status: selectedStatus,
         remarks: remarks || `Status updated to ${selectedStatus}`
