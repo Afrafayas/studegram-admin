@@ -37,6 +37,11 @@ export default function SettingsPortal({
   const [intakeTitle, setIntakeTitle] = useState('');
   const [intakeDesc, setIntakeDesc] = useState('');
   
+  // Intake Edit State
+  const [editingIntake, setEditingIntake] = useState(null);
+  const [editIntakeTitle, setEditIntakeTitle] = useState('');
+  const [editIntakeDesc, setEditIntakeDesc] = useState('');
+  
   const [docName, setDocName] = useState('');
   const [docFormat, setDocFormat] = useState('.pdf');
   const [docMinSize, setDocMinSize] = useState('0.001');
@@ -243,6 +248,66 @@ export default function SettingsPortal({
       }
       setIntakeTitle('');
       setIntakeDesc('');
+      setModalType(null);
+    } catch (err) {
+      alert(err.message);
+    }
+  };
+
+  const openEditIntakeModal = (intake) => {
+    if (!isWritable) {
+      alert("Permission Denied: System configurations can only be modified by the Director.");
+      return;
+    }
+    setEditingIntake(intake);
+    setEditIntakeTitle(intake.title);
+    setEditIntakeDesc(intake.description || '');
+    setModalType('edit-intake');
+  };
+
+  const handleUpdateIntake = async (e) => {
+    e.preventDefault();
+    if (!isWritable) return;
+    if (!editIntakeTitle) {
+      alert("Please enter intake title.");
+      return;
+    }
+
+    const token = localStorage.getItem('admin_token');
+    const updatedIntakeData = {
+      title: editIntakeTitle,
+      description: editIntakeDesc
+    };
+
+    try {
+      if (token && token !== 'mock-admin-token-12345' && editingIntake?._id) {
+        const response = await fetch(`/api/intakes/${editingIntake._id}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify(updatedIntakeData)
+        });
+        const resData = await response.json();
+        if (response.ok && resData.success) {
+          setIntakes(prev => prev.map(item => item._id === editingIntake._id ? resData.data : item));
+          addAuditLog('EDIT_SETTING_INTAKE', 'Settings', editIntakeTitle, `Updated intake setting: ${editIntakeTitle}`);
+        } else {
+          throw new Error(resData.message || 'Failed to update intake');
+        }
+      } else {
+        setIntakes(prev => prev.map(item => {
+          if (item._id === editingIntake?._id || item.title === editingIntake?.title) {
+            return { ...item, title: editIntakeTitle, description: editIntakeDesc };
+          }
+          return item;
+        }));
+        addAuditLog('EDIT_SETTING_INTAKE', 'Settings', editIntakeTitle, `Updated mock intake setting: ${editIntakeTitle}`);
+      }
+      setEditingIntake(null);
+      setEditIntakeTitle('');
+      setEditIntakeDesc('');
       setModalType(null);
     } catch (err) {
       alert(err.message);
@@ -649,14 +714,24 @@ export default function SettingsPortal({
                       <p className="text-xs font-bold text-slate-800">{displayName}</p>
                       {detailsLabel && <p className="text-[10px] text-slate-400 font-semibold mt-0.5">{detailsLabel}</p>}
                     </div>
-                    {listSetter && (
-                      <button
-                        onClick={() => handleDeleteSettingItem(item, listSetter, activeSubTab.replace('settings-', ''))}
-                        className="text-rose-500 hover:text-rose-700 font-extrabold text-xs cursor-pointer bg-white px-2.5 py-1 border border-slate-200 rounded-lg hover:border-rose-200 hover:bg-rose-50/20 transition-all shadow-3xs"
-                      >
-                        Delete
-                      </button>
-                    )}
+                    <div className="flex items-center gap-2">
+                      {activeSubTab === 'settings-intake' && listSetter && (
+                        <button
+                          onClick={() => openEditIntakeModal(item)}
+                          className="text-indigo-500 hover:text-indigo-700 font-extrabold text-xs cursor-pointer bg-white px-2.5 py-1 border border-slate-200 rounded-lg hover:border-indigo-200 hover:bg-indigo-50/20 transition-all shadow-3xs"
+                        >
+                          Edit
+                        </button>
+                      )}
+                      {listSetter && (
+                        <button
+                          onClick={() => handleDeleteSettingItem(item, listSetter, activeSubTab.replace('settings-', ''))}
+                          className="text-rose-500 hover:text-rose-700 font-extrabold text-xs cursor-pointer bg-white px-2.5 py-1 border border-slate-200 rounded-lg hover:border-rose-200 hover:bg-rose-50/20 transition-all shadow-3xs"
+                        >
+                          Delete
+                        </button>
+                      )}
+                    </div>
                   </div>
                 );
               })}
@@ -685,7 +760,8 @@ export default function SettingsPortal({
                 {modalType === 'doc' && 'Add New Course Document Rule'}
                 {modalType === 'agent' && 'Invite Referral Agent Channel'}
                 {modalType === 'stage' && 'Add Application Pipeline Stage'}
-                {modalType !== 'doc' && modalType !== 'agent' && modalType !== 'stage' && 'Add Configuration Lookup Item'}
+                {modalType === 'edit-intake' && 'Edit Intake Season'}
+                {modalType !== 'doc' && modalType !== 'agent' && modalType !== 'stage' && modalType !== 'edit-intake' && 'Add Configuration Lookup Item'}
               </h3>
               <button onClick={() => setModalType(null)} className="text-slate-400 hover:text-slate-600 font-bold">✕</button>
             </div>
@@ -983,8 +1059,40 @@ export default function SettingsPortal({
               </form>
             )}
 
+            {modalType === 'edit-intake' && (
+              <form onSubmit={handleUpdateIntake} className="space-y-4">
+                <div className="space-y-1.5">
+                  <label className="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">Intake Title</label>
+                  <input
+                    type="text"
+                    required
+                    value={editIntakeTitle}
+                    onChange={(e) => setEditIntakeTitle(e.target.value)}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs font-semibold focus:outline-none focus:bg-white focus:border-[#D99A1C] focus:ring-1 focus:ring-[#D99A1C] text-slate-950"
+                    placeholder="e.g. September intake"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">Intake Description</label>
+                  <input
+                    type="text"
+                    value={editIntakeDesc}
+                    onChange={(e) => setEditIntakeDesc(e.target.value)}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs font-semibold focus:outline-none focus:bg-white focus:border-[#D99A1C] text-slate-950"
+                    placeholder="e.g. Fall intake starts in September"
+                  />
+                </div>
+                
+                <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
+                  <button type="button" onClick={() => setModalType(null)} className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-extrabold text-xs rounded-xl">Cancel</button>
+                  <button type="submit" className="px-5 py-2 bg-[#D99A1C] hover:bg-[#F5B025] text-white font-extrabold text-xs rounded-xl shadow-md">Save Changes</button>
+                </div>
+              </form>
+            )}
+
             {modalType !== 'doc' && modalType !== 'agent' && modalType !== 'stage' && 
-             modalType !== 'settings-university' && modalType !== 'settings-course' && modalType !== 'settings-intake' && (
+             modalType !== 'settings-university' && modalType !== 'settings-course' && modalType !== 'settings-intake' && 
+             modalType !== 'edit-intake' && (
               <form 
                 onSubmit={(e) => {
                   let setter = null;

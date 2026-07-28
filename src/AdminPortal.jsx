@@ -117,7 +117,11 @@ export default function AdminPortal({ onLogout }) {
           dateAdded: new Date(app.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
           country: app.university?.country || 'India',
           assignedBdm: app.partner?.name || 'Direct',
-          assignedExecutive: 'Rahul Krishnan'
+          assignedExecutive: 'Rahul Krishnan',
+          statusHistory: app.statusHistory || [],
+          dob: app.student?.dob ? new Date(app.student.dob).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : null,
+          studentEmail: app.student?.email || null,
+          phone: app.student?.phone || null
         }));
         setApplications(mapped);
       }
@@ -271,28 +275,32 @@ export default function AdminPortal({ onLogout }) {
     const token = localStorage.getItem('admin_token');
     try {
       if (token && token !== 'mock-admin-token-12345') {
-        // 1. Create student
-        const studentResponse = await fetch('/api/students', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-          },
-          body: JSON.stringify({
-            name: newApp.studentName,
-            email: newApp.studentEmail,
-            phone: newApp.phone,
-            passportNo: newApp.passportNo,
-            dob: newApp.dob,
-            referredBy: newApp.partnerId ? 'Agent' : 'Direct'
-          })
-        });
-        const studentResult = await studentResponse.json();
-        if (!studentResponse.ok || !studentResult.success) {
-          throw new Error(studentResult.message || 'Failed to create student profile');
-        }
+        let studentId = newApp.studentId;
 
-        const studentId = studentResult.data._id;
+        // Only create a new student profile if a pre-existing student ID was not passed
+        if (!studentId) {
+          // 1. Create student
+          const studentResponse = await fetch('/api/students', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({
+              name: newApp.studentName,
+              email: newApp.studentEmail,
+              phone: newApp.phone,
+              passportNo: newApp.passportNo,
+              dob: newApp.dob,
+              referredBy: newApp.partnerId ? 'Agent' : 'Direct'
+            })
+          });
+          const studentResult = await studentResponse.json();
+          if (!studentResponse.ok || !studentResult.success) {
+            throw new Error(studentResult.message || 'Failed to create student profile');
+          }
+          studentId = studentResult.data._id;
+        }
 
         // 2. Create application
         const appPayload = {
@@ -334,7 +342,10 @@ export default function AdminPortal({ onLogout }) {
         setApplications(prev => [freshApp, ...prev]);
 
         setClients(prev => {
-          const exists = prev.find(c => c.name.toLowerCase() === newApp.studentName.toLowerCase());
+          const exists = prev.find(c => 
+            (newApp.studentId && c.id === newApp.studentId) || 
+            c.name.toLowerCase() === newApp.studentName.toLowerCase()
+          );
           if (exists) {
             return prev.map(c => c.id === exists.id ? { ...c, activeApps: c.activeApps + 1 } : c);
           } else {
@@ -389,6 +400,7 @@ export default function AdminPortal({ onLogout }) {
             setActiveTab('sales-order');
             setActiveSubTab('study');
           }}
+          onRefresh={fetchInitialData}
         />
       );
     }
@@ -429,6 +441,7 @@ export default function AdminPortal({ onLogout }) {
             intakes={intakes}
             partners={referralAgents}
             staffList={staffList}
+            students={clients.filter(c => c.type === 'Student')}
             onAddApplication={handleAddApplication}
             onBack={() => {
               setActiveTab('daily-report');

@@ -6,9 +6,13 @@ export default function SalesOrderStudy({
   intakes = [], 
   partners = [],
   staffList = [],
+  students = [],
   onAddApplication, 
   onBack 
 }) {
+  const [studentSelectionMode, setStudentSelectionMode] = useState('new'); // 'new' or 'existing'
+  const [selectedStudent, setSelectedStudent] = useState('');
+
   const [fullName, setFullName] = useState('');
   const [phoneCode, setPhoneCode] = useState('+91');
   const [phoneNumber, setPhoneNumber] = useState('');
@@ -39,8 +43,12 @@ export default function SalesOrderStudy({
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (!fullName || !phoneNumber || !dob) {
+    if (studentSelectionMode === 'new' && (!fullName || !phoneNumber || !dob)) {
       alert("Please fill in all required fields.");
+      return;
+    }
+    if (studentSelectionMode === 'existing' && !selectedStudent) {
+      alert("Please select a student.");
       return;
     }
 
@@ -52,23 +60,46 @@ export default function SalesOrderStudy({
     const cName = typeof selectedCourse === 'object' ? selectedCourse.title : selectedCourse;
     const iName = typeof selectedIntake === 'object' ? selectedIntake.title : selectedIntake;
 
-    const newApp = {
-      studentName: fullName,
-      studentEmail: `${fullName.toLowerCase().replace(/\s+/g, '')}@gmail.com`,
-      phone: `${phoneCode} ${phoneNumber}`,
-      dob,
-      assignedTo,
-      universityId: university,
-      universityName: uName,
-      courseId: course,
-      courseName: cName,
-      intakeId: intake,
-      intake: iName,
-      partnerId: partner || null,
-      passportNo: `T${Math.floor(1000000 + Math.random() * 9000000)}`,
-      secondaryStatus: 'Pending',
-      dateAdded: new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
-    };
+    let newApp;
+    if (studentSelectionMode === 'existing') {
+      const studentObj = students.find(s => s.id === selectedStudent);
+      newApp = {
+        studentId: selectedStudent,
+        studentName: studentObj?.name || 'Unknown',
+        studentEmail: studentObj?.email || '',
+        phone: studentObj?.phone || '',
+        dob: studentObj?.dob || '',
+        assignedTo,
+        universityId: university,
+        universityName: uName,
+        courseId: course,
+        courseName: cName,
+        intakeId: intake,
+        intake: iName,
+        partnerId: partner || null,
+        passportNo: studentObj?.passportNo || `T${Math.floor(1000000 + Math.random() * 9000000)}`,
+        secondaryStatus: 'Pending',
+        dateAdded: new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
+      };
+    } else {
+      newApp = {
+        studentName: fullName,
+        studentEmail: `${fullName.toLowerCase().replace(/\s+/g, '')}@gmail.com`,
+        phone: `${phoneCode} ${phoneNumber}`,
+        dob,
+        assignedTo,
+        universityId: university,
+        universityName: uName,
+        courseId: course,
+        courseName: cName,
+        intakeId: intake,
+        intake: iName,
+        partnerId: partner || null,
+        passportNo: `T${Math.floor(1000000 + Math.random() * 9000000)}`,
+        secondaryStatus: 'Pending',
+        dateAdded: new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
+      };
+    }
 
     onAddApplication(newApp);
     setSuccessMessage(true);
@@ -77,6 +108,8 @@ export default function SalesOrderStudy({
     setPhoneNumber('');
     setDob('');
     setPartner('');
+    setSelectedStudent('');
+    setStudentSelectionMode('new');
 
     setTimeout(() => {
       setSuccessMessage(false);
@@ -136,76 +169,123 @@ export default function SalesOrderStudy({
               </select>
             </div>
 
-            <div className="space-y-1.5">
-              <label className="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">Full Name <span className="text-rose-500">*</span></label>
-              <input
-                type="text"
-                required
-                value={fullName}
-                onChange={(e) => setFullName(e.target.value)}
-                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs font-semibold focus:outline-none focus:bg-white focus:border-[#D99A1C] focus:ring-1 focus:ring-[#D99A1C] transition-all text-slate-900"
-                placeholder="Enter student first and last name"
-              />
-            </div>
-
-            <div className="space-y-1.5 relative">
-              <label className="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">Phone Number <span className="text-rose-500">*</span></label>
-              <div className="flex border border-slate-200 rounded-xl overflow-visible bg-slate-50 focus-within:bg-white focus-within:border-[#D99A1C] focus-within:ring-1 focus-within:ring-[#D99A1C] transition-all">
-                <button
-                  type="button"
-                  onClick={() => setIsFlagDropdownOpen(!isFlagDropdownOpen)}
-                  className="flex items-center gap-1.5 px-3 py-2 border-r border-slate-200 hover:bg-slate-100 rounded-l-xl text-xs font-extrabold text-slate-700 shrink-0"
-                >
-                  <span>{selectedCountry.flag}</span>
-                  <span>{selectedCountry.code}</span>
-                  <svg className="w-3 h-3 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M19 9l-7 7-7-7" />
-                  </svg>
-                </button>
-
-                {isFlagDropdownOpen && (
-                  <>
-                    <div className="fixed inset-0 z-10" onClick={() => setIsFlagDropdownOpen(false)}></div>
-                    <div className="absolute left-0 top-[60px] w-48 bg-white border border-slate-200 rounded-xl shadow-xl py-1 z-20 text-xs font-semibold text-slate-700 animate-in fade-in slide-in-from-top-1 duration-150">
-                      {countries.map(c => (
-                        <button
-                          key={c.code}
-                          type="button"
-                          onClick={() => {
-                            setPhoneCode(c.code);
-                            setIsFlagDropdownOpen(false);
-                          }}
-                          className="w-full flex items-center gap-3 px-4 py-2 hover:bg-slate-50 text-left font-semibold"
-                        >
-                          <span className="text-sm">{c.flag}</span>
-                          <span className="font-bold">{c.code}</span>
-                          <span className="text-slate-400 font-medium truncate">{c.name}</span>
-                        </button>
-                      ))}
-                    </div>
-                  </>
-                )}
-
-                <input
-                  type="tel"
-                  required
-                  value={phoneNumber}
-                  onChange={(e) => setPhoneNumber(e.target.value)}
-                  className="w-full bg-transparent px-3 py-2.5 text-xs font-semibold focus:outline-none text-slate-900"
-                  placeholder="98765 43210"
-                />
+            <div className="space-y-3">
+              <label className="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">Student Information</label>
+              
+              <div className="flex gap-4">
+                <label className="flex items-center gap-2 cursor-pointer text-xs font-semibold text-slate-700">
+                  <input
+                    type="radio"
+                    name="studentSelectionMode"
+                    checked={studentSelectionMode === 'new'}
+                    onChange={() => setStudentSelectionMode('new')}
+                    className="text-[#D99A1C] focus:ring-[#D99A1C]"
+                  />
+                  Register New Student
+                </label>
+                <label className="flex items-center gap-2 cursor-pointer text-xs font-semibold text-slate-700">
+                  <input
+                    type="radio"
+                    name="studentSelectionMode"
+                    checked={studentSelectionMode === 'existing'}
+                    onChange={() => setStudentSelectionMode('existing')}
+                    className="text-[#D99A1C] focus:ring-[#D99A1C]"
+                  />
+                  Select Existing Student
+                </label>
               </div>
-            </div>
 
-            <div className="space-y-1.5">
-              <label className="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">Date of Birth <span className="text-rose-500">*</span></label>
-              <input
-                type="date"
-                required
-                value={dob}
-                onChange={(e) => setDob(e.target.value)}
-                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs font-semibold focus:outline-none focus:bg-white focus:border-[#D99A1C] focus:ring-1 focus:ring-[#D99A1C] transition-all text-slate-900"
-              />
+              {studentSelectionMode === 'existing' ? (
+                <div className="space-y-1.5">
+                  <select
+                    required={studentSelectionMode === 'existing'}
+                    value={selectedStudent}
+                    onChange={(e) => setSelectedStudent(e.target.value)}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs font-semibold focus:outline-none focus:bg-white focus:ring-1 focus:ring-[#D99A1C] focus:border-[#D99A1C] text-slate-900 cursor-pointer"
+                  >
+                    <option value="">-- Choose Student --</option>
+                    {students.map(s => (
+                      <option key={s.id} value={s.id}>
+                        {s.name} ({s.passportNo || 'No Passport'})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              ) : (
+                <div className="space-y-4 bg-slate-50/50 border border-slate-100 rounded-xl p-4 shadow-3xs">
+                  <div className="space-y-1.5">
+                    <label className="block text-[9px] font-extrabold text-slate-500 uppercase tracking-wider">Full Name <span className="text-rose-500">*</span></label>
+                    <input
+                      type="text"
+                      required={studentSelectionMode === 'new'}
+                      value={fullName}
+                      onChange={(e) => setFullName(e.target.value)}
+                      className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs font-semibold focus:outline-none focus:border-[#D99A1C] focus:ring-1 focus:ring-[#D99A1C] transition-all text-slate-900"
+                      placeholder="Enter student first and last name"
+                    />
+                  </div>
+
+                  <div className="space-y-1.5 relative">
+                    <label className="block text-[9px] font-extrabold text-slate-500 uppercase tracking-wider">Phone Number <span className="text-rose-500">*</span></label>
+                    <div className="flex border border-slate-200 rounded-xl overflow-visible bg-white focus-within:border-[#D99A1C] focus-within:ring-1 focus-within:ring-[#D99A1C] transition-all">
+                      <button
+                        type="button"
+                        onClick={() => setIsFlagDropdownOpen(!isFlagDropdownOpen)}
+                        className="flex items-center gap-1.5 px-3 py-1.5 border-r border-slate-200 hover:bg-slate-50 rounded-l-xl text-xs font-extrabold text-slate-700 shrink-0"
+                      >
+                        <span>{selectedCountry.flag}</span>
+                        <span>{selectedCountry.code}</span>
+                        <svg className="w-3 h-3 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M19 9l-7 7-7-7" />
+                        </svg>
+                      </button>
+
+                      {isFlagDropdownOpen && (
+                        <>
+                          <div className="fixed inset-0 z-10" onClick={() => setIsFlagDropdownOpen(false)}></div>
+                          <div className="absolute left-0 top-[110px] w-48 bg-white border border-slate-200 rounded-xl shadow-xl py-1 z-20 text-xs font-semibold text-slate-700 animate-in fade-in slide-in-from-top-1 duration-150">
+                            {countries.map(c => (
+                              <button
+                                key={c.code}
+                                type="button"
+                                onClick={() => {
+                                  setPhoneCode(c.code);
+                                  setIsFlagDropdownOpen(false);
+                                }}
+                                className="w-full flex items-center gap-3 px-4 py-2 hover:bg-slate-50 text-left font-semibold"
+                              >
+                                <span className="text-sm">{c.flag}</span>
+                                <span className="font-bold">{c.code}</span>
+                                <span className="text-slate-400 font-medium truncate">{c.name}</span>
+                              </button>
+                            ))}
+                          </div>
+                        </>
+                      )}
+
+                      <input
+                        type="tel"
+                        required={studentSelectionMode === 'new'}
+                        value={phoneNumber}
+                        onChange={(e) => setPhoneNumber(e.target.value)}
+                        className="w-full bg-transparent px-3 py-2 text-xs font-semibold focus:outline-none text-slate-900"
+                        placeholder="98765 43210"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="block text-[9px] font-extrabold text-slate-500 uppercase tracking-wider">Date of Birth <span className="text-rose-500">*</span></label>
+                    <input
+                      type="date"
+                      required={studentSelectionMode === 'new'}
+                      value={dob}
+                      onChange={(e) => setDob(e.target.value)}
+                      className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs font-semibold focus:outline-none focus:border-[#D99A1C] focus:ring-1 focus:ring-[#D99A1C] transition-all text-slate-900"
+                    />
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 
