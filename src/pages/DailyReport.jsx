@@ -7,28 +7,37 @@ export default function DailyReport({ applications }) {
   const [hoveredPoint, setHoveredPoint] = useState(null);
 
   // Compute stats dynamically based on scoped applications to demonstrate RBAC scoping
-  const isGlobal = ['Director', 'COO', 'Finance'].includes(currentUser?.role);
-  const totalAppsToday = applications ? (isGlobal ? applications.length + 39 : applications.length) : 0;
-  const activeLeads = isGlobal ? 318 : (currentUser?.role === 'Country Head' ? 84 : 12);
-  const successRate = isGlobal ? "94.2%" : "96.5%";
+  // Compute stats dynamically based on actual applications
+  const totalAppsToday = applications ? applications.length : 0;
+  const activeLeads = applications ? applications.length : 0;
+  const successRate = applications && applications.length > 0 ? `${Math.round((applications.filter(a => a.secondaryStatus === 'Processed' || a.secondaryStatus === 'Offer Issued').length / applications.length) * 100)}%` : "0%";
   const pendingVerification = applications ? applications.filter(a => a.secondaryStatus === 'Pending' || a.secondaryStatus === 'Document Verification').length : 0;
 
   const timelineData = [
-    { day: 'Wed', count: 12 },
-    { day: 'Thu', count: 19 },
-    { day: 'Fri', count: 15 },
-    { day: 'Sat', count: 8 },
-    { day: 'Sun', count: 10 },
-    { day: 'Mon', count: 28 },
-    { day: 'Tue', count: 35 },
+    { day: 'Wed', count: 0 },
+    { day: 'Thu', count: 0 },
+    { day: 'Fri', count: 0 },
+    { day: 'Sat', count: 0 },
+    { day: 'Sun', count: 0 },
+    { day: 'Mon', count: 0 },
+    { day: 'Tue', count: totalAppsToday },
   ];
 
-  const universityData = [
-    { name: 'University of Surrey', count: 28, pct: 85, color: 'from-indigo-500 to-cyan-400' },
-    { name: 'Coventry University', count: 22, pct: 70, color: 'from-blue-500 to-indigo-500' },
-    { name: 'Anglia Ruskin University', count: 17, pct: 55, color: 'from-cyan-500 to-blue-400' },
-    { name: 'Calicut University', count: 12, pct: 40, color: 'from-teal-400 to-cyan-500' },
-  ];
+  // Dynamic university breakdown
+  const univCounts = {};
+  if (applications) {
+    applications.forEach(a => {
+      const uName = a.universityName || 'Other';
+      univCounts[uName] = (univCounts[uName] || 0) + 1;
+    });
+  }
+
+  const universityData = Object.keys(univCounts).map((name, idx) => ({
+    name,
+    count: univCounts[name],
+    pct: totalAppsToday > 0 ? Math.round((univCounts[name] / totalAppsToday) * 100) : 0,
+    color: idx % 2 === 0 ? 'from-indigo-500 to-cyan-400' : 'from-blue-500 to-indigo-500'
+  }));
 
   const width = 500;
   const height = 150;

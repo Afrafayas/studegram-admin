@@ -5,27 +5,15 @@ export default function AdminReport({ applications }) {
   const [selectedUniversity, setSelectedUniversity] = useState('All');
   const [selectedCourse, setSelectedCourse] = useState('All');
 
-  const reportDatabase = [
-    { camsId: 'CAMS10204', name: 'Shanto Shaju', agent: 'Salman', university: 'University of Surrey', course: 'MSc International Hotel Management', intake: 'September 2026', status: 'Offer Issued' },
-    { camsId: 'CAMS10492', name: 'Aneesha Anil', agent: 'Aisha', university: 'University of Surrey', course: 'MSc Human Resources Management', intake: 'January 2027', status: 'Pending' },
-    { camsId: 'CAMS93810', name: 'Rahul Krishnan', agent: 'Salman', university: 'Coventry University', course: 'MSc Computer Science', intake: 'September 2026', status: 'Processed' },
-    { camsId: 'CAMS30492', name: 'Sherin Susan', agent: 'Aisha', university: 'Anglia Ruskin University', course: 'BCOM', intake: 'January 2027', status: 'Document Verification' },
-    { camsId: 'CAMS82739', name: 'Basil George', agent: 'None (Direct)', university: 'Calicut University', course: 'BCOM', intake: 'June 2026', status: 'Visa Pending' },
-    { camsId: 'CAMS10928', name: 'Nandana Roy', agent: 'Salman', university: 'Coventry University', course: 'MSc Human Resources Management', intake: 'September 2026', status: 'Offer Issued' },
-  ];
-
-  const allReportApps = [
-    ...reportDatabase,
-    ...(applications || []).map((app, idx) => ({
-      camsId: app.camsId || `CAMS${10000 + idx}`,
-      name: app.studentName || `${app.firstName} ${app.lastName}`,
-      agent: 'Salman',
-      university: app.universityName || app.university,
-      course: app.courseName || 'MSc Computer Science',
-      intake: app.intake,
-      status: app.secondaryStatus || 'Pending'
-    }))
-  ];
+  const allReportApps = (applications || []).map((app, idx) => ({
+    camsId: app.camsId || app._id || `CAMS${10000 + idx}`,
+    name: app.studentName || `${app.firstName || ''} ${app.lastName || ''}`.trim() || 'N/A',
+    agent: app.assignedBdm || 'Direct',
+    university: app.universityName || app.university || 'N/A',
+    course: app.courseName || 'N/A',
+    intake: app.intake || 'N/A',
+    status: app.secondaryStatus || 'Pending'
+  }));
 
   const filteredApps = allReportApps.filter(app => {
     const agentMatch = selectedAgent === 'All' || app.agent.toLowerCase().includes(selectedAgent.toLowerCase());

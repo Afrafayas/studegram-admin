@@ -1,9 +1,22 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import API from '../api/axios';
 
 const AuthContext = createContext(null);
 
 // Preset users mapped to organizational hierarchy roles
 export const PRESET_USERS = [
+  {
+    id: 100,
+    name: 'Super Admin',
+    email: 'superadminluzid@gmail.com',
+    password: '123456',
+    role: 'Director',
+    level: 1,
+    country: 'All',
+    team: 'All',
+    phone: '+1 800 555 0199',
+    avatar: 'SA'
+  },
   {
     id: 101,
     name: 'Elena Rostova',
@@ -157,16 +170,9 @@ export function AuthProvider({ children }) {
 
   const login = async (email, password) => {
     try {
-      const response = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ email, password })
-      });
-
-      const resData = await response.json();
-      if (response.ok && resData.success) {
+      const response = await API.post('/auth/login', { email, password });
+      const resData = response.data;
+      if (resData?.success) {
         const token = resData.token;
         const dbUser = resData.data;
 
@@ -241,33 +247,12 @@ export function AuthProvider({ children }) {
         setAuditLogs(prev => [newLog, ...prev]);
         return { success: true };
       } else {
-        throw new Error(resData.message || 'Invalid credentials');
+        return { success: false, message: resData?.message || 'Invalid credentials' };
       }
     } catch (err) {
-      console.warn('API login failed, falling back to preset local credentials:', err.message);
-      
-      const user = PRESET_USERS.find(
-        u => u.email.toLowerCase() === email.toLowerCase() && u.password === password
-      );
-      if (user) {
-        setCurrentUser(user);
-        localStorage.setItem('studegram_user', JSON.stringify(user));
-        localStorage.setItem('admin_token', 'mock-admin-token-12345');
-        
-        const newLog = {
-          id: Date.now(),
-          timestamp: new Date().toISOString(),
-          userName: user.name,
-          userRole: user.role,
-          action: 'LOGIN_SUCCESS',
-          targetType: 'Session',
-          targetId: 'SYS-AUTH',
-          details: `Successful login as ${user.role} via local mock (Scope: ${user.country}/${user.team})`
-        };
-        setAuditLogs(prev => [newLog, ...prev]);
-        return { success: true };
-      }
-      return { success: false, message: err.message || 'Invalid email or password' };
+      const errMsg = err.response?.data?.message || err.message || 'Invalid email or password';
+      console.warn('API login failed:', errMsg);
+      return { success: false, message: errMsg };
     }
   };
 

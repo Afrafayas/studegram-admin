@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import API from '../api/axios';
 
 export default function Partners({ clients, setClients }) {
   const [searchTerm, setSearchTerm] = useState('');
@@ -17,20 +18,12 @@ export default function Partners({ clients, setClients }) {
     const token = localStorage.getItem('admin_token');
     try {
       if (token && token !== 'mock-admin-token-12345') {
-        const response = await fetch(`/api/partners/${partnerId}`, {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-          },
-          body: JSON.stringify({ status: newStatus })
-        });
-        const resData = await response.json();
-        if (response.ok && resData.success) {
+        const response = await API.put(`/partners/${partnerId}`, { status: newStatus });
+        if (response.data?.success) {
           setClients(prev => prev.map(c => c.id === partnerId ? { ...c, status: newStatus } : c));
           alert(`Partner status updated to ${newStatus}.`);
         } else {
-          throw new Error(resData.message || 'Failed to update partner status');
+          throw new Error(response.data?.message || 'Failed to update partner status');
         }
       } else {
         // Fallback

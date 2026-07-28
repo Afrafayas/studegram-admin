@@ -4,14 +4,8 @@ import { useAuth } from '../context/AuthContext';
 export default function CommissionManagement() {
   const { currentUser, hasPermission, addAuditLog } = useAuth();
   
-  // Initial commissions mock database
-  const [commissions, setCommissions] = useState([
-    { id: 'COM-001', studentName: 'Shanto Shaju', partnerName: 'Salman', courseName: 'MSc International Hotel Management', fee: 14500, rate: 12, amount: 1740, status: 'Approved', country: 'India', date: '12 Jun 2026' },
-    { id: 'COM-002', studentName: 'Aneesha Anil', partnerName: 'Aisha', courseName: 'MSc Human Resources Management', fee: 16000, rate: 10, amount: 1600, status: 'Pending Approval', country: 'India', date: '16 Jun 2026' },
-    { id: 'COM-003', studentName: 'David Miller', partnerName: 'Global Study Group', courseName: 'BSc Computer Science', fee: 18500, rate: 15, amount: 2775, status: 'Paid', country: 'United Kingdom', date: '01 Jun 2026' },
-    { id: 'COM-004', studentName: 'Li Wei', partnerName: 'Beijing Edu Consultancy', courseName: 'MBA Business Admin', fee: 22000, rate: 12, amount: 2640, status: 'Under Review', country: 'China', date: '05 Jun 2026' },
-    { id: 'COM-005', studentName: 'Aditi Rao', partnerName: 'Salman', courseName: 'MSc Data Science', fee: 15500, rate: 12, amount: 1860, status: 'Pending Approval', country: 'India', date: '14 Jun 2026' }
-  ]);
+  // Initial commissions database initialized cleanly
+  const [commissions, setCommissions] = useState([]);
 
   const [filterStatus, setFilterStatus] = useState('All');
   

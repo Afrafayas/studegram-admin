@@ -233,7 +233,7 @@ export default function RoleHierarchy() {
             <div className="bg-slate-50 p-4 border border-slate-200/50 rounded-xl space-y-2">
               <span className="text-[9px] font-black text-slate-400 uppercase tracking-wider">Active Demo Account</span>
               <div className="text-[11px] font-bold text-slate-800">
-                {selectedRole === 'Director' && <p>📧 director@studegram.com <br/>🔑 password123</p>}
+                {selectedRole === 'Director' && <p>📧 superadminluzid@gmail.com <br/>🔑 123456</p>}
                 {selectedRole === 'COO' && <p>📧 coo@studegram.com <br/>🔑 password123</p>}
                 {selectedRole === 'Finance' && <p>📧 finance@studegram.com <br/>🔑 password123</p>}
                 {selectedRole === 'Country Head' && <p>📧 countryhead.in@studegram.com <br/>🔑 password123</p>}

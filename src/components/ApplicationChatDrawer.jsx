@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
+import API, { API_BASE_URL } from '../api/axios';
 
 export default function ApplicationChatDrawer({ app, onClose }) {
   const { currentUser } = useAuth();
@@ -14,7 +15,6 @@ export default function ApplicationChatDrawer({ app, onClose }) {
   const chatEndRef = useRef(null);
   const fileInputRef = useRef(null);
 
-  const API_BASE_URL = '/api';
   const token = localStorage.getItem('admin_token') || localStorage.getItem('token') || localStorage.getItem('studegram_token');
 
   // Load chat messages

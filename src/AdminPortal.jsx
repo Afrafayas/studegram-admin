@@ -16,8 +16,9 @@ import TodoList from './pages/TodoList';
 import CommissionManagement from './pages/CommissionManagement';
 import RoleHierarchy from './pages/RoleHierarchy';
 
-// Auth
+// Auth & API
 import { useAuth } from './context/AuthContext';
+import API from './api/axios';
 
 export default function AdminPortal({ onLogout }) {
   const { currentUser, checkScope } = useAuth();
@@ -28,66 +29,52 @@ export default function AdminPortal({ onLogout }) {
     if (!adminToken) return;
     try {
       // 1. Fetch Intakes
-      const intakeRes = await fetch('/api/intakes', {
-        headers: { 'Authorization': `Bearer ${adminToken}` }
-      });
-      const intakeData = await intakeRes.json();
-      if (intakeData.success) {
-        setIntakes(intakeData.data);
+      const intakeRes = await API.get('/intakes');
+      if (intakeRes.data?.success) {
+        setIntakes(intakeRes.data.data);
       }
 
       // 2. Fetch Universities
-      const univRes = await fetch('/api/universities', {
-        headers: { 'Authorization': `Bearer ${adminToken}` }
-      });
-      const univData = await univRes.json();
-      if (univData.success) {
-        setUniversities(univData.data);
+      const univRes = await API.get('/universities');
+      if (univRes.data?.success) {
+        setUniversities(univRes.data.data);
       }
 
       // 3. Fetch Courses
-      const courseRes = await fetch('/api/courses', {
-        headers: { 'Authorization': `Bearer ${adminToken}` }
-      });
-      const courseData = await courseRes.json();
-      if (courseData.success) {
-        setCourses(courseData.data);
+      const courseRes = await API.get('/courses');
+      if (courseRes.data?.success) {
+        setCourses(courseRes.data.data);
       }
 
       // 4. Fetch Partners
-      const partnerRes = await fetch('/api/partners', {
-        headers: { 'Authorization': `Bearer ${adminToken}` }
-      });
-      const partnerData = await partnerRes.json();
-      if (partnerData.success) {
-        setReferralAgents(partnerData.data);
+      const partnerRes = await API.get('/partners');
+      if (partnerRes.data?.success) {
+        setReferralAgents(partnerRes.data.data);
         
-        const mappedAgents = partnerData.data.map(agent => ({
+        const mappedAgents = partnerRes.data.data.map((agent, idx) => ({
           id: agent._id,
           name: agent.name,
           type: 'Agent',
           email: agent.email,
           phone: agent.phone || '',
           activeApps: 0,
-          partnerCode: agent.partnerCode || `PRT-${agent._id.substring(agent._id.length - 4).toUpperCase()}`,
+          partnerCode: `PRTNR-${10001 + idx}`,
           dateAdded: new Date(agent.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
           country: agent.country || 'India',
           status: agent.status || 'Active'
         }));
         
-        const studentRes = await fetch('/api/students', {
-          headers: { 'Authorization': `Bearer ${adminToken}` }
-        });
-        const studentData = await studentRes.json();
+        const studentRes = await API.get('/students');
         let mappedStudents = [];
-        if (studentData.success) {
-          mappedStudents = studentData.data.map(student => ({
+        if (studentRes.data?.success) {
+          mappedStudents = studentRes.data.data.map((student, idx) => ({
             id: student._id,
             name: student.name,
             type: 'Student',
             email: student.email,
             phone: student.phone || '',
             activeApps: 0,
+            studentCode: `STD-${10001 + idx}`,
             passportNo: student.passportNo || 'Pending',
             dob: student.dob || '',
             dateAdded: new Date(student.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
@@ -101,13 +88,11 @@ export default function AdminPortal({ onLogout }) {
       }
 
       // 5. Fetch Applications
-      const appRes = await fetch('/api/applications', {
-        headers: { 'Authorization': `Bearer ${adminToken}` }
-      });
-      const appData = await appRes.json();
-      if (appData.success) {
-        const mapped = appData.data.map(app => ({
-          camsId: app._id,
+      const appRes = await API.get('/applications');
+      if (appRes.data?.success) {
+        const mapped = appRes.data.data.map((app, idx) => ({
+          id: app._id,
+          camsId: `CAMS-${10001 + idx}`,
           studentName: app.student?.name || 'N/A',
           passportNo: app.student?.passportNo || 'N/A',
           universityName: app.university?.name || 'N/A',
@@ -138,48 +123,8 @@ export default function AdminPortal({ onLogout }) {
   const [activeSubTab, setActiveSubTab] = useState(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  // States with mock databases (enriched with scoping details for RBAC evaluation)
-  const [applications, setApplications] = useState([
-    {
-      camsId: 'CAMS10204',
-      studentName: 'Shanto Shaju',
-      passportNo: 'T1029482',
-      universityName: 'University of Surrey',
-      courseName: 'MSc International Hotel Management',
-      intake: 'September 2026',
-      secondaryStatus: 'Offer Issued',
-      dateAdded: '10 Jun 2026',
-      country: 'India',
-      assignedBdm: 'Amit Patel',
-      assignedExecutive: 'Rahul Krishnan'
-    },
-    {
-      camsId: 'CAMS10492',
-      studentName: 'Aneesha Anil',
-      passportNo: 'T9381048',
-      universityName: 'University of Surrey',
-      courseName: 'MSc Human Resources Management',
-      intake: 'January 2027',
-      secondaryStatus: 'Pending',
-      dateAdded: '15 Jun 2026',
-      country: 'India',
-      assignedBdm: 'Amit Patel',
-      assignedExecutive: 'Rahul Krishnan'
-    },
-    {
-      camsId: 'CAMS10599',
-      studentName: 'David Miller',
-      passportNo: 'U9998822',
-      universityName: 'Anglia Ruskin University',
-      courseName: 'BSc Computer Science',
-      intake: 'September 2026',
-      secondaryStatus: 'Visa Pending',
-      dateAdded: '01 Jun 2026',
-      country: 'United Kingdom',
-      assignedBdm: 'Marcus Vance',
-      assignedExecutive: 'Sarah Jenkins'
-    }
-  ]);
+  // States initialized cleanly for production / live DB data
+  const [applications, setApplications] = useState([]);
 
   const [courseDocuments, setCourseDocuments] = useState([
     { siNo: 1, name: 'SSLC', format: '.pdf', minSize: 0.001, maxSize: 12 },
@@ -187,11 +132,7 @@ export default function AdminPortal({ onLogout }) {
     { siNo: 3, name: 'Degree Certificate', format: '.pdf', minSize: 0.01, maxSize: 20 }
   ]);
 
-  const [referralAgents, setReferralAgents] = useState([
-    { siNo: 1, agentName: 'Salman', email: 'info@luzidcraft.com', country: 'India' },
-    { siNo: 2, agentName: 'Aisha', email: 'aisha@agents.com', country: 'India' },
-    { siNo: 3, agentName: 'Global Study Group', email: 'uk@globalstudy.com', country: 'United Kingdom' }
-  ]);
+  const [referralAgents, setReferralAgents] = useState([]);
 
   const [stages, setStages] = useState([
     'Document Verification',
@@ -201,20 +142,8 @@ export default function AdminPortal({ onLogout }) {
     'Visa Pending'
   ]);
 
-  const [universities, setUniversities] = useState([
-    'Calicut University',
-    'University of Surrey',
-    'Anglia Ruskin University',
-    'Coventry University',
-    'University of Exeter'
-  ]);
-
-  const [courses, setCourses] = useState([
-    'BCOM',
-    'MSc Computer Science',
-    'MSc International Hotel Management',
-    'MSc Human Resources Management'
-  ]);
+  const [universities, setUniversities] = useState([]);
+  const [courses, setCourses] = useState([]);
 
   const [intakes, setIntakes] = useState([
     'September/October 2026',
@@ -249,12 +178,10 @@ export default function AdminPortal({ onLogout }) {
     'Generate Admission Invoice'
   ]);
 
-  const [todoList, setTodoList] = useState([
-    { id: 1, task: 'Verify Shanto Shaju passport document', completed: false },
-    { id: 2, task: 'Send email invitation to referral agent Salman', completed: true }
-  ]);
+  const [todoList, setTodoList] = useState([]);
 
   const [staffList, setStaffList] = useState([
+    { id: 100, name: 'Super Admin', role: 'Director', email: 'superadminluzid@gmail.com', phone: '+1 800 555 0199', status: 'Active', dateAdded: '01 Jan 2026', accessLevel: 'SuperAdmin (Full Access)' },
     { id: 101, name: 'Elena Rostova', role: 'Director', email: 'director@studegram.com', phone: '+44 7911 123456', status: 'Active', dateAdded: '01 Jan 2026', accessLevel: 'Director (Level 1)' },
     { id: 102, name: 'Marcus Vance', role: 'COO', email: 'coo@studegram.com', phone: '+44 7911 654321', status: 'Active', dateAdded: '15 Mar 2026', accessLevel: 'COO (Level 2)' },
     { id: 103, name: 'Sarah Jenkins', role: 'Finance', email: 'finance@studegram.com', phone: '+44 7911 987654', status: 'Active', dateAdded: '10 May 2026', accessLevel: 'Finance (Level 3)' },
@@ -263,13 +190,7 @@ export default function AdminPortal({ onLogout }) {
     { id: 106, name: 'Rahul Krishnan', role: 'Executive', email: 'rahul@studegram.com', phone: '+91 99988 87772', status: 'Active', dateAdded: '01 May 2026', accessLevel: 'Executive (Level 6)' }
   ]);
 
-  const [clients, setClients] = useState([
-    { id: 1, name: 'Shanto Shaju', type: 'Student', email: 'shanto@gmail.com', phone: '+91 9876543210', activeApps: 1, status: 'Active', passportNo: 'T1029482', dob: '1999-05-14', dateAdded: '10 Jun 2026', referredBy: 'Salman', country: 'India' },
-    { id: 2, name: 'Salman', type: 'Agent', email: 'info@luzidcraft.com', phone: '+91 9998887776', activeApps: 2, status: 'Active', partnerCode: 'PRT-101', dateAdded: '01 Jun 2026', country: 'India' },
-    { id: 3, name: 'Aneesha Anil', type: 'Student', email: 'aneesha@gmail.com', phone: '+91 8887776665', activeApps: 1, status: 'Active', passportNo: 'T9381048', dob: '2001-08-22', dateAdded: '15 Jun 2026', referredBy: 'Aisha', country: 'India' },
-    { id: 4, name: 'Aisha', type: 'Agent', email: 'aisha@agents.com', phone: '+44 7946 0958', activeApps: 1, status: 'Active', partnerCode: 'PRT-102', dateAdded: '05 Jun 2026', country: 'India' },
-    { id: 5, name: 'David Miller', type: 'Student', email: 'david@gmail.com', phone: '+44 7999 112233', activeApps: 1, status: 'Active', passportNo: 'U9998822', dob: '2000-03-12', dateAdded: '01 Jun 2026', referredBy: 'Global Study Group', country: 'United Kingdom' }
-  ]);
+  const [clients, setClients] = useState([]);
 
   const handleAddApplication = async (newApp) => {
     const token = localStorage.getItem('admin_token');
@@ -280,26 +201,18 @@ export default function AdminPortal({ onLogout }) {
         // Only create a new student profile if a pre-existing student ID was not passed
         if (!studentId) {
           // 1. Create student
-          const studentResponse = await fetch('/api/students', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${token}`
-            },
-            body: JSON.stringify({
-              name: newApp.studentName,
-              email: newApp.studentEmail,
-              phone: newApp.phone,
-              passportNo: newApp.passportNo,
-              dob: newApp.dob,
-              referredBy: newApp.partnerId ? 'Agent' : 'Direct'
-            })
+          const studentRes = await API.post('/students', {
+            name: newApp.studentName,
+            email: newApp.studentEmail,
+            phone: newApp.phone,
+            passportNo: newApp.passportNo,
+            dob: newApp.dob,
+            referredBy: newApp.partnerId ? 'Agent' : 'Direct'
           });
-          const studentResult = await studentResponse.json();
-          if (!studentResponse.ok || !studentResult.success) {
-            throw new Error(studentResult.message || 'Failed to create student profile');
+          if (!studentRes.data?.success) {
+            throw new Error(studentRes.data?.message || 'Failed to create student profile');
           }
-          studentId = studentResult.data._id;
+          studentId = studentRes.data.data._id;
         }
 
         // 2. Create application
@@ -313,17 +226,9 @@ export default function AdminPortal({ onLogout }) {
           appPayload.partner = newApp.partnerId;
         }
 
-        const appResponse = await fetch('/api/applications', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-          },
-          body: JSON.stringify(appPayload)
-        });
-        const appResult = await appResponse.json();
-        if (!appResponse.ok || !appResult.success) {
-          throw new Error(appResult.message || 'Failed to create student application');
+        const appRes = await API.post('/applications', appPayload);
+        if (!appRes.data?.success) {
+          throw new Error(appRes.data?.message || 'Failed to create student application');
         }
 
         alert('Application successfully created in database!');
