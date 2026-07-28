@@ -25,8 +25,8 @@ export default function ApplicationChatDrawer({ app, onClose }) {
       setIsLoading(true);
       setErrorMsg('');
       try {
-        // Attempt backend API call
-        const response = await fetch(`${API_BASE_URL}/applications/${app.camsId}/chat`, {
+        const targetAppId = app.id || app._id;
+        const response = await fetch(`${API_BASE_URL}/applications/${targetAppId}/chat`, {
           headers: {
             'Authorization': `Bearer ${token}`
           }
@@ -145,7 +145,8 @@ export default function ApplicationChatDrawer({ app, onClose }) {
     });
 
     try {
-      const response = await fetch(`${API_BASE_URL}/applications/${app.camsId}/chat`, {
+      const targetAppId = app.id || app._id;
+      const response = await fetch(`${API_BASE_URL}/applications/${targetAppId}/chat`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`
