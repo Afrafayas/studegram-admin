@@ -20,6 +20,8 @@ export default function AdminHeader({
       if (activeSubTab === 'report-agent') crumbs.push('By Agent');
       if (activeSubTab === 'report-university') crumbs.push('By University');
       if (activeSubTab === 'report-course') crumbs.push('By Course');
+    } else if (activeTab === 'applications') {
+      crumbs.push('Applications');
     } else if (activeTab === 'partners') {
       crumbs.push('Partners');
     } else if (activeTab === 'students') {
@@ -95,20 +97,6 @@ export default function AdminHeader({
           <div className="sm:hidden text-xs font-bold text-white">
             {breadcrumbs[breadcrumbs.length - 1]}
           </div>
-        </div>
-
-        {/* Center Side: Global Search */}
-        <div className="relative w-full max-w-xs mx-4 hidden md:block">
-          <span className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-slate-500">
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-            </svg>
-          </span>
-          <input
-            type="text"
-            className="w-full bg-[#161622] border border-slate-800 rounded-full pl-9 pr-4 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:bg-[#050508] focus:border-[#D99A1C] focus:ring-1 focus:ring-[#D99A1C] transition-all font-semibold"
-            placeholder="Search here..."
-          />
         </div>
 
         {/* Right Side: Profile Dropdown */}

@@ -106,7 +106,8 @@ export default function AdminPortal({ onLogout }) {
           statusHistory: app.statusHistory || [],
           dob: app.student?.dob ? new Date(app.student.dob).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : null,
           studentEmail: app.student?.email || null,
-          phone: app.student?.phone || null
+          phone: app.student?.phone || null,
+          documents: app.documents || []
         }));
         setApplications(mapped);
       }
@@ -220,7 +221,8 @@ export default function AdminPortal({ onLogout }) {
           student: studentId,
           university: newApp.universityId,
           course: newApp.courseId,
-          status: 'Pending'
+          status: 'Pending',
+          documents: newApp.documents || []
         };
         if (newApp.partnerId) {
           appPayload.partner = newApp.partnerId;

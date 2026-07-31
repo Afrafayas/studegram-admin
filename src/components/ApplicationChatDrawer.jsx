@@ -11,6 +11,16 @@ export default function ApplicationChatDrawer({ app, onClose }) {
   const [isSending, setIsSending] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [activeTab, setActiveTab] = useState('chat'); // 'chat' or 'details'
+
+  const [localDocuments, setLocalDocuments] = useState([]);
+  const [isUploadingDoc, setIsUploadingDoc] = useState(false);
+  const [uploadDocError, setUploadDocError] = useState('');
+
+  useEffect(() => {
+    if (app) {
+      setLocalDocuments(app.documents || []);
+    }
+  }, [app]);
   
   const chatEndRef = useRef(null);
   const fileInputRef = useRef(null);
@@ -595,6 +605,105 @@ export default function ApplicationChatDrawer({ app, onClose }) {
                     {app.secondaryStatus}
                   </span>
                 </div>
+              </div>
+            </div>
+
+            {/* Uploaded Documents Section */}
+            <div className="bg-white border border-slate-200/80 rounded-2xl p-4 shadow-3xs space-y-3">
+              <div className="flex justify-between items-center border-b border-slate-100 pb-1.5">
+                <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-wider flex items-center gap-1">
+                  <span>📄</span> Uploaded Documents
+                </h4>
+                <span className="text-[10px] text-emerald-600 font-bold bg-emerald-50 border border-emerald-100 px-2 py-0.5 rounded-full uppercase">
+                  {localDocuments.length} File(s)
+                </span>
+              </div>
+
+              {/* Upload Input */}
+              <div className="border-2 border-dashed border-slate-200 hover:border-[#D99A1C] transition-colors rounded-xl p-3 text-center cursor-pointer relative bg-slate-50">
+                <input
+                  type="file"
+                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                  onChange={async (e) => {
+                    const file = e.target.files?.[0];
+                    if (!file) return;
+                    setIsUploadingDoc(true);
+                    setUploadDocError('');
+                    try {
+                      const formData = new FormData();
+                      formData.append('file', file);
+                      const response = await fetch(`${API_BASE_URL}/upload`, {
+                        method: 'POST',
+                        headers: {
+                          'Authorization': `Bearer ${token}`
+                        },
+                        body: formData
+                      });
+                      const resData = await response.json();
+                      if (resData.success) {
+                        const newDoc = { name: file.name, url: resData.url };
+                        const updatedDocs = [...localDocuments, newDoc];
+                        
+                        const targetAppId = app.id || app._id;
+                        await API.put(`/applications/${targetAppId}`, { documents: updatedDocs });
+                        setLocalDocuments(updatedDocs);
+                      } else {
+                        throw new Error(resData.message || 'Upload failed');
+                      }
+                    } catch (err) {
+                      console.error('File upload failed:', err);
+                      setUploadDocError('Failed to upload document.');
+                    } finally {
+                      setIsUploadingDoc(false);
+                    }
+                  }}
+                />
+                <div className="space-y-1 text-slate-500">
+                  <span className="text-base">📤</span>
+                  <p className="text-[10.5px] font-bold text-slate-700">Click to upload additional document</p>
+                  <p className="text-[9px] text-slate-400 font-semibold">PDF, Word, Images up to 10MB</p>
+                </div>
+              </div>
+
+              {isUploadingDoc && (
+                <p className="text-[10px] text-[#D99A1C] font-semibold animate-pulse">⏳ Uploading file, please wait...</p>
+              )}
+              {uploadDocError && (
+                <p className="text-[10px] text-red-500 font-semibold">❌ {uploadDocError}</p>
+              )}
+
+              {/* List */}
+              <div className="divide-y divide-slate-100 bg-white border border-slate-100 rounded-xl overflow-hidden shadow-3xs max-h-56 overflow-y-auto">
+                {localDocuments.length > 0 ? (
+                  localDocuments.map((doc, idx) => (
+                    <div key={idx} className="p-2.5 flex items-center justify-between hover:bg-slate-50 transition-colors">
+                      <div className="flex items-center gap-2 truncate pr-2">
+                        <span className="text-xs">📄</span>
+                        <div className="truncate">
+                          <p className="text-xs font-bold text-slate-800 truncate" title={doc.name}>{doc.name}</p>
+                          <p className="text-[9px] text-slate-400 font-semibold mt-0.5">
+                            {doc.uploadedAt ? new Date(doc.uploadedAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : 'Just Now'}
+                          </p>
+                        </div>
+                      </div>
+                      <a
+                        href={doc.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="bg-[#D99A1C] hover:bg-[#F5B025] text-white font-extrabold text-[9px] px-2.5 py-1.5 rounded-lg transition-all shadow-3xs shrink-0 flex items-center gap-1 cursor-pointer"
+                      >
+                        <span>View</span>
+                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                        </svg>
+                      </a>
+                    </div>
+                  ))
+                ) : (
+                  <div className="p-4 text-center text-slate-400 text-xs font-semibold">
+                    ⚠️ No documents uploaded yet.
+                  </div>
+                )}
               </div>
             </div>
           </div>

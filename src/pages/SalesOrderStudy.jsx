@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import API from '../api/axios';
 
 export default function SalesOrderStudy({ 
   universities = [], 
@@ -18,6 +19,10 @@ export default function SalesOrderStudy({
   const [phoneNumber, setPhoneNumber] = useState('');
   const [dob, setDob] = useState('');
   const [assignedTo, setAssignedTo] = useState(staffList[0]?.name || 'Super Admin');
+
+  const [uploadedFiles, setUploadedFiles] = useState([]);
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadError, setUploadError] = useState('');
   
   // Set default values based on whether items are objects or strings
   const getInitialId = (items) => {
@@ -51,6 +56,10 @@ export default function SalesOrderStudy({
       alert("Please select a student.");
       return;
     }
+    if (uploadedFiles.length === 0) {
+      alert("Please upload at least one supporting document (e.g. Passport, Transcripts) to submit the application.");
+      return;
+    }
 
     const selectedUniv = universities.find(u => (typeof u === 'object' ? u._id : u) === university);
     const selectedCourse = courses.find(c => (typeof c === 'object' ? c._id : c) === course);
@@ -79,7 +88,8 @@ export default function SalesOrderStudy({
         partnerId: partner || null,
         passportNo: studentObj?.passportNo || `T${Math.floor(1000000 + Math.random() * 9000000)}`,
         secondaryStatus: 'Pending',
-        dateAdded: new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
+        dateAdded: new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
+        documents: uploadedFiles
       };
     } else {
       newApp = {
@@ -97,7 +107,8 @@ export default function SalesOrderStudy({
         partnerId: partner || null,
         passportNo: `T${Math.floor(1000000 + Math.random() * 9000000)}`,
         secondaryStatus: 'Pending',
-        dateAdded: new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
+        dateAdded: new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
+        documents: uploadedFiles
       };
     }
 
@@ -109,6 +120,7 @@ export default function SalesOrderStudy({
     setDob('');
     setPartner('');
     setSelectedStudent('');
+    setUploadedFiles([]);
     setStudentSelectionMode('new');
 
     setTimeout(() => {
@@ -374,6 +386,73 @@ export default function SalesOrderStudy({
               </select>
             </div>
           </div>
+
+          {/* Document Upload Section */}
+          <div className="space-y-4 bg-white border border-slate-250/70 p-5 rounded-2xl">
+            <h3 className="text-xs font-black text-slate-950 uppercase tracking-wider pb-1 border-b border-slate-105/60">Supporting Documents *</h3>
+            
+            <div className="border-2 border-dashed border-slate-200 hover:border-[#D99A1C] transition-colors rounded-xl p-6 text-center cursor-pointer relative bg-slate-50">
+              <input
+                type="file"
+                multiple
+                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                onChange={async (e) => {
+                  const files = Array.from(e.target.files || []);
+                  if (files.length === 0) return;
+                  setIsUploading(true);
+                  setUploadError('');
+                  try {
+                    const uploadPromises = files.map(async (file) => {
+                      const formData = new FormData();
+                      formData.append('file', file);
+                      const res = await API.post('/upload', formData, {
+                        headers: { 'Content-Type': 'multipart/form-data' }
+                      });
+                      return { name: file.name, url: res.data.url };
+                    });
+                    const results = await Promise.all(uploadPromises);
+                    setUploadedFiles(prev => [...prev, ...results]);
+                  } catch (err) {
+                    console.error('File upload failed:', err);
+                    setUploadError('Failed to upload some documents. Please check your connection.');
+                  } finally {
+                    setIsUploading(false);
+                  }
+                }}
+              />
+              <div className="space-y-1 text-slate-500">
+                <span className="text-xl">📄</span>
+                <p className="text-xs font-semibold text-slate-700">Click or drag files here to upload</p>
+                <p className="text-[10px] text-slate-400 font-semibold">Upload at least one document (PDF, PNG, JPG, Word)</p>
+              </div>
+            </div>
+
+            {isUploading && (
+              <p className="text-[10px] text-[#D99A1C] font-semibold animate-pulse">⏳ Uploading files, please wait...</p>
+            )}
+            {uploadError && (
+              <p className="text-[10px] text-red-500 font-semibold">❌ {uploadError}</p>
+            )}
+
+            {/* Uploaded File Badges */}
+            {uploadedFiles.length > 0 && (
+              <div className="flex flex-wrap gap-2 pt-1.5">
+                {uploadedFiles.map((file, idx) => (
+                  <div key={idx} className="flex items-center gap-1.5 bg-[#D99A1C]/10 border border-[#D99A1C]/25 text-[#D99A1C] text-[10px] px-2.5 py-1 rounded-lg font-bold">
+                    <span>📄</span>
+                    <span className="truncate max-w-[150px]">{file.name}</span>
+                    <button
+                      type="button"
+                      onClick={() => setUploadedFiles(prev => prev.filter((_, i) => i !== idx))}
+                      className="hover:text-red-500 transition-colors pl-1 font-bold text-xs"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
 
         <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-100">
@@ -387,7 +466,8 @@ export default function SalesOrderStudy({
           
           <button
             type="submit"
-            className="px-6 py-2.5 bg-gradient-to-r from-[#D99A1C] to-[#F5B025] hover:scale-[1.01] hover:shadow-lg text-white font-extrabold text-xs rounded-xl transition-all duration-150 shadow-md uppercase tracking-wider"
+            disabled={isUploading || uploadedFiles.length === 0}
+            className="px-6 py-2.5 bg-gradient-to-r from-[#D99A1C] to-[#F5B025] hover:scale-[1.01] hover:shadow-lg text-white font-extrabold text-xs rounded-xl transition-all duration-150 shadow-md uppercase tracking-wider disabled:opacity-50 disabled:pointer-events-none"
           >
             Submit Application
           </button>
