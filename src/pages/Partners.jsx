@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
 import API from '../api/axios';
+import { useToast } from '../context/ToastContext';
 
 export default function Partners({ clients, setClients }) {
+  const toast = useToast();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
   const [locationFilter, setLocationFilter] = useState('All');
@@ -21,17 +23,17 @@ export default function Partners({ clients, setClients }) {
         const response = await API.put(`/partners/${partnerId}`, { status: newStatus });
         if (response.data?.success) {
           setClients(prev => prev.map(c => c.id === partnerId ? { ...c, status: newStatus } : c));
-          alert(`Partner status updated to ${newStatus}.`);
+          toast.success(`Partner status updated to ${newStatus}.`);
         } else {
           throw new Error(response.data?.message || 'Failed to update partner status');
         }
       } else {
         // Fallback
         setClients(prev => prev.map(c => c.id === partnerId ? { ...c, status: newStatus } : c));
-        alert(`Mock partner status updated to ${newStatus}.`);
+        toast.success(`Mock partner status updated to ${newStatus}.`);
       }
     } catch (err) {
-      alert(err.message);
+      toast.error(err.message);
     }
   };
 
@@ -66,7 +68,7 @@ export default function Partners({ clients, setClients }) {
   const handleInvitePartner = (e) => {
     e.preventDefault();
     if (!newPartnerName || !newPartnerEmail || !newPartnerPhone) {
-      alert("Please fill out all fields.");
+      toast.error("Please fill out all fields.");
       return;
     }
 
@@ -91,7 +93,7 @@ export default function Partners({ clients, setClients }) {
     setNewPartnerPhone('');
     setIsModalOpen(false);
     
-    alert(`Partner ${newPartnerName} successfully onboarded with Code ${newPartner.partnerCode}`);
+    toast.success(`Partner ${newPartnerName} successfully onboarded with Code ${newPartner.partnerCode}`);
   };
 
   // Find referred students for a specific partner

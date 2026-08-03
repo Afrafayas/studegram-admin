@@ -265,18 +265,6 @@ export default function Login({ onLoginSuccess }) {
               )}
             </button>
           </form>
-          
-          <div className="text-center text-xs font-semibold text-[#64748B] pt-2">
-            Looking for candidate access?{' '}
-            <a
-              href="http://localhost:5173/"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-[#D99A1C] font-bold hover:underline"
-            >
-              Go to Student Portal
-            </a>
-          </div>
         </div>
       </div>
     </div>

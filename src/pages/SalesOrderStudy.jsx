@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import API from '../api/axios';
+import { useToast } from '../context/ToastContext';
 
 export default function SalesOrderStudy({ 
   universities = [], 
@@ -11,6 +12,7 @@ export default function SalesOrderStudy({
   onAddApplication, 
   onBack 
 }) {
+  const toast = useToast();
   const [studentSelectionMode, setStudentSelectionMode] = useState('new'); // 'new' or 'existing'
   const [selectedStudent, setSelectedStudent] = useState('');
 
@@ -49,15 +51,15 @@ export default function SalesOrderStudy({
   const handleSubmit = (e) => {
     e.preventDefault();
     if (studentSelectionMode === 'new' && (!fullName || !phoneNumber || !dob)) {
-      alert("Please fill in all required fields.");
+      toast.error("Please fill in all required fields.");
       return;
     }
     if (studentSelectionMode === 'existing' && !selectedStudent) {
-      alert("Please select a student.");
+      toast.error("Please select a student.");
       return;
     }
     if (uploadedFiles.length === 0) {
-      alert("Please upload at least one supporting document (e.g. Passport, Transcripts) to submit the application.");
+      toast.error("Please upload at least one supporting document (e.g. Passport, Transcripts) to submit the application.");
       return;
     }
 

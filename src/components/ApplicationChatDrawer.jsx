@@ -1,8 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import API, { API_BASE_URL } from '../api/axios';
+import { useToast } from '../context/ToastContext';
 
 export default function ApplicationChatDrawer({ app, onClose }) {
+  const toast = useToast();
   const { currentUser } = useAuth();
   const [messages, setMessages] = useState([]);
   const [messageText, setMessageText] = useState('');
@@ -120,7 +122,7 @@ export default function ApplicationChatDrawer({ app, onClose }) {
   const handleFileChange = (e) => {
     const files = Array.from(e.target.files);
     if (selectedFiles.length + files.length > 5) {
-      alert('You can only attach a maximum of 5 files.');
+      toast.error('You can only attach a maximum of 5 files.');
       return;
     }
     

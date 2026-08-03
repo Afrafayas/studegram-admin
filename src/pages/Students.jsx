@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import ApplicationChatDrawer from '../components/ApplicationChatDrawer';
+import { useToast } from '../context/ToastContext';
 
 export default function Students({ clients, setClients, applications }) {
+  const toast = useToast();
   const { currentUser, addAuditLog } = useAuth();
   const [selectedChatApp, setSelectedChatApp] = useState(null);
   
@@ -55,7 +57,7 @@ export default function Students({ clients, setClients, applications }) {
     e.preventDefault();
     if (!canOnboard) return;
     if (!newStudentName || !newStudentEmail || !newStudentPhone) {
-      alert("Please fill out required fields.");
+      toast.error("Please fill out required fields.");
       return;
     }
 
@@ -86,7 +88,7 @@ export default function Students({ clients, setClients, applications }) {
     setNewStudentReferredBy('Direct');
     setIsModalOpen(false);
 
-    alert(`Student ${newStudentName} successfully onboarded.`);
+    toast.success(`Student ${newStudentName} successfully onboarded.`);
   };
 
   // Find linked applications for a specific student

@@ -347,18 +347,6 @@ export default function AdminSidebar({
 
         {/* Footer actions inside Sidebar */}
         <div className="px-4 mt-auto pt-4 border-t border-slate-900 flex flex-col gap-2">
-          {/* Switch to Student Portal */}
-          <a
-            href="http://localhost:5173/"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-gradient-to-r from-[#D99A1C]/10 to-[#2563EB]/10 hover:from-[#D99A1C]/20 hover:to-[#2563EB]/20 text-[#F5B025] hover:text-[#D99A1C] border border-[#D99A1C]/30 rounded-xl text-xs font-bold transition-all text-center"
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
-            </svg>
-            <span>Studegram Student Portal</span>
-          </a>
           {/* Logout */}
           <button
             onClick={onLogout}

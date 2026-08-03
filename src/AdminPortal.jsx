@@ -19,8 +19,10 @@ import RoleHierarchy from './pages/RoleHierarchy';
 // Auth & API
 import { useAuth } from './context/AuthContext';
 import API from './api/axios';
+import { useToast } from './context/ToastContext';
 
 export default function AdminPortal({ onLogout }) {
+  const toast = useToast();
   const { currentUser, checkScope } = useAuth();
 
   const adminToken = localStorage.getItem('admin_token');
@@ -233,7 +235,7 @@ export default function AdminPortal({ onLogout }) {
           throw new Error(appRes.data?.message || 'Failed to create student application');
         }
 
-        alert('Application successfully created in database!');
+        toast.success('Application successfully created in database!');
         fetchInitialData(); // Refresh list
       } else {
         // Mock fallback
@@ -276,7 +278,7 @@ export default function AdminPortal({ onLogout }) {
         });
       }
     } catch (err) {
-      alert(err.message);
+      toast.error(err.message);
     }
   };
 

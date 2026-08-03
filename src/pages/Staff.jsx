@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { useToast } from '../context/ToastContext';
 
 export default function Staff({ staffList, setStaffList, applications }) {
+  const toast = useToast();
   const { currentUser, hasPermission, addAuditLog } = useAuth();
   
   const [searchTerm, setSearchTerm] = useState('');
@@ -65,7 +67,7 @@ export default function Staff({ staffList, setStaffList, applications }) {
   const handleOnboardStaff = (e) => {
     e.preventDefault();
     if (!newStaffName || !newStaffEmail || !newStaffPhone) {
-      alert("Please fill out all required fields.");
+      toast.error("Please fill out all required fields.");
       return;
     }
 
@@ -75,7 +77,7 @@ export default function Staff({ staffList, setStaffList, applications }) {
     const targetStaffLevel = userRoleHierarchy[newStaffRole] || 6;
 
     if (targetStaffLevel <= currentUserLevel) {
-      alert(`Permission Denied: You cannot onboard a user with equal or higher clearance level (${newStaffRole}) than your role (${currentUser.role}).`);
+      toast.error(`Permission Denied: You cannot onboard a user with equal or higher clearance level (${newStaffRole}) than your role (${currentUser.role}).`);
       return;
     }
 
@@ -103,7 +105,7 @@ export default function Staff({ staffList, setStaffList, applications }) {
     setNewStaffStatus('Active');
     setIsModalOpen(false);
 
-    alert(`Staff member ${newStaffName} has been successfully onboarded.`);
+    toast.success(`Staff member ${newStaffName} has been successfully onboarded.`);
   };
 
   // Find applications assigned to this staff member

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import ApplicationChatDrawer from '../components/ApplicationChatDrawer';
 import API from '../api/axios';
+import { useToast } from '../context/ToastContext';
 
 const STATUS_STEPS = [
   'Submitted',
@@ -18,6 +19,7 @@ const STATUS_STEPS = [
 ];
 
 export default function Applications({ applications, referralAgents, onAddClick, onRefresh }) {
+  const toast = useToast();
   const { currentUser } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
@@ -49,15 +51,15 @@ export default function Applications({ applications, referralAgents, onAddClick,
       });
 
       if (res.data?.success) {
-        alert(`✓ Application status updated to "${selectedStatus}" successfully!`);
+        toast.success(`Application status updated to "${selectedStatus}" successfully!`);
         setStatusModalApp(null);
         if (onRefresh) onRefresh();
       } else {
-        alert(res.data?.message || 'Failed to update application status.');
+        toast.error(res.data?.message || 'Failed to update application status.');
       }
     } catch (err) {
       console.error('Update status error:', err);
-      alert(err.response?.data?.message || err.message || 'Error updating status.');
+      toast.error(err.response?.data?.message || err.message || 'Error updating status.');
     } finally {
       setIsUpdating(false);
     }

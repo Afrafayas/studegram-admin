@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { useToast } from '../context/ToastContext';
 
 export default function CommissionManagement() {
+  const toast = useToast();
   const { currentUser, hasPermission, addAuditLog } = useAuth();
   
   // Initial commissions database initialized cleanly
@@ -20,22 +22,22 @@ export default function CommissionManagement() {
 
   const handleExport = () => {
     if (!hasPermission('commissions:export')) {
-      alert("Permission Denied: You do not have permission to export financial reports.");
+      toast.error("Permission Denied: You do not have permission to export financial reports.");
       return;
     }
     addAuditLog('EXPORT_FINANCIALS', 'Finance', 'COM-ALL', `Exported commission statement for ${displayCommissions.length} records.`);
-    alert("Financial report exported successfully as CSV! (Logged to Audit Logs)");
+    toast.success("Financial report exported successfully as CSV! (Logged to Audit Logs)");
   };
 
   const handleUpdateStatus = (id, newStatus) => {
     if (!hasPermission('commissions:manage')) {
-      alert("Permission Denied: Only Finance Team, COO, or Director can manage commissions.");
+      toast.error("Permission Denied: Only Finance Team, COO, or Director can manage commissions.");
       return;
     }
     
     setCommissions(prev => prev.map(c => c.id === id ? { ...c, status: newStatus } : c));
     addAuditLog('UPDATE_COMMISSION_STATUS', 'Finance', id, `Updated commission status to ${newStatus}`);
-    alert(`Commission ${id} status updated to ${newStatus}.`);
+    toast.success(`Commission ${id} status updated to ${newStatus}.`);
   };
 
   // Permission Guard
