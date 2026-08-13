@@ -17,10 +17,14 @@ export default function ApplicationChatDrawer({ app, onClose }) {
   const [localDocuments, setLocalDocuments] = useState([]);
   const [isUploadingDoc, setIsUploadingDoc] = useState(false);
   const [uploadDocError, setUploadDocError] = useState('');
+  const [selectedUploadFile, setSelectedUploadFile] = useState(null);
+  const [uploadComment, setUploadComment] = useState('');
 
   useEffect(() => {
     if (app) {
       setLocalDocuments(app.documents || []);
+      setSelectedUploadFile(null);
+      setUploadComment('');
     }
   }, [app]);
   
@@ -638,37 +642,11 @@ export default function ApplicationChatDrawer({ app, onClose }) {
                 <input
                   type="file"
                   className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                  onChange={async (e) => {
+                  onChange={(e) => {
                     const file = e.target.files?.[0];
-                    if (!file) return;
-                    setIsUploadingDoc(true);
-                    setUploadDocError('');
-                    try {
-                      const formData = new FormData();
-                      formData.append('file', file);
-                      const response = await fetch(`${API_BASE_URL}/upload`, {
-                        method: 'POST',
-                        headers: {
-                          'Authorization': `Bearer ${token}`
-                        },
-                        body: formData
-                      });
-                      const resData = await response.json();
-                      if (resData.success) {
-                        const newDoc = { name: file.name, url: resData.url };
-                        const updatedDocs = [...localDocuments, newDoc];
-                        
-                        const targetAppId = app.id || app._id;
-                        await API.put(`/applications/${targetAppId}`, { documents: updatedDocs });
-                        setLocalDocuments(updatedDocs);
-                      } else {
-                        throw new Error(resData.message || 'Upload failed');
-                      }
-                    } catch (err) {
-                      console.error('File upload failed:', err);
-                      setUploadDocError('Failed to upload document.');
-                    } finally {
-                      setIsUploadingDoc(false);
+                    if (file) {
+                      setSelectedUploadFile(file);
+                      setUploadDocError('');
                     }
                   }}
                 />
@@ -679,7 +657,105 @@ export default function ApplicationChatDrawer({ app, onClose }) {
                 </div>
               </div>
 
-              {isUploadingDoc && (
+              {selectedUploadFile && (
+                <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-4">
+                  <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs">📄</span>
+                      <span className="text-xs font-bold text-slate-800 truncate max-w-[180px]">
+                        {selectedUploadFile.name}
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedUploadFile(null);
+                        setUploadComment('');
+                      }}
+                      className="text-xs text-rose-500 hover:text-rose-700 font-bold"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                  
+                  <div className="space-y-1.5">
+                    <label className="block text-[10px] font-extrabold text-[#64748B] uppercase tracking-wider">Comments / Notes</label>
+                    <textarea
+                      rows="2.5"
+                      className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-1 focus:ring-[#D99A1C] font-semibold text-[#0F172A] resize-none shadow-sm"
+                      placeholder="Add comment about this document upload..."
+                      value={uploadComment}
+                      onChange={(e) => setUploadComment(e.target.value)}
+                    />
+                  </div>
+
+                  <div className="flex justify-end">
+                    <button
+                      type="button"
+                      disabled={isUploadingDoc}
+                      onClick={async () => {
+                        setIsUploadingDoc(true);
+                        setUploadDocError('');
+                        try {
+                          const formData = new FormData();
+                          formData.append('file', selectedUploadFile);
+                          const response = await fetch(`${API_BASE_URL}/upload`, {
+                            method: 'POST',
+                            headers: {
+                              'Authorization': `Bearer ${token}`
+                            },
+                            body: formData
+                          });
+                          const resData = await response.json();
+                          if (resData.success) {
+                            const newDoc = { 
+                              name: selectedUploadFile.name, 
+                              url: resData.url,
+                              comment: uploadComment.trim()
+                            };
+                            const updatedDocs = [...localDocuments, newDoc];
+                            
+                            const targetAppId = app.id || app._id;
+                            await API.put(`/applications/${targetAppId}`, { documents: updatedDocs });
+                            setLocalDocuments(updatedDocs);
+
+                            // Auto log in secure chat thread
+                            try {
+                              const chatMessageText = `📎 New Document Uploaded: "${selectedUploadFile.name}"\nComment: ${uploadComment.trim() || 'No comments provided.'}`;
+                              const chatFormData = new FormData();
+                              chatFormData.append('message', chatMessageText);
+                              await fetch(`${API_BASE_URL}/applications/${targetAppId}/chat`, {
+                                method: 'POST',
+                                headers: {
+                                  'Authorization': `Bearer ${token}`
+                                },
+                                body: chatFormData
+                              });
+                            } catch (chatErr) {
+                              console.warn('Failed to log document upload in chat:', chatErr.message);
+                            }
+
+                            setSelectedUploadFile(null);
+                            setUploadComment('');
+                          } else {
+                            throw new Error(resData.message || 'Upload failed');
+                          }
+                        } catch (err) {
+                          console.error('File upload failed:', err);
+                          setUploadDocError('Failed to upload document.');
+                        } finally {
+                          setIsUploadingDoc(false);
+                        }
+                      }}
+                      className="bg-[#D99A1C] hover:bg-[#C28410] disabled:opacity-50 text-white font-bold px-4 py-2 rounded-xl text-[10px] uppercase tracking-wider transition-all duration-150 active:scale-95 shadow-md flex items-center gap-1.5"
+                    >
+                      {isUploadingDoc ? 'Uploading...' : 'Upload Document'}
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {isUploadingDoc && !selectedUploadFile && (
                 <p className="text-[10px] text-[#D99A1C] font-semibold animate-pulse">⏳ Uploading file, please wait...</p>
               )}
               {uploadDocError && (
@@ -690,12 +766,17 @@ export default function ApplicationChatDrawer({ app, onClose }) {
               <div className="divide-y divide-slate-100 bg-white border border-slate-100 rounded-xl overflow-hidden shadow-3xs max-h-56 overflow-y-auto">
                 {localDocuments.length > 0 ? (
                   localDocuments.map((doc, idx) => (
-                    <div key={idx} className="p-2.5 flex items-center justify-between hover:bg-slate-50 transition-colors">
+                    <div key={idx} className="p-2.5 flex items-center justify-between hover:bg-slate-50 transition-colors border-b last:border-b-0 border-slate-105/50">
                       <div className="flex items-center gap-2 truncate pr-2">
-                        <span className="text-xs">📄</span>
+                        <span className="text-xs text-amber-500">📄</span>
                         <div className="truncate">
                           <p className="text-xs font-bold text-slate-800 truncate" title={doc.name}>{doc.name}</p>
-                          <p className="text-[9px] text-slate-400 font-semibold mt-0.5">
+                          {doc.comment && (
+                            <p className="text-[10px] text-slate-500 bg-slate-50 border border-slate-200/50 px-2 py-0.5 rounded font-semibold mt-1 inline-block">
+                              💬 {doc.comment}
+                            </p>
+                          )}
+                          <p className="text-[9px] text-slate-450 font-semibold mt-1">
                             {doc.uploadedAt ? new Date(doc.uploadedAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : 'Just Now'}
                           </p>
                         </div>
