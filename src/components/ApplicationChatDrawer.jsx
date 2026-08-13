@@ -668,22 +668,6 @@ export default function ApplicationChatDrawer({ app, onClose }) {
                         await API.put(`/applications/${targetAppId}`, { documents: updatedDocs });
                         setLocalDocuments(updatedDocs);
 
-                        // Auto log in secure chat thread
-                        try {
-                          const chatMessageText = `📎 New Document Uploaded: "${file.name}"\nComment: ${uploadComment.trim() || 'No comments provided.'}`;
-                          const chatFormData = new FormData();
-                          chatFormData.append('message', chatMessageText);
-                          await fetch(`${API_BASE_URL}/applications/${targetAppId}/chat`, {
-                            method: 'POST',
-                            headers: {
-                              'Authorization': `Bearer ${token}`
-                            },
-                            body: chatFormData
-                          });
-                        } catch (chatErr) {
-                          console.warn('Failed to log document upload in chat:', chatErr.message);
-                        }
-
                         setUploadComment('');
                       } else {
                         throw new Error(resData.message || 'Upload failed');
