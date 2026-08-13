@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import AdminSidebar from './components/AdminSidebar';
 import AdminHeader from './components/AdminHeader';
 
@@ -109,7 +109,8 @@ export default function AdminPortal({ onLogout }) {
           dob: app.student?.dob ? new Date(app.student.dob).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : null,
           studentEmail: app.student?.email || null,
           phone: app.student?.phone || null,
-          documents: app.documents || []
+          documents: app.documents || [],
+          notes: app.notes || ''
         }));
         setApplications(mapped);
       }
@@ -125,6 +126,47 @@ export default function AdminPortal({ onLogout }) {
   const [activeTab, setActiveTab] = useState('daily-report');
   const [activeSubTab, setActiveSubTab] = useState(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [navigationHistory, setNavigationHistory] = useState([]);
+  const prevActiveTabRef = useRef('daily-report');
+  const prevActiveSubTabRef = useRef(null);
+  const isBackNavRef = useRef(false);
+
+  useEffect(() => {
+    if (isBackNavRef.current) {
+      isBackNavRef.current = false;
+      prevActiveTabRef.current = activeTab;
+      prevActiveSubTabRef.current = activeSubTab;
+      return;
+    }
+
+    const prevTab = prevActiveTabRef.current;
+    const prevSubTab = prevActiveSubTabRef.current;
+
+    if (prevTab !== activeTab || prevSubTab !== activeSubTab) {
+      setNavigationHistory(prev => {
+        const last = prev[prev.length - 1];
+        if (last && last.tab === prevTab && last.subTab === prevSubTab) {
+          return prev;
+        }
+        return [...prev, { tab: prevTab, subTab: prevSubTab }];
+      });
+    }
+
+    prevActiveTabRef.current = activeTab;
+    prevActiveSubTabRef.current = activeSubTab;
+  }, [activeTab, activeSubTab]);
+
+  const handleBack = navigationHistory.length > 0 ? () => {
+    const prevPosition = navigationHistory[navigationHistory.length - 1];
+    if (prevPosition) {
+      isBackNavRef.current = true;
+      setActiveTab(prevPosition.tab);
+      setActiveSubTab(prevPosition.subTab);
+      prevActiveTabRef.current = prevPosition.tab;
+      prevActiveSubTabRef.current = prevPosition.subTab;
+      setNavigationHistory(prev => prev.slice(0, -1));
+    }
+  } : null;
 
   // States initialized cleanly for production / live DB data
   const [applications, setApplications] = useState([]);
@@ -218,13 +260,13 @@ export default function AdminPortal({ onLogout }) {
           studentId = studentRes.data.data._id;
         }
 
-        // 2. Create application
         const appPayload = {
           student: studentId,
           university: newApp.universityId,
           course: newApp.courseId,
           status: 'Pending',
-          documents: newApp.documents || []
+          documents: newApp.documents || [],
+          notes: newApp.notes
         };
         if (newApp.partnerId) {
           appPayload.partner = newApp.partnerId;
@@ -352,10 +394,10 @@ export default function AdminPortal({ onLogout }) {
             staffList={staffList}
             students={clients.filter(c => c.type === 'Student')}
             onAddApplication={handleAddApplication}
-            onBack={() => {
+            onBack={handleBack || (() => {
               setActiveTab('daily-report');
               setActiveSubTab(null);
-            }}
+            })}
           />
         );
       }
@@ -411,6 +453,7 @@ export default function AdminPortal({ onLogout }) {
             activeSubTab={activeSubTab}
             onToggleSidebar={() => setSidebarOpen(!sidebarOpen)}
             onLogout={onLogout}
+            onBack={handleBack}
           />
 
           <main key={`${activeTab}-${activeSubTab}`} className="flex-1 flex flex-col pb-16 animate-fade-in-up">

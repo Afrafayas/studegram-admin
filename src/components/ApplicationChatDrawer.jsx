@@ -552,6 +552,18 @@ export default function ApplicationChatDrawer({ app, onClose }) {
               </div>
             </div>
 
+            {/* Comments / Notes */}
+            {app.notes && (
+              <div className="bg-white border border-slate-200/80 rounded-2xl p-4 shadow-3xs space-y-2">
+                <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-wider border-b border-slate-100 pb-1.5 flex items-center gap-1">
+                  <span>📝</span> Application Notes / Comments
+                </h4>
+                <p className="text-xs font-semibold text-slate-805 whitespace-pre-wrap leading-relaxed">
+                  {app.notes}
+                </p>
+              </div>
+            )}
+
             {/* Academic Program Info */}
             <div className="bg-white border border-slate-200/80 rounded-2xl p-4 shadow-3xs space-y-3">
               <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-wider border-b border-slate-100 pb-1.5 flex items-center gap-1">

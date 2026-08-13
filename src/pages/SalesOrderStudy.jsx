@@ -36,6 +36,7 @@ export default function SalesOrderStudy({
   const [course, setCourse] = useState(() => getInitialId(courses));
   const [intake, setIntake] = useState(() => getInitialId(intakes));
   const [partner, setPartner] = useState('');
+  const [notes, setNotes] = useState('');
   
   const [isFlagDropdownOpen, setIsFlagDropdownOpen] = useState(false);
   const [successMessage, setSuccessMessage] = useState(false);
@@ -91,7 +92,8 @@ export default function SalesOrderStudy({
         passportNo: studentObj?.passportNo || `T${Math.floor(1000000 + Math.random() * 9000000)}`,
         secondaryStatus: 'Pending',
         dateAdded: new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
-        documents: uploadedFiles
+        documents: uploadedFiles,
+        notes: notes
       };
     } else {
       newApp = {
@@ -110,7 +112,8 @@ export default function SalesOrderStudy({
         passportNo: `T${Math.floor(1000000 + Math.random() * 9000000)}`,
         secondaryStatus: 'Pending',
         dateAdded: new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
-        documents: uploadedFiles
+        documents: uploadedFiles,
+        notes: notes
       };
     }
 
@@ -123,6 +126,7 @@ export default function SalesOrderStudy({
     setPartner('');
     setSelectedStudent('');
     setUploadedFiles([]);
+    setNotes('');
     setStudentSelectionMode('new');
 
     setTimeout(() => {
@@ -386,6 +390,18 @@ export default function SalesOrderStudy({
                   </>
                 )}
               </select>
+            </div>
+
+            {/* Comments / Notes */}
+            <div className="space-y-1.5">
+              <label className="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">Comments / Notes</label>
+              <textarea
+                rows="3"
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-semibold focus:outline-none focus:bg-white focus:ring-1 focus:ring-[#D99A1C] focus:border-[#D99A1C] text-slate-900 resize-none"
+                placeholder="Add any comments or notes for this application..."
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+              />
             </div>
           </div>
 
