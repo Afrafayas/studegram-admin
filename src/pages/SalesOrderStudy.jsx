@@ -404,8 +404,9 @@ export default function SalesOrderStudy({
               />
             </div>
           </div>
+        </div>
 
-          {/* Document Upload Section */}
+        {/* Document Upload Section */}
           <div className="space-y-4 bg-white border border-slate-250/70 p-5 rounded-2xl">
             <h3 className="text-xs font-black text-slate-950 uppercase tracking-wider pb-1 border-b border-slate-105/60">Supporting Documents *</h3>
             
@@ -471,7 +472,6 @@ export default function SalesOrderStudy({
               </div>
             )}
           </div>
-        </div>
 
         <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-100">
           <button
