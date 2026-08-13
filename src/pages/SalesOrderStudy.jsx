@@ -391,18 +391,6 @@ export default function SalesOrderStudy({
                 )}
               </select>
             </div>
-
-            {/* Comments / Notes */}
-            <div className="space-y-1.5">
-              <label className="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">Comments / Notes</label>
-              <textarea
-                rows="3"
-                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-semibold focus:outline-none focus:bg-white focus:ring-1 focus:ring-[#D99A1C] focus:border-[#D99A1C] text-slate-900 resize-none"
-                placeholder="Add any comments or notes for this application..."
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-              />
-            </div>
           </div>
         </div>
 
@@ -472,6 +460,18 @@ export default function SalesOrderStudy({
               </div>
             )}
           </div>
+
+        {/* Comments / Notes */}
+        <div className="space-y-4 bg-white border border-slate-250/70 p-5 rounded-2xl">
+          <h3 className="text-xs font-black text-slate-950 uppercase tracking-wider pb-1 border-b border-slate-105/60">Comments / Notes</h3>
+          <textarea
+            rows="3"
+            className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs font-semibold focus:outline-none focus:bg-white focus:ring-1 focus:ring-[#D99A1C] focus:border-[#D99A1C] text-slate-900 resize-none"
+            placeholder="Add any comments or notes for this application..."
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+          />
+        </div>
 
         <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-100">
           <button
