@@ -29,6 +29,11 @@ export default function Students({ clients, setClients, applications }) {
   const students = clients.filter(c => c.type === 'Student');
   const partners = clients.filter(c => c.type === 'Agent');
 
+  // Find linked applications for a specific student
+  const getStudentApplications = (studentName) => {
+    return (applications || []).filter(app => (app.studentName || '').toLowerCase() === (studentName || '').toLowerCase());
+  };
+
   // Dynamically extract all unique intakes from applications
   const availableIntakes = Array.from(
     new Set((applications || []).map(app => app.intake).filter(Boolean))
@@ -104,10 +109,7 @@ export default function Students({ clients, setClients, applications }) {
     toast.success(`Student ${newStudentName} successfully onboarded.`);
   };
 
-  // Find linked applications for a specific student
-  const getStudentApplications = (studentName) => {
-    return applications.filter(app => app.studentName.toLowerCase() === studentName.toLowerCase());
-  };
+
 
   return (
     <div className="flex-1 p-6 space-y-6 bg-[#F0F2F5]">
