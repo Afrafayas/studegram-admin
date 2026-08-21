@@ -7,6 +7,7 @@ import { useToast } from '../context/ToastContext';
 const STATUS_STEPS = [
   'Submitted',
   'Under Review',
+  'Paid Students',
   'Conditional Offer Issued',
   'Unconditional Offer Issued',
   'CAS / I-20 Requested',
@@ -107,7 +108,7 @@ export default function Applications({ applications, referralAgents, onAddClick,
       {/* Advanced Filters */}
       <div className="bg-white border border-[#E2E8F0] border-t-4 border-t-[#2563EB] rounded-2xl p-5 shadow-xs flex flex-col sm:flex-row gap-4 items-center justify-between">
         <div className="flex flex-wrap gap-2">
-          {['All', 'Submitted', 'Under Review', 'Conditional Offer Issued', 'CAS / I-20 Issued', 'Visa Approved', 'Enrolled / Closed'].map((status) => (
+          {['All', 'Submitted', 'Under Review', 'Paid Students', 'Conditional Offer Issued', 'CAS / I-20 Issued', 'Visa Approved', 'Enrolled / Closed'].map((status) => (
             <button
               key={status}
               onClick={() => setStatusFilter(status)}
@@ -192,7 +193,7 @@ export default function Applications({ applications, referralAgents, onAddClick,
                       </td>
                       <td className="px-6 py-4">
                         <span className={`px-2.5 py-0.5 border rounded-full text-[9px] font-extrabold ${
-                          isClosed || displayStatus === 'Enrolled / Closed' || displayStatus === 'Visa Approved'
+                          isClosed || displayStatus === 'Enrolled / Closed' || displayStatus === 'Visa Approved' || displayStatus === 'Paid Students'
                             ? 'bg-emerald-50 text-emerald-700 border-emerald-200 font-black' 
                             : displayStatus.includes('Offer') || displayStatus.includes('CAS')
                               ? 'bg-blue-50 text-blue-700 border-blue-200'

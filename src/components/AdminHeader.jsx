@@ -20,7 +20,7 @@ export default function AdminHeader({
       crumbs.push('Admin-Report');
       if (activeSubTab === 'report-agent') crumbs.push('By Agent');
       if (activeSubTab === 'report-university') crumbs.push('By University');
-      if (activeSubTab === 'report-course') crumbs.push('By Course');
+      if (activeSubTab === 'report-country') crumbs.push('By Country');
     } else if (activeTab === 'applications') {
       crumbs.push('Applications');
     } else if (activeTab === 'partners') {

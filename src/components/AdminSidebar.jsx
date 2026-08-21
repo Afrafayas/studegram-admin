@@ -130,14 +130,14 @@ export default function AdminSidebar({
                       Report by University
                     </button>
                     <button
-                      onClick={() => handleSubTabClick('admin-report', 'report-course')}
+                      onClick={() => handleSubTabClick('admin-report', 'report-country')}
                       className={`w-full text-left py-2 px-3 text-[11px] font-semibold rounded-md transition-colors ${
-                        activeTab === 'admin-report' && activeSubTab === 'report-course'
+                        activeTab === 'admin-report' && activeSubTab === 'report-country'
                           ? 'text-[#F5B025] bg-[#161622]/60 font-bold'
                           : 'text-slate-400 hover:text-white hover:bg-[#161622]/30'
                       }`}
                     >
-                      Report by Course
+                      Report by Country
                     </button>
                   </div>
                 )}

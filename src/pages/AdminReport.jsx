@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 export default function AdminReport({ applications }) {
   const [selectedAgent, setSelectedAgent] = useState('All');
   const [selectedUniversity, setSelectedUniversity] = useState('All');
-  const [selectedCourse, setSelectedCourse] = useState('All');
+  const [selectedCountry, setSelectedCountry] = useState('All');
 
   const allReportApps = (applications || []).map((app, idx) => ({
     camsId: app.camsId || app._id || `CAMS${10000 + idx}`,
@@ -11,6 +11,7 @@ export default function AdminReport({ applications }) {
     agent: app.assignedBdm || 'Direct',
     university: app.universityName || app.university || 'N/A',
     course: app.courseName || 'N/A',
+    country: app.country || 'United Kingdom',
     intake: app.intake || 'N/A',
     status: app.secondaryStatus || 'Pending'
   }));
@@ -18,8 +19,8 @@ export default function AdminReport({ applications }) {
   const filteredApps = allReportApps.filter(app => {
     const agentMatch = selectedAgent === 'All' || app.agent.toLowerCase().includes(selectedAgent.toLowerCase());
     const univMatch = selectedUniversity === 'All' || app.university.toLowerCase().includes(selectedUniversity.toLowerCase());
-    const courseMatch = selectedCourse === 'All' || app.course.toLowerCase().includes(selectedCourse.toLowerCase());
-    return agentMatch && univMatch && courseMatch;
+    const countryMatch = selectedCountry === 'All' || app.country.toLowerCase().includes(selectedCountry.toLowerCase());
+    return agentMatch && univMatch && countryMatch;
   });
 
   const handleExport = () => {
@@ -32,7 +33,7 @@ export default function AdminReport({ applications }) {
       <div className="flex justify-between items-center bg-white border border-[#E2E8F0] border-t-4 border-t-[#D99A1C] p-6 rounded-2xl shadow-xs">
         <div className="space-y-1">
           <h1 className="text-xl font-black text-slate-900 tracking-tight">Admin-Report Generator</h1>
-          <p className="text-xs text-slate-500 font-medium">Query B2B referrals and filter details by university, course, and agent channel.</p>
+          <p className="text-xs text-slate-500 font-medium">Query B2B referrals and filter details by university, country, and agent channel.</p>
         </div>
         <button
           onClick={handleExport}
@@ -77,17 +78,17 @@ export default function AdminReport({ applications }) {
         </div>
 
         <div className="space-y-1.5">
-          <label className="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">Academic Program</label>
+          <label className="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">Country</label>
           <select 
-            value={selectedCourse} 
-            onChange={(e) => setSelectedCourse(e.target.value)}
+            value={selectedCountry} 
+            onChange={(e) => setSelectedCountry(e.target.value)}
             className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-semibold focus:outline-none focus:bg-white focus:ring-1 focus:ring-[#D99A1C] focus:border-[#D99A1C]"
           >
-            <option value="All">All Courses</option>
-            <option value="Hotel">MSc International Hotel Management</option>
-            <option value="Resources">MSc Human Resources Management</option>
-            <option value="Computer">MSc Computer Science</option>
-            <option value="BCOM">BCOM</option>
+            <option value="All">All Countries</option>
+            <option value="United Kingdom">United Kingdom</option>
+            <option value="Canada">Canada</option>
+            <option value="Australia">Australia</option>
+            <option value="India">India</option>
           </select>
         </div>
       </div>
@@ -96,7 +97,7 @@ export default function AdminReport({ applications }) {
       <div className="bg-white border border-[#E2E8F0] border-t-4 border-t-[#D99A1C] rounded-2xl shadow-xs overflow-hidden">
         <div className="px-6 py-4 border-b border-[#E2E8F0] flex justify-between items-center">
           <h2 className="text-xs font-black text-slate-900 uppercase tracking-wider">Query Results ({filteredApps.length} entries)</h2>
-          <span className="text-[10px] font-bold text-slate-400">Filters: Agent={selectedAgent}, Univ={selectedUniversity}, Course={selectedCourse}</span>
+          <span className="text-[10px] font-bold text-slate-400">Filters: Agent={selectedAgent}, Univ={selectedUniversity}, Country={selectedCountry}</span>
         </div>
         <div className="overflow-x-auto">
           {filteredApps.length > 0 ? (
