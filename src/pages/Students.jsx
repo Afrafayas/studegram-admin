@@ -135,7 +135,7 @@ export default function Students({ clients, setClients, applications }) {
       {/* Search & Filters */}
       <div className="bg-white border border-[#E2E8F0] border-t-4 border-t-[#2563EB] rounded-2xl p-5 shadow-xs flex flex-col sm:flex-row gap-4 items-center justify-between">
         <div className="bg-slate-100 p-1 rounded-xl flex w-full sm:w-auto">
-          {['All', 'Active', 'Paid Students', 'Inactive'].map((status) => (
+          {['All', 'Active', 'Inactive', 'Paid Students'].map((status) => (
             <button
               key={status}
               onClick={() => setStatusFilter(status)}
