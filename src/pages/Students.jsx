@@ -11,6 +11,7 @@ export default function Students({ clients, setClients, applications }) {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
   const [partnerFilter, setPartnerFilter] = useState('All');
+  const [intakeFilter, setIntakeFilter] = useState('All');
   const [expandedId, setExpandedId] = useState(null);
   
   // Onboard Student Modal State
@@ -28,6 +29,11 @@ export default function Students({ clients, setClients, applications }) {
   const students = clients.filter(c => c.type === 'Student');
   const partners = clients.filter(c => c.type === 'Agent');
 
+  // Dynamically extract all unique intakes from applications
+  const availableIntakes = Array.from(
+    new Set((applications || []).map(app => app.intake).filter(Boolean))
+  );
+
   // Filter students
   const filteredStudents = students.filter(s => {
     const name = s.name || '';
@@ -42,11 +48,18 @@ export default function Students({ clients, setClients, applications }) {
                         phone.includes(searchTerm) ||
                         ref.toLowerCase().includes(searchTerm.toLowerCase());
                         
-    const statusMatch = statusFilter === 'All' || s.status === statusFilter;
+    const studentApps = getStudentApplications(s.name);
+    const hasPaidApp = studentApps.some(app => app.secondaryStatus === 'Paid Students' || app.status === 'Paid Students' || app.paymentStatus === 'Paid');
+    
+    const statusMatch = statusFilter === 'All' ? true :
+                        statusFilter === 'Paid Students' ? hasPaidApp :
+                        s.status === statusFilter;
+
+    const hasIntakeApp = intakeFilter === 'All' || studentApps.some(app => app.intake && app.intake.toLowerCase().includes(intakeFilter.toLowerCase()));
 
     const partnerMatch = partnerFilter === 'All' || s.referredBy === partnerFilter;
     
-    return searchMatch && statusMatch && partnerMatch;
+    return searchMatch && statusMatch && partnerMatch && hasIntakeApp;
   });
 
   const toggleExpand = (id) => {
@@ -120,7 +133,7 @@ export default function Students({ clients, setClients, applications }) {
       {/* Search & Filters */}
       <div className="bg-white border border-[#E2E8F0] border-t-4 border-t-[#2563EB] rounded-2xl p-5 shadow-xs flex flex-col sm:flex-row gap-4 items-center justify-between">
         <div className="bg-slate-100 p-1 rounded-xl flex w-full sm:w-auto">
-          {['All', 'Active', 'Inactive'].map((status) => (
+          {['All', 'Active', 'Paid Students', 'Inactive'].map((status) => (
             <button
               key={status}
               onClick={() => setStatusFilter(status)}
@@ -136,6 +149,17 @@ export default function Students({ clients, setClients, applications }) {
         </div>
 
         <div className="flex w-full sm:w-auto items-center gap-3">
+          <select
+            value={intakeFilter}
+            onChange={(e) => setIntakeFilter(e.target.value)}
+            className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs text-slate-900 focus:outline-none focus:border-[#D99A1C] focus:ring-1 focus:ring-[#D99A1C] font-semibold cursor-pointer"
+          >
+            <option value="All">All Intakes</option>
+            {availableIntakes.map((intake) => (
+              <option key={intake} value={intake}>{intake}</option>
+            ))}
+          </select>
+
           <select
             value={partnerFilter}
             onChange={(e) => setPartnerFilter(e.target.value)}
