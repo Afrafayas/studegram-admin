@@ -33,6 +33,15 @@ export default function Staff({ staffList, setStaffList, applications }) {
     setManualPassword(res);
   };
 
+  // Dynamic list of assigned countries derived from staff database & master list
+  const defaultCountries = ['India', 'United Kingdom', 'Canada', 'Australia', 'United States'];
+  const availableCountries = Array.from(
+    new Set([
+      ...defaultCountries,
+      ...staffList.map(s => s.country).filter(Boolean)
+    ])
+  );
+
   // Permission Guard
   if (!hasPermission('staff:view')) {
     return (
@@ -47,11 +56,6 @@ export default function Staff({ staffList, setStaffList, applications }) {
       </div>
     );
   }
-
-  // Extract dynamic country list from staffList data + system defaults
-  const systemCountries = ['India', 'United Kingdom', 'Canada', 'Australia', 'United States'];
-  const extractedCountries = staffList.map(s => s.country).filter(Boolean);
-  const availableCountries = Array.from(new Set([...systemCountries, ...extractedCountries]));
 
   // Filter staff based on searching, status, and country
   const baseFiltered = staffList.filter(s => {
@@ -169,7 +173,7 @@ export default function Staff({ staffList, setStaffList, applications }) {
       </div>
 
       {/* Search & Filters */}
-      <div className="bg-white border border-[#E2E8F0] border-t-4 border-t-[#2563EB] rounded-2xl p-5 shadow-xs flex flex-col sm:flex-row gap-4 items-center justify-between">
+      <div className="bg-[#FFFFFF] border border-[#E2E8F0] border-t-4 border-t-[#2563EB] rounded-2xl p-5 shadow-xs flex flex-col sm:flex-row gap-4 items-center justify-between">
         <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto">
           <div className="bg-slate-100 p-1 rounded-xl flex">
             {['All', 'Active', 'Inactive', 'Suspended'].map((status) => (
@@ -187,13 +191,13 @@ export default function Staff({ staffList, setStaffList, applications }) {
             ))}
           </div>
 
-          {/* Dynamic Country Filter Dropdown */}
+          {/* Country Filter Dropdown (Dynamic) */}
           <select
             value={countryFilter}
             onChange={(e) => setCountryFilter(e.target.value)}
             className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-[#D99A1C] focus:ring-1 focus:ring-[#D99A1C] font-extrabold cursor-pointer"
           >
-            <option value="All">All Assigned Countries ({availableCountries.length})</option>
+            <option value="All">All Assigned Countries</option>
             {availableCountries.map(country => (
               <option key={country} value={country}>{country}</option>
             ))}
