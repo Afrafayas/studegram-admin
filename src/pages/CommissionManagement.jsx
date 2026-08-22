@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 
-export default function CommissionManagement() {
+export default function CommissionManagement({ clients = [], referralAgents = [], applications = [] }) {
   const toast = useToast();
   const { currentUser, hasPermission, addAuditLog } = useAuth();
   
@@ -56,11 +56,19 @@ export default function CommissionManagement() {
     );
   }
 
+  // Calculate total agents
+  const agentList = referralAgents.length > 0 
+    ? referralAgents 
+    : clients.filter(c => c.type === 'Agent');
+
+  const totalAgents = agentList.length > 0 
+    ? agentList.length 
+    : (commissions.length > 0 ? new Set(commissions.map(c => c.partnerName)).size : 0);
+
   // Calculate stats
-  const totalAmount = displayCommissions.reduce((acc, c) => acc + c.amount, 0);
-  const paidAmount = displayCommissions.filter(c => c.status === 'Paid').reduce((acc, c) => acc + c.amount, 0);
-  const pendingAmount = displayCommissions.filter(c => c.status === 'Pending Approval').reduce((acc, c) => acc + c.amount, 0);
-  const reviewAmount = displayCommissions.filter(c => c.status === 'Under Review').reduce((acc, c) => acc + c.amount, 0);
+  const totalAmount = displayCommissions.reduce((acc, c) => acc + (c.amount || 0), 0);
+  const paidAmount = displayCommissions.filter(c => c.status === 'Paid').reduce((acc, c) => acc + (c.amount || 0), 0);
+  const pendingAmount = displayCommissions.filter(c => c.status === 'Pending Approval').reduce((acc, c) => acc + (c.amount || 0), 0);
 
   return (
     <div className="flex-1 p-6 space-y-6 bg-[#F0F2F5]">
@@ -89,39 +97,39 @@ export default function CommissionManagement() {
 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* Card 1 */}
+        {/* Card 1: Total Agents */}
         <div className="bg-white border border-[#E2E8F0] border-t-4 border-t-indigo-500 rounded-2xl p-5 shadow-xs flex flex-col justify-between">
-          <span className="text-[10px] font-extrabold uppercase tracking-widest text-slate-400">Total Scoped Payouts</span>
+          <span className="text-[10px] font-extrabold uppercase tracking-widest text-slate-400">Total Agents</span>
+          <div className="mt-4 flex items-baseline gap-2">
+            <span className="text-2xl font-black text-slate-900 tracking-tight">{totalAgents}</span>
+            <span className="text-[9px] font-bold text-indigo-500 uppercase">Active</span>
+          </div>
+        </div>
+
+        {/* Card 2: Total Payments */}
+        <div className="bg-white border border-[#E2E8F0] border-t-4 border-t-emerald-500 rounded-2xl p-5 shadow-xs flex flex-col justify-between">
+          <span className="text-[10px] font-extrabold uppercase tracking-widest text-slate-400">Total Payments</span>
           <div className="mt-4 flex items-baseline gap-2">
             <span className="text-2xl font-black text-slate-900 tracking-tight">£{totalAmount.toLocaleString()}</span>
             <span className="text-[9px] font-bold text-slate-400 uppercase">GBP</span>
           </div>
         </div>
 
-        {/* Card 2 */}
-        <div className="bg-white border border-[#E2E8F0] border-t-4 border-t-emerald-500 rounded-2xl p-5 shadow-xs flex flex-col justify-between">
-          <span className="text-[10px] font-extrabold uppercase tracking-widest text-slate-400">Total Paid</span>
+        {/* Card 3: Total Paid Commissions */}
+        <div className="bg-white border border-[#E2E8F0] border-t-4 border-t-blue-500 rounded-2xl p-5 shadow-xs flex flex-col justify-between">
+          <span className="text-[10px] font-extrabold uppercase tracking-widest text-slate-400">Total Paid Commissions</span>
           <div className="mt-4 flex items-baseline gap-2">
             <span className="text-2xl font-black text-slate-900 tracking-tight">£{paidAmount.toLocaleString()}</span>
             <span className="text-[9px] font-bold text-emerald-500 uppercase">Cleared</span>
           </div>
         </div>
 
-        {/* Card 3 */}
+        {/* Card 4: Total Pending Commissions */}
         <div className="bg-white border border-[#E2E8F0] border-t-4 border-t-amber-500 rounded-2xl p-5 shadow-xs flex flex-col justify-between">
-          <span className="text-[10px] font-extrabold uppercase tracking-widest text-slate-400">Pending Approval</span>
+          <span className="text-[10px] font-extrabold uppercase tracking-widest text-slate-400">Total Pending Commissions</span>
           <div className="mt-4 flex items-baseline gap-2">
             <span className="text-2xl font-black text-slate-900 tracking-tight">£{pendingAmount.toLocaleString()}</span>
             <span className="text-[9px] font-bold text-amber-500 uppercase">In Review</span>
-          </div>
-        </div>
-
-        {/* Card 4 */}
-        <div className="bg-white border border-[#E2E8F0] border-t-4 border-t-rose-500 rounded-2xl p-5 shadow-xs flex flex-col justify-between">
-          <span className="text-[10px] font-extrabold uppercase tracking-widest text-slate-400">Under Dispute</span>
-          <div className="mt-4 flex items-baseline gap-2">
-            <span className="text-2xl font-black text-slate-900 tracking-tight">£{reviewAmount.toLocaleString()}</span>
-            <span className="text-[9px] font-bold text-rose-500 uppercase">Held</span>
           </div>
         </div>
       </div>

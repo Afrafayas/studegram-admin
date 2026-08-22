@@ -373,7 +373,7 @@ export default function AdminPortal({ onLogout }) {
     }
 
     if (activeTab === 'commissions') {
-      return <CommissionManagement />;
+      return <CommissionManagement clients={scopedClients} referralAgents={referralAgents} applications={scopedApplications} />;
     }
 
     if (activeTab === 'role-hierarchy') {
