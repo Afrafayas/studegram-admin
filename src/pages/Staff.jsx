@@ -520,10 +520,10 @@ export default function Staff({ staffList, setStaffList, applications }) {
                 </select>
               </div>
 
-              {/* Password Setup Strategy Section */}
+              {/* Password Setup Section */}
               <div className="bg-slate-50 border border-slate-200 p-4 rounded-xl space-y-3">
                 <div className="flex justify-between items-center">
-                  <label className="block text-[10px] font-black text-slate-700 uppercase tracking-wider">Password Setup Strategy</label>
+                  <label className="block text-[10px] font-black text-slate-700 uppercase tracking-wider">Password Setup</label>
                   <span className="text-[9px] font-bold text-indigo-600 bg-indigo-50 border border-indigo-100 px-2 py-0.5 rounded-md">Security Control</span>
                 </div>
 
