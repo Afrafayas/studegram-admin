@@ -226,13 +226,13 @@ export default function AdminPortal({ onLogout }) {
   const [todoList, setTodoList] = useState([]);
 
   const [staffList, setStaffList] = useState([
-    { id: 100, name: 'Super Admin', role: 'Director', email: 'superadminluzid@gmail.com', phone: '+1 800 555 0199', status: 'Active', dateAdded: '01 Jan 2026', accessLevel: 'SuperAdmin (Full Access)' },
-    { id: 101, name: 'Elena Rostova', role: 'Director', email: 'director@studegram.com', phone: '+44 7911 123456', status: 'Active', dateAdded: '01 Jan 2026', accessLevel: 'Director (Level 1)' },
-    { id: 102, name: 'Marcus Vance', role: 'COO', email: 'coo@studegram.com', phone: '+44 7911 654321', status: 'Active', dateAdded: '15 Mar 2026', accessLevel: 'COO (Level 2)' },
-    { id: 103, name: 'Sarah Jenkins', role: 'Finance', email: 'finance@studegram.com', phone: '+44 7911 987654', status: 'Active', dateAdded: '10 May 2026', accessLevel: 'Finance (Level 3)' },
-    { id: 104, name: 'Rajesh Kumar', role: 'Country Head', email: 'countryhead.in@studegram.com', phone: '+91 98765 43210', status: 'Active', dateAdded: '01 Apr 2026', accessLevel: 'Country Head (Level 4 - India)' },
-    { id: 105, name: 'Amit Patel', role: 'BDM', email: 'bdm.india@studegram.com', phone: '+91 99988 77766', status: 'Active', dateAdded: '20 Apr 2026', accessLevel: 'BDM (Level 5 - North India)' },
-    { id: 106, name: 'Rahul Krishnan', role: 'Executive', email: 'rahul@studegram.com', phone: '+91 99988 87772', status: 'Active', dateAdded: '01 May 2026', accessLevel: 'Executive (Level 6)' }
+    { id: 100, name: 'Super Admin', role: 'Director', email: 'superadminluzid@gmail.com', phone: '+1 800 555 0199', status: 'Active', dateAdded: '01 Jan 2026', accessLevel: 'SuperAdmin (Full Access)', country: 'India' },
+    { id: 101, name: 'Elena Rostova', role: 'Director', email: 'director@studegram.com', phone: '+44 7911 123456', status: 'Active', dateAdded: '01 Jan 2026', accessLevel: 'Director (Level 1)', country: 'United Kingdom' },
+    { id: 102, name: 'Marcus Vance', role: 'COO', email: 'coo@studegram.com', phone: '+44 7911 654321', status: 'Active', dateAdded: '15 Mar 2026', accessLevel: 'COO (Level 2)', country: 'United Kingdom' },
+    { id: 103, name: 'Sarah Jenkins', role: 'Finance', email: 'finance@studegram.com', phone: '+44 7911 987654', status: 'Active', dateAdded: '10 May 2026', accessLevel: 'Finance (Level 3)', country: 'United Kingdom' },
+    { id: 104, name: 'Rajesh Kumar', role: 'Country Head', email: 'countryhead.in@studegram.com', phone: '+91 98765 43210', status: 'Active', dateAdded: '01 Apr 2026', accessLevel: 'Country Head (Level 4 - India)', country: 'India' },
+    { id: 105, name: 'Amit Patel', role: 'BDM', email: 'bdm.india@studegram.com', phone: '+91 99988 77766', status: 'Active', dateAdded: '20 Apr 2026', accessLevel: 'BDM (Level 5 - North India)', country: 'India' },
+    { id: 106, name: 'Rahul Krishnan', role: 'Executive', email: 'rahul@studegram.com', phone: '+91 99988 87772', status: 'Active', dateAdded: '01 May 2026', accessLevel: 'Executive (Level 6)', country: 'India' }
   ]);
 
   const [clients, setClients] = useState([]);
