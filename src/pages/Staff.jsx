@@ -48,6 +48,11 @@ export default function Staff({ staffList, setStaffList, applications }) {
     );
   }
 
+  // Extract dynamic country list from staffList data + system defaults
+  const systemCountries = ['India', 'United Kingdom', 'Canada', 'Australia', 'United States'];
+  const extractedCountries = staffList.map(s => s.country).filter(Boolean);
+  const availableCountries = Array.from(new Set([...systemCountries, ...extractedCountries]));
+
   // Filter staff based on searching, status, and country
   const baseFiltered = staffList.filter(s => {
     const name = s.name || '';
@@ -182,18 +187,16 @@ export default function Staff({ staffList, setStaffList, applications }) {
             ))}
           </div>
 
-          {/* Country Filter Dropdown */}
+          {/* Dynamic Country Filter Dropdown */}
           <select
             value={countryFilter}
             onChange={(e) => setCountryFilter(e.target.value)}
             className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-[#D99A1C] focus:ring-1 focus:ring-[#D99A1C] font-extrabold cursor-pointer"
           >
-            <option value="All">All Assigned Countries</option>
-            <option value="India">India</option>
-            <option value="United Kingdom">United Kingdom</option>
-            <option value="Canada">Canada</option>
-            <option value="Australia">Australia</option>
-            <option value="United States">United States</option>
+            <option value="All">All Assigned Countries ({availableCountries.length})</option>
+            {availableCountries.map(country => (
+              <option key={country} value={country}>{country}</option>
+            ))}
           </select>
         </div>
 
@@ -493,11 +496,9 @@ export default function Staff({ staffList, setStaffList, applications }) {
                     className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs font-semibold focus:outline-none focus:bg-white focus:border-[#D99A1C] text-slate-900 cursor-pointer"
                     disabled={currentUser.role === 'Country Head'}
                   >
-                    <option value="India">India</option>
-                    <option value="United Kingdom">United Kingdom</option>
-                    <option value="Canada">Canada</option>
-                    <option value="Australia">Australia</option>
-                    <option value="United States">United States</option>
+                    {availableCountries.map(country => (
+                      <option key={country} value={country}>{country}</option>
+                    ))}
                   </select>
                 </div>
               </div>
