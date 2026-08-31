@@ -30,30 +30,32 @@ export default function AdminPortal({ onLogout }) {
   const fetchInitialData = async () => {
     if (!adminToken) return;
     try {
-      // 1. Fetch Intakes
-      const intakeRes = await API.get('/intakes');
+      // Execute all API requests concurrently in parallel
+      const [intakeRes, univRes, courseRes, partnerRes, studentRes, appRes] = await Promise.all([
+        API.get('/intakes').catch(err => ({ error: err })),
+        API.get('/universities').catch(err => ({ error: err })),
+        API.get('/courses').catch(err => ({ error: err })),
+        API.get('/partners').catch(err => ({ error: err })),
+        API.get('/students').catch(err => ({ error: err })),
+        API.get('/applications').catch(err => ({ error: err }))
+      ]);
+
       if (intakeRes.data?.success) {
         setIntakes(intakeRes.data.data);
       }
 
-      // 2. Fetch Universities
-      const univRes = await API.get('/universities');
       if (univRes.data?.success) {
         setUniversities(univRes.data.data);
       }
 
-      // 3. Fetch Courses
-      const courseRes = await API.get('/courses');
       if (courseRes.data?.success) {
         setCourses(courseRes.data.data);
       }
 
-      // 4. Fetch Partners
-      const partnerRes = await API.get('/partners');
+      let mappedAgents = [];
       if (partnerRes.data?.success) {
         setReferralAgents(partnerRes.data.data);
-        
-        const mappedAgents = partnerRes.data.data.map((agent, idx) => ({
+        mappedAgents = partnerRes.data.data.map((agent, idx) => ({
           id: agent._id,
           name: agent.name,
           type: 'Agent',
@@ -65,32 +67,29 @@ export default function AdminPortal({ onLogout }) {
           country: agent.country || 'India',
           status: agent.status || 'Active'
         }));
-        
-        const studentRes = await API.get('/students');
-        let mappedStudents = [];
-        if (studentRes.data?.success) {
-          mappedStudents = studentRes.data.data.map((student, idx) => ({
-            id: student._id,
-            name: student.name,
-            type: 'Student',
-            email: student.email,
-            phone: student.phone || '',
-            activeApps: 0,
-            studentCode: `STD-${10001 + idx}`,
-            passportNo: student.passportNo || 'Pending',
-            dob: student.dob || '',
-            dateAdded: new Date(student.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
-            referredBy: student.referredBy || 'Direct',
-            country: student.country || 'India',
-            status: student.status || 'Active'
-          }));
-        }
-
-        setClients([...mappedAgents, ...mappedStudents]);
       }
 
-      // 5. Fetch Applications
-      const appRes = await API.get('/applications');
+      let mappedStudents = [];
+      if (studentRes.data?.success) {
+        mappedStudents = studentRes.data.data.map((student, idx) => ({
+          id: student._id,
+          name: student.name,
+          type: 'Student',
+          email: student.email,
+          phone: student.phone || '',
+          activeApps: 0,
+          studentCode: `STD-${10001 + idx}`,
+          passportNo: student.passportNo || 'Pending',
+          dob: student.dob || '',
+          dateAdded: new Date(student.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
+          referredBy: student.referredBy || 'Direct',
+          country: student.country || 'India',
+          status: student.status || 'Active'
+        }));
+      }
+
+      setClients([...mappedAgents, ...mappedStudents]);
+
       if (appRes.data?.success) {
         const mapped = appRes.data.data.map((app, idx) => ({
           id: app._id,
@@ -347,6 +346,7 @@ export default function AdminPortal({ onLogout }) {
         <Applications 
           applications={scopedApplications} 
           referralAgents={referralAgents}
+          intakes={intakes}
           onAddClick={() => {
             setActiveTab('sales-order');
             setActiveSubTab('study');
@@ -365,7 +365,7 @@ export default function AdminPortal({ onLogout }) {
     }
     
     if (activeTab === 'students') {
-      return <Students clients={scopedClients} setClients={setClients} applications={scopedApplications} />;
+      return <Students clients={scopedClients} setClients={setClients} applications={scopedApplications} intakes={intakes} />;
     }
     
     if (activeTab === 'staff') {

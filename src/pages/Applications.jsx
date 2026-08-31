@@ -19,12 +19,13 @@ const STATUS_STEPS = [
   'Withdrawn / Closed'
 ];
 
-export default function Applications({ applications, referralAgents, onAddClick, onRefresh }) {
+export default function Applications({ applications, referralAgents, intakes = [], onAddClick, onRefresh }) {
   const toast = useToast();
   const { currentUser } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
   const [partnerFilter, setPartnerFilter] = useState('All');
+  const [intakeFilter, setIntakeFilter] = useState('All');
   const [selectedChatApp, setSelectedChatApp] = useState(null);
 
   // Status update modal state
@@ -32,6 +33,13 @@ export default function Applications({ applications, referralAgents, onAddClick,
   const [selectedStatus, setSelectedStatus] = useState('Submitted');
   const [remarks, setRemarks] = useState('');
   const [isUpdating, setIsUpdating] = useState(false);
+
+  // Extract available intakes from master list and applications
+  const masterIntakeTitles = (intakes || []).map(i => typeof i === 'object' ? i.title : i).filter(Boolean);
+  const appIntakeTitles = (applications || []).map(app => app.intake).filter(Boolean);
+  const availableIntakes = Array.from(
+    new Set([...masterIntakeTitles, ...appIntakeTitles])
+  );
 
   const openStatusModal = (app) => {
     setStatusModalApp(app);
@@ -82,8 +90,9 @@ export default function Applications({ applications, referralAgents, onAddClick,
     const currentAppStatus = app.secondaryStatus || app.status || 'Submitted';
     const statusMatch = statusFilter === 'All' || currentAppStatus === statusFilter;
     const partnerMatch = partnerFilter === 'All' || partner === partnerFilter;
+    const intakeMatch = intakeFilter === 'All' || (app.intake && app.intake.toLowerCase().includes(intakeFilter.toLowerCase()));
 
-    return searchMatch && statusMatch && partnerMatch;
+    return searchMatch && statusMatch && partnerMatch && intakeMatch;
   });
 
   return (
@@ -124,6 +133,18 @@ export default function Applications({ applications, referralAgents, onAddClick,
         </div>
 
         <div className="flex w-full sm:w-auto items-center gap-3">
+          {/* Filter by Intake */}
+          <select
+            value={intakeFilter}
+            onChange={(e) => setIntakeFilter(e.target.value)}
+            className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs text-slate-900 focus:outline-none focus:border-[#D99A1C] focus:ring-1 focus:ring-[#D99A1C] font-semibold cursor-pointer"
+          >
+            <option value="All">All Intakes</option>
+            {availableIntakes.map((intake) => (
+              <option key={intake} value={intake}>{intake}</option>
+            ))}
+          </select>
+
           {/* Filter by Partner */}
           <select
             value={partnerFilter}

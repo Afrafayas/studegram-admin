@@ -3,7 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import ApplicationChatDrawer from '../components/ApplicationChatDrawer';
 import { useToast } from '../context/ToastContext';
 
-export default function Students({ clients, setClients, applications }) {
+export default function Students({ clients, setClients, applications, intakes = [] }) {
   const toast = useToast();
   const { currentUser, addAuditLog } = useAuth();
   const [selectedChatApp, setSelectedChatApp] = useState(null);
@@ -34,9 +34,11 @@ export default function Students({ clients, setClients, applications }) {
     return (applications || []).filter(app => (app.studentName || '').toLowerCase() === (studentName || '').toLowerCase());
   };
 
-  // Dynamically extract all unique intakes from applications
+  // Dynamically extract all unique intakes from master intakes and applications
+  const masterIntakeTitles = (intakes || []).map(i => typeof i === 'object' ? i.title : i).filter(Boolean);
+  const appIntakeTitles = (applications || []).map(app => app.intake).filter(Boolean);
   const availableIntakes = Array.from(
-    new Set((applications || []).map(app => app.intake).filter(Boolean))
+    new Set([...masterIntakeTitles, ...appIntakeTitles])
   );
 
   // Filter students

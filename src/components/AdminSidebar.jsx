@@ -214,67 +214,7 @@ export default function AdminSidebar({
               </button>
             )}
 
-            {/* Sales Order Dropdown */}
-            {(currentUser.role !== 'Finance' && currentUser.role !== 'Executive') && (
-              <div>
-                <button
-                  onClick={() => setSalesOrderOpen(!salesOrderOpen)}
-                  className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-left text-xs font-semibold transition-all duration-150 ${
-                    activeTab === 'sales-order' ? 'text-white font-bold bg-[#161622]/40' : 'hover:bg-[#161622]/50 hover:text-white'
-                  }`}
-                >
-                  <div className="flex items-center gap-3">
-                    <svg className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
-                    </svg>
-                    <span>Sales Order</span>
-                  </div>
-                  <svg className={`w-3.5 h-3.5 transform transition-transform duration-200 ${salesOrderOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
-                  </svg>
-                </button>
 
-                {salesOrderOpen && (
-                  <div className="pl-7 mt-1.5 space-y-1 border-l border-slate-800 ml-5">
-                    <button
-                      onClick={() => handleSubTabClick('sales-order', 'tourist-package')}
-                      className={`w-full text-left py-2 px-3 text-[11px] font-semibold rounded-md transition-colors ${
-                        activeTab === 'sales-order' && activeSubTab === 'tourist-package'
-                          ? 'text-[#F5B025] bg-[#161622]/60 font-bold'
-                          : 'text-slate-400 hover:text-white hover:bg-[#161622]/30'
-                      }`}
-                    >
-                      Tourist Package
-                    </button>
-                    <button
-                      onClick={() => handleSubTabClick('sales-order', 'study')}
-                      className={`w-full text-left py-2 px-3 text-[11px] font-semibold rounded-md transition-colors ${
-                        activeTab === 'sales-order' && activeSubTab === 'study'
-                          ? 'text-[#F5B025] bg-[#161622]/60 font-bold'
-                          : 'text-slate-400 hover:text-white hover:bg-[#161622]/30'
-                      }`}
-                    >
-                      Study (Apply)
-                    </button>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Security & Roles */}
-            <button
-              onClick={() => handleTabClick('role-hierarchy')}
-              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left text-xs font-semibold transition-all duration-150 ${
-                activeTab === 'role-hierarchy' && !activeSubTab
-                  ? 'bg-[#161622] text-white border-l-2 border-[#D99A1C] pl-2.5'
-                  : 'hover:bg-[#161622]/50 hover:text-white'
-              }`}
-            >
-              <svg className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-              </svg>
-              <span>Security & Roles</span>
-            </button>
 
             {/* Application Portal Settings Dropdown */}
             {hasPermission('settings:view') && (
