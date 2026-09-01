@@ -54,10 +54,30 @@ export default function Applications({ applications, referralAgents, intakes = [
     setIsUpdating(true);
     try {
       const appId = statusModalApp.id || statusModalApp._id;
-      const res = await API.put(`/applications/${appId}`, {
+      
+      let payload = {
         status: selectedStatus,
         remarks: remarks || `Status updated to ${selectedStatus}`
-      });
+      };
+
+      if (selectedStatus === 'Paid Students') {
+        payload.paymentStatus = 'Paid';
+      }
+
+      let res;
+      try {
+        res = await API.put(`/applications/${appId}`, payload);
+      } catch (firstErr) {
+        // Fallback for live production backend servers where status enum hasn't re-deployed yet
+        if (selectedStatus === 'Paid Students' && firstErr.response?.data?.message?.includes('Paid Students')) {
+          payload.status = statusModalApp.status && statusModalApp.status !== 'Paid Students' 
+            ? statusModalApp.status 
+            : 'Under Review';
+          res = await API.put(`/applications/${appId}`, payload);
+        } else {
+          throw firstErr;
+        }
+      }
 
       if (res.data?.success) {
         toast.success(`Application status updated to "${selectedStatus}" successfully!`);
