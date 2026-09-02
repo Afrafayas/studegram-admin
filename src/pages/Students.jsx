@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import ApplicationChatDrawer from '../components/ApplicationChatDrawer';
 import { useToast } from '../context/ToastContext';
@@ -13,6 +13,15 @@ export default function Students({ clients, setClients, applications, intakes = 
   const [partnerFilter, setPartnerFilter] = useState('All');
   const [intakeFilter, setIntakeFilter] = useState('All');
   const [expandedId, setExpandedId] = useState(null);
+  
+  // Pagination State
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(5);
+
+  // Reset page on filter change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, statusFilter, partnerFilter, intakeFilter]);
   
   // Onboard Student Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -68,6 +77,13 @@ export default function Students({ clients, setClients, applications, intakes = 
     
     return searchMatch && statusMatch && partnerMatch && hasIntakeApp;
   });
+
+  // Pagination Math
+  const totalItems = filteredStudents.length;
+  const totalPages = Math.ceil(totalItems / itemsPerPage) || 1;
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = Math.min(startIndex + itemsPerPage, totalItems);
+  const paginatedStudents = filteredStudents.slice(startIndex, startIndex + itemsPerPage);
 
   const toggleExpand = (id) => {
     setExpandedId(expandedId === id ? null : id);
@@ -195,8 +211,11 @@ export default function Students({ clients, setClients, applications, intakes = 
 
       {/* Directory Table */}
       <div className="bg-white border border-[#E2E8F0] border-t-4 border-t-[#D99A1C] rounded-2xl shadow-xs overflow-hidden">
-        <div className="px-6 py-4 border-b border-[#E2E8F0]">
+        <div className="px-6 py-4 border-b border-[#E2E8F0] flex justify-between items-center">
           <h2 className="text-xs font-black text-slate-900 uppercase tracking-wider">Registered Student Profiles</h2>
+          <span className="text-[10px] font-bold text-slate-400">
+            Showing {totalItems > 0 ? startIndex + 1 : 0} - {endIndex} of {totalItems} Students
+          </span>
         </div>
         <div className="overflow-x-auto">
           {filteredStudents.length > 0 ? (
@@ -214,7 +233,7 @@ export default function Students({ clients, setClients, applications, intakes = 
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 text-xs font-semibold text-slate-700">
-                {filteredStudents.map((student, idx) => {
+                {paginatedStudents.map((student, idx) => {
                   const isExpanded = expandedId === student.id;
                   const studentApps = getStudentApplications(student.name);
                   const activeAppsCount = studentApps.length || student.activeApps || 0;
@@ -227,7 +246,7 @@ export default function Students({ clients, setClients, applications, intakes = 
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M9 5l7 7-7 7" />
                           </svg>
                         </td>
-                        <td className="px-6 py-4 font-bold text-slate-400">{idx + 1}</td>
+                        <td className="px-6 py-4 font-bold text-slate-400">{startIndex + idx + 1}</td>
                         <td className="px-6 py-4 flex items-center gap-3">
                           <div className="w-8 h-8 rounded-full flex items-center justify-center font-bold text-white text-xs bg-gradient-to-tr from-[#D99A1C] to-[#F5B025]">
                             {student.name.split(' ').map(n=>n[0]).join('')}
@@ -377,6 +396,64 @@ export default function Students({ clients, setClients, applications, intakes = 
             </div>
           )}
         </div>
+
+        {/* Pagination Footer */}
+        {totalItems > 0 && (
+          <div className="px-6 py-4 bg-slate-50 border-t border-[#E2E8F0] flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <span className="text-xs font-semibold text-slate-500">Rows per page:</span>
+              <select
+                value={itemsPerPage}
+                onChange={(e) => {
+                  setItemsPerPage(Number(e.target.value));
+                  setCurrentPage(1);
+                }}
+                className="bg-white border border-slate-200 rounded-lg px-2.5 py-1 text-xs font-bold text-slate-700 focus:outline-none focus:border-[#D99A1C] cursor-pointer"
+              >
+                <option value={5}>5</option>
+                <option value={10}>10</option>
+                <option value={20}>20</option>
+                <option value={50}>50</option>
+                <option value={100}>100</option>
+              </select>
+              <span className="text-xs font-semibold text-slate-400">
+                Showing {totalItems > 0 ? startIndex + 1 : 0} to {endIndex} of {totalItems} entries
+              </span>
+            </div>
+
+            <div className="flex items-center gap-1.5">
+              <button
+                disabled={currentPage === 1}
+                onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                className="px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-bold bg-white text-slate-600 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer"
+              >
+                ◀ Prev
+              </button>
+
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+                <button
+                  key={page}
+                  onClick={() => setCurrentPage(page)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-extrabold transition-all cursor-pointer ${
+                    currentPage === page
+                      ? 'bg-[#D99A1C] text-white shadow-xs'
+                      : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-100'
+                  }`}
+                >
+                  {page}
+                </button>
+              ))}
+
+              <button
+                disabled={currentPage === totalPages}
+                onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                className="px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-bold bg-white text-slate-600 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer"
+              >
+                Next ▶
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {isModalOpen && (

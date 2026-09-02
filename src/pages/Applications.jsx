@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import ApplicationChatDrawer from '../components/ApplicationChatDrawer';
 import API from '../api/axios';
@@ -27,6 +27,15 @@ export default function Applications({ applications, referralAgents, intakes = [
   const [partnerFilter, setPartnerFilter] = useState('All');
   const [intakeFilter, setIntakeFilter] = useState('All');
   const [selectedChatApp, setSelectedChatApp] = useState(null);
+
+  // Pagination State
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(5);
+
+  // Reset page on filter change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, statusFilter, partnerFilter, intakeFilter]);
 
   // Status update modal state
   const [statusModalApp, setStatusModalApp] = useState(null);
@@ -115,6 +124,13 @@ export default function Applications({ applications, referralAgents, intakes = [
     return searchMatch && statusMatch && partnerMatch && intakeMatch;
   });
 
+  // Pagination Math
+  const totalItems = filteredApps.length;
+  const totalPages = Math.ceil(totalItems / itemsPerPage) || 1;
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = Math.min(startIndex + itemsPerPage, totalItems);
+  const paginatedApps = filteredApps.slice(startIndex, startIndex + itemsPerPage);
+
   return (
     <div className="flex-1 p-6 space-y-6 bg-[#F0F2F5]">
       {/* Header */}
@@ -197,7 +213,13 @@ export default function Applications({ applications, referralAgents, intakes = [
       </div>
 
       {/* Applications Table */}
-      <div className="bg-white border border-[#E2E8F0] rounded-2xl shadow-xs overflow-hidden">
+      <div className="bg-white border border-[#E2E8F0] border-t-4 border-t-[#D99A1C] rounded-2xl shadow-xs overflow-hidden">
+        <div className="px-6 py-4 border-b border-[#E2E8F0] flex justify-between items-center">
+          <h2 className="text-xs font-black text-slate-900 uppercase tracking-wider">Application Files Directory</h2>
+          <span className="text-[10px] font-bold text-slate-400">
+            Showing {totalItems > 0 ? startIndex + 1 : 0} - {endIndex} of {totalItems} Applications
+          </span>
+        </div>
         <div className="overflow-x-auto">
           {filteredApps.length > 0 ? (
             <table className="w-full text-left border-collapse">
@@ -213,7 +235,7 @@ export default function Applications({ applications, referralAgents, intakes = [
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 text-xs font-semibold text-slate-700">
-                {filteredApps.map((app) => {
+                {paginatedApps.map((app) => {
                   const displayStatus = app.secondaryStatus || app.status || 'Submitted';
                   const isClosed = displayStatus.includes('Closed');
                   return (
@@ -281,10 +303,68 @@ export default function Applications({ applications, referralAgents, intakes = [
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
               </svg>
               <h3 className="text-xs font-black text-slate-900 uppercase">No Applications Found</h3>
-              <p className="text-[10px] text-slate-400 font-semibold max-w-xs mx-auto">No student application entries matched your search criteria.</p>
+              <p className="text-[10px] text-slate-400 font-semibold max-w-xs mx-auto font-medium">No student application records matched your search parameters.</p>
             </div>
           )}
         </div>
+
+        {/* Pagination Footer */}
+        {totalItems > 0 && (
+          <div className="px-6 py-4 bg-slate-50 border-t border-[#E2E8F0] flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <span className="text-xs font-semibold text-slate-500">Rows per page:</span>
+              <select
+                value={itemsPerPage}
+                onChange={(e) => {
+                  setItemsPerPage(Number(e.target.value));
+                  setCurrentPage(1);
+                }}
+                className="bg-white border border-slate-200 rounded-lg px-2.5 py-1 text-xs font-bold text-slate-700 focus:outline-none focus:border-[#D99A1C] cursor-pointer"
+              >
+                <option value={5}>5</option>
+                <option value={10}>10</option>
+                <option value={20}>20</option>
+                <option value={50}>50</option>
+                <option value={100}>100</option>
+              </select>
+              <span className="text-xs font-semibold text-slate-400">
+                Showing {totalItems > 0 ? startIndex + 1 : 0} to {endIndex} of {totalItems} entries
+              </span>
+            </div>
+
+            <div className="flex items-center gap-1.5">
+              <button
+                disabled={currentPage === 1}
+                onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                className="px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-bold bg-white text-slate-600 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer"
+              >
+                ◀ Prev
+              </button>
+
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+                <button
+                  key={page}
+                  onClick={() => setCurrentPage(page)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-extrabold transition-all cursor-pointer ${
+                    currentPage === page
+                      ? 'bg-[#D99A1C] text-white shadow-xs'
+                      : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-100'
+                  }`}
+                >
+                  {page}
+                </button>
+              ))}
+
+              <button
+                disabled={currentPage === totalPages}
+                onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                className="px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-bold bg-white text-slate-600 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer"
+              >
+                Next ▶
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Status Update Modal */}
