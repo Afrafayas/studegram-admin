@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 
@@ -10,7 +10,20 @@ export default function Staff({ staffList, setStaffList, applications }) {
   const [statusFilter, setStatusFilter] = useState('All');
   const [countryFilter, setCountryFilter] = useState('All');
   const [expandedId, setExpandedId] = useState(null);
-  
+
+  // ----------------------------------------------------
+  // STEP 1: Pagination State Variables
+  // ----------------------------------------------------
+  const [currentPage, setCurrentPage] = useState(1); // Default is Page 1
+  const [itemsPerPage, setItemsPerPage] = useState(5); // Default is 5 items per page
+
+  // ----------------------------------------------------
+  // STEP 2: Reset to Page 1 when Search or Filters change
+  // ----------------------------------------------------
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, statusFilter, countryFilter]);
+
   // Onboard Staff Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [newStaffName, setNewStaffName] = useState('');
@@ -64,15 +77,15 @@ export default function Staff({ staffList, setStaffList, applications }) {
     const role = s.role || '';
     const phone = s.phone || '';
     const country = s.country || 'India';
-    
+
     const searchMatch = name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                        email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                        role.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                        phone.includes(searchTerm);
-                        
+      email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      role.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      phone.includes(searchTerm);
+
     const statusMatch = statusFilter === 'All' || s.status === statusFilter;
     const countryMatch = countryFilter === 'All' || country === countryFilter;
-    
+
     return searchMatch && statusMatch && countryMatch;
   });
 
@@ -84,6 +97,15 @@ export default function Staff({ staffList, setStaffList, applications }) {
     }
     return false;
   });
+
+  // ----------------------------------------------------
+  // STEP 3: Pagination Math & Array Slicing
+  // ----------------------------------------------------
+  const totalItems = filteredStaff.length;
+  const totalPages = Math.ceil(totalItems / itemsPerPage) || 1;
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = Math.min(startIndex + itemsPerPage, totalItems);
+  const paginatedStaff = filteredStaff.slice(startIndex, startIndex + itemsPerPage);
 
   const toggleExpand = (id) => {
     setExpandedId(expandedId === id ? null : id);
@@ -180,11 +202,10 @@ export default function Staff({ staffList, setStaffList, applications }) {
               <button
                 key={status}
                 onClick={() => setStatusFilter(status)}
-                className={`px-3.5 py-1.5 text-xs font-bold rounded-lg transition-all ${
-                  statusFilter === status 
-                    ? 'bg-white text-[#D99A1C] shadow-sm font-black' 
+                className={`px-3.5 py-1.5 text-xs font-bold rounded-lg transition-all ${statusFilter === status
+                    ? 'bg-white text-[#D99A1C] shadow-sm font-black'
                     : 'text-slate-500 hover:text-slate-900'
-                }`}
+                  }`}
               >
                 {status}
               </button>
@@ -224,7 +245,9 @@ export default function Staff({ staffList, setStaffList, applications }) {
       <div className="bg-white border border-[#E2E8F0] border-t-4 border-t-[#D99A1C] rounded-2xl shadow-xs overflow-hidden">
         <div className="px-6 py-4 border-b border-[#E2E8F0] flex justify-between items-center">
           <h2 className="text-xs font-black text-slate-900 uppercase tracking-wider">Registered Operations Team</h2>
-          <span className="text-[10px] font-bold text-slate-400">Showing {filteredStaff.length} Members</span>
+          <span className="text-[10px] font-bold text-slate-400">
+            Showing {totalItems > 0 ? startIndex + 1 : 0} - {endIndex} of {totalItems} Members
+          </span>
         </div>
         <div className="overflow-x-auto">
           {filteredStaff.length > 0 ? (
@@ -243,10 +266,13 @@ export default function Staff({ staffList, setStaffList, applications }) {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 text-xs font-semibold text-slate-700">
-                {filteredStaff.map((staff, idx) => {
+                {/* ---------------------------------------------------- */}
+                {/* STEP 4: Render paginatedStaff instead of filteredStaff */}
+                {/* ---------------------------------------------------- */}
+                {paginatedStaff.map((staff, idx) => {
                   const isExpanded = expandedId === staff.id;
                   const assignedApps = getAssignedApplications(staff.name);
-                  
+
                   return (
                     <React.Fragment key={staff.id}>
                       <tr className="hover:bg-slate-50/50 transition-colors cursor-pointer" onClick={() => toggleExpand(staff.id)}>
@@ -255,10 +281,11 @@ export default function Staff({ staffList, setStaffList, applications }) {
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M9 5l7 7-7 7" />
                           </svg>
                         </td>
-                        <td className="px-6 py-4 font-bold text-slate-400">{idx + 1}</td>
+                        {/* Serial number adjusted globally across pages */}
+                        <td className="px-6 py-4 font-bold text-slate-400">{startIndex + idx + 1}</td>
                         <td className="px-6 py-4 flex items-center gap-3">
                           <div className="w-8 h-8 rounded-full flex items-center justify-center font-bold text-white text-xs bg-gradient-to-tr from-[#D99A1C] to-[#F5B025]">
-                            {staff.name.split(' ').map(n=>n[0]).join('')}
+                            {staff.name.split(' ').map(n => n[0]).join('')}
                           </div>
                           <div>
                             <p className="text-slate-950 font-black">{staff.name}</p>
@@ -273,25 +300,23 @@ export default function Staff({ staffList, setStaffList, applications }) {
                         <td className="px-6 py-4 text-slate-500 font-bold">{staff.email}</td>
                         <td className="px-6 py-4 text-slate-500 font-semibold">{staff.phone}</td>
                         <td className="px-6 py-4">
-                          <span className={`px-2 py-0.5 rounded-full text-[9px] font-extrabold border ${
-                            staff.accessLevel.includes('Full Access')
+                          <span className={`px-2 py-0.5 rounded-full text-[9px] font-extrabold border ${staff.accessLevel.includes('Full Access')
                               ? 'bg-purple-50 text-purple-700 border-purple-100'
                               : staff.accessLevel.includes('Read & Write')
-                              ? 'bg-indigo-50 text-indigo-700 border-indigo-100'
-                              : 'bg-slate-50 text-slate-700 border-slate-100'
-                          }`}>
+                                ? 'bg-indigo-50 text-indigo-700 border-indigo-100'
+                                : 'bg-slate-50 text-slate-700 border-slate-100'
+                            }`}>
                             {staff.accessLevel}
                           </span>
                         </td>
                         <td className="px-6 py-4 font-black text-indigo-600">{assignedApps.length} Files</td>
                         <td className="px-6 py-4 text-right">
-                          <span className={`px-2 py-0.5 border rounded-full text-[9px] font-extrabold ${
-                            staff.status === 'Active' 
+                          <span className={`px-2 py-0.5 border rounded-full text-[9px] font-extrabold ${staff.status === 'Active'
                               ? 'bg-emerald-50 text-emerald-700 border-emerald-100'
                               : staff.status === 'Suspended'
-                              ? 'bg-rose-50 text-rose-700 border-rose-100'
-                              : 'bg-amber-50 text-amber-700 border-amber-100'
-                          }`}>
+                                ? 'bg-rose-50 text-rose-700 border-rose-100'
+                                : 'bg-amber-50 text-amber-700 border-amber-100'
+                            }`}>
                             {staff.status}
                           </span>
                         </td>
@@ -357,13 +382,12 @@ export default function Staff({ staffList, setStaffList, applications }) {
                                             <td className="px-4 py-3 text-slate-550 font-bold">{app.universityName}</td>
                                             <td className="px-4 py-3 text-slate-500">{app.courseName}</td>
                                             <td className="px-4 py-3 text-right">
-                                              <span className={`px-2 py-0.5 border rounded-full text-[9px] font-extrabold ${
-                                                app.secondaryStatus === 'Offer Issued'
+                                              <span className={`px-2 py-0.5 border rounded-full text-[9px] font-extrabold ${app.secondaryStatus === 'Offer Issued'
                                                   ? 'bg-emerald-50 text-emerald-700 border-emerald-100'
                                                   : app.secondaryStatus === 'Pending'
-                                                  ? 'bg-amber-50 text-amber-700 border-amber-100'
-                                                  : 'bg-indigo-50 text-indigo-700 border-indigo-100'
-                                              }`}>
+                                                    ? 'bg-amber-50 text-amber-700 border-amber-100'
+                                                    : 'bg-indigo-50 text-indigo-700 border-indigo-100'
+                                                }`}>
                                                 {app.secondaryStatus}
                                               </span>
                                             </td>
@@ -397,6 +421,71 @@ export default function Staff({ staffList, setStaffList, applications }) {
             </div>
           )}
         </div>
+
+        {/* ---------------------------------------------------- */}
+        {/* STEP 5: Pagination UI Controls Footer                */}
+        {/* ---------------------------------------------------- */}
+        {totalItems > 0 && (
+          <div className="px-6 py-4 bg-slate-50 border-t border-[#E2E8F0] flex flex-col sm:flex-row items-center justify-between gap-4">
+            {/* Left: Rows per page selector */}
+            <div className="flex items-center gap-3">
+              <span className="text-xs font-semibold text-slate-500">Rows per page:</span>
+              <select
+                value={itemsPerPage}
+                onChange={(e) => {
+                  setItemsPerPage(Number(e.target.value));
+                  setCurrentPage(1);
+                }}
+                className="bg-white border border-slate-200 rounded-lg px-2.5 py-1 text-xs font-bold text-slate-700 focus:outline-none focus:border-[#D99A1C] cursor-pointer"
+              >
+                <option value={5}>5 per page</option>
+                <option value={10}>10 per page</option>
+                <option value={20}>20 per page</option>
+                <option value={50}>50 per page</option>
+                <option value={100}>100 per page</option>
+              </select>
+              <span className="text-xs font-semibold text-slate-400">
+                Showing {totalItems > 0 ? startIndex + 1 : 0} to {endIndex} of {totalItems} entries
+              </span>
+            </div>
+
+            {/* Right: Page Navigation Buttons */}
+            <div className="flex items-center gap-1.5">
+              {/* Previous Page Button */}
+              <button
+                disabled={currentPage === 1}
+                onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                className="px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-bold bg-white text-slate-600 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer"
+              >
+                ◀ Prev
+              </button>
+
+              {/* Dynamic Page Number Buttons */}
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+                <button
+                  key={page}
+                  onClick={() => setCurrentPage(page)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-extrabold transition-all cursor-pointer ${
+                    currentPage === page
+                      ? 'bg-[#D99A1C] text-white shadow-xs'
+                      : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-100'
+                  }`}
+                >
+                  {page}
+                </button>
+              ))}
+
+              {/* Next Page Button */}
+              <button
+                disabled={currentPage === totalPages}
+                onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                className="px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-bold bg-white text-slate-600 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer"
+              >
+                Next ▶
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Onboard Staff Modal */}
@@ -408,8 +497,8 @@ export default function Staff({ staffList, setStaffList, applications }) {
                 <h3 className="text-xs font-black text-slate-900 uppercase tracking-wider">Onboard Admin Staff</h3>
                 <p className="text-[10px] text-slate-400 font-semibold">Onboard a new operational team member and assign scope</p>
               </div>
-              <button 
-                onClick={() => setIsModalOpen(false)} 
+              <button
+                onClick={() => setIsModalOpen(false)}
                 className="text-slate-400 hover:text-slate-600 font-bold cursor-pointer"
               >
                 ✕
@@ -531,22 +620,20 @@ export default function Staff({ staffList, setStaffList, applications }) {
                   <button
                     type="button"
                     onClick={() => setPasswordMode('auto')}
-                    className={`p-2 rounded-lg border text-center transition-all cursor-pointer ${
-                      passwordMode === 'auto'
+                    className={`p-2 rounded-lg border text-center transition-all cursor-pointer ${passwordMode === 'auto'
                         ? 'bg-white border-[#D99A1C] text-[#D99A1C] shadow-xs font-black'
                         : 'border-slate-200 text-slate-500 hover:bg-slate-100'
-                    }`}
+                      }`}
                   >
                     ⚡ Auto-Generate & Email
                   </button>
                   <button
                     type="button"
                     onClick={() => setPasswordMode('manual')}
-                    className={`p-2 rounded-lg border text-center transition-all cursor-pointer ${
-                      passwordMode === 'manual'
+                    className={`p-2 rounded-lg border text-center transition-all cursor-pointer ${passwordMode === 'manual'
                         ? 'bg-white border-[#D99A1C] text-[#D99A1C] shadow-xs font-black'
                         : 'border-slate-200 text-slate-500 hover:bg-slate-100'
-                    }`}
+                      }`}
                   >
                     🔑 Set Manual Password
                   </button>
