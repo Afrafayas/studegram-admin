@@ -438,11 +438,11 @@ export default function Staff({ staffList, setStaffList, applications }) {
                 }}
                 className="bg-white border border-slate-200 rounded-lg px-2.5 py-1 text-xs font-bold text-slate-700 focus:outline-none focus:border-[#D99A1C] cursor-pointer"
               >
-                <option value={5}>5 per page</option>
-                <option value={10}>10 per page</option>
-                <option value={20}>20 per page</option>
-                <option value={50}>50 per page</option>
-                <option value={100}>100 per page</option>
+                <option value={5}>5</option>
+                <option value={10}>10</option>
+                <option value={20}>20</option>
+                <option value={50}>50</option>
+                <option value={100}>100</option>
               </select>
               <span className="text-xs font-semibold text-slate-400">
                 Showing {totalItems > 0 ? startIndex + 1 : 0} to {endIndex} of {totalItems} entries
