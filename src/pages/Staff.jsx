@@ -46,12 +46,14 @@ export default function Staff({ staffList, setStaffList, applications }) {
     setManualPassword(res);
   };
 
+  const safeStaffList = Array.isArray(staffList) ? staffList : [];
+
   // Dynamic list of assigned countries derived from staff database & master list
   const defaultCountries = ['India', 'United Kingdom', 'Canada', 'Australia', 'United States'];
   const availableCountries = Array.from(
     new Set([
       ...defaultCountries,
-      ...staffList.map(s => s.country).filter(Boolean)
+      ...safeStaffList.map(s => s.country).filter(Boolean)
     ])
   );
 
@@ -71,7 +73,7 @@ export default function Staff({ staffList, setStaffList, applications }) {
   }
 
   // Filter staff based on searching, status, and country
-  const baseFiltered = staffList.filter(s => {
+  const baseFiltered = safeStaffList.filter(s => {
     const name = s.name || '';
     const email = s.email || '';
     const role = s.role || '';
@@ -84,18 +86,18 @@ export default function Staff({ staffList, setStaffList, applications }) {
       phone.includes(searchTerm);
 
     const statusMatch = statusFilter === 'All' || s.status === statusFilter;
-    const countryMatch = countryFilter === 'All' || country === countryFilter;
+    const countryMatch = countryFilter === 'All' || country.toLowerCase() === countryFilter.toLowerCase();
 
     return searchMatch && statusMatch && countryMatch;
   });
 
-  // Apply scope filtering (Country Head only sees regional staff)
+  // Apply scope filtering (Country Head / Regional staff scoping)
   const filteredStaff = baseFiltered.filter(s => {
-    if (currentUser.role === 'Director' || currentUser.role === 'COO') return true;
+    if (!currentUser?.role || ['Director', 'COO', 'Super Admin'].includes(currentUser.role)) return true;
     if (currentUser.role === 'Country Head') {
-      return (s.country || 'India') === currentUser.country;
+      return (s.country || 'India').toLowerCase() === (currentUser.country || 'India').toLowerCase();
     }
-    return false;
+    return (s.country || 'India').toLowerCase() === (currentUser.country || 'India').toLowerCase();
   });
 
   // ----------------------------------------------------
