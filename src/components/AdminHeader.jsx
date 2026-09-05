@@ -6,7 +6,9 @@ export default function AdminHeader({
   activeSubTab, 
   onToggleSidebar, 
   onLogout,
-  onBack
+  onBack,
+  isSyncing,
+  onRefreshData
 }) {
   const { currentUser } = useAuth();
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
@@ -54,18 +56,6 @@ export default function AdminHeader({
 
   return (
     <header className="flex flex-col select-none z-20 sticky top-0 bg-[#0A0A0F] text-white border-b border-slate-900">
-      {/* 1. Subscription Expiry Warning Banner (Commented out)
-      <div className="bg-[#FFFBEB] border-b border-[#FDE68A] text-[#B45309] text-[11px] font-bold py-2 px-6 flex items-center justify-between shadow-sm animate-pulse-slow">
-        <div className="flex items-center gap-2">
-          <span>⚠️</span>
-          <span>Your subscription will expire on July 31, 2026. Please renew your plan to prevent service interruption.</span>
-        </div>
-        <button className="bg-[#F59E0B] text-white hover:bg-[#D97706] px-3 py-1 rounded-md font-extrabold text-[10px] uppercase tracking-wider transition-all duration-150 active:scale-95">
-          Renew Now
-        </button>
-      </div>
-      */}
-
       {/* 2. Top Navigation Bar */}
       <div className="h-[64px] min-h-[64px] px-6 flex items-center justify-between">
         {/* Left Side: Hamburger & Breadcrumbs */}
@@ -112,8 +102,19 @@ export default function AdminHeader({
           </div>
         </div>
 
-        {/* Right Side: Profile Dropdown */}
+        {/* Right Side: Profile Dropdown & Sync Badge */}
         <div className="flex items-center gap-3 relative">
+          {onRefreshData && (
+            <button
+              onClick={onRefreshData}
+              disabled={isSyncing}
+              title="Sync Live Server Data"
+              className="px-2.5 py-1 bg-slate-900 border border-slate-800 hover:border-[#D99A1C] text-[10px] font-extrabold text-slate-300 hover:text-white rounded-lg transition-all cursor-pointer flex items-center gap-1.5 active:scale-95 disabled:opacity-50"
+            >
+              <span className={isSyncing ? "animate-spin text-[#D99A1C]" : "text-[#D99A1C]"}>🔄</span>
+              <span className="hidden md:inline">{isSyncing ? "Syncing..." : "Sync DB"}</span>
+            </button>
+          )}
           <div className="text-right hidden sm:block">
             <p className="text-xs font-bold text-white">{currentUser?.name || 'Super Admin'}</p>
             <p className="text-[10px] text-slate-400 font-medium">{currentUser?.role || 'Administrator'} ({currentUser?.country || 'Global'})</p>

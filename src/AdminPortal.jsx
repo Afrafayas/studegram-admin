@@ -26,9 +26,11 @@ export default function AdminPortal({ onLogout }) {
   const { currentUser, checkScope } = useAuth();
 
   const adminToken = localStorage.getItem('admin_token');
+  const [isDataSyncing, setIsDataSyncing] = useState(false);
 
   const fetchInitialData = async () => {
     if (!adminToken) return;
+    setIsDataSyncing(true);
     try {
       // Execute all API requests concurrently in parallel
       const [intakeRes, univRes, courseRes, partnerRes, studentRes, appRes] = await Promise.all([
@@ -40,20 +42,20 @@ export default function AdminPortal({ onLogout }) {
         API.get('/applications').catch(err => ({ error: err }))
       ]);
 
-      if (intakeRes.data?.success) {
+      if (intakeRes.data?.success && Array.isArray(intakeRes.data.data) && intakeRes.data.data.length > 0) {
         setIntakes(intakeRes.data.data);
       }
 
-      if (univRes.data?.success) {
+      if (univRes.data?.success && Array.isArray(univRes.data.data) && univRes.data.data.length > 0) {
         setUniversities(univRes.data.data);
       }
 
-      if (courseRes.data?.success) {
+      if (courseRes.data?.success && Array.isArray(courseRes.data.data) && courseRes.data.data.length > 0) {
         setCourses(courseRes.data.data);
       }
 
       let mappedAgents = [];
-      if (partnerRes.data?.success) {
+      if (partnerRes.data?.success && Array.isArray(partnerRes.data.data)) {
         setReferralAgents(partnerRes.data.data);
         mappedAgents = partnerRes.data.data.map((agent, idx) => ({
           id: agent._id,
@@ -70,7 +72,7 @@ export default function AdminPortal({ onLogout }) {
       }
 
       let mappedStudents = [];
-      if (studentRes.data?.success) {
+      if (studentRes.data?.success && Array.isArray(studentRes.data.data)) {
         mappedStudents = studentRes.data.data.map((student, idx) => ({
           id: student._id,
           name: student.name,
@@ -88,9 +90,11 @@ export default function AdminPortal({ onLogout }) {
         }));
       }
 
-      setClients([...mappedAgents, ...mappedStudents]);
+      if (mappedAgents.length > 0 || mappedStudents.length > 0) {
+        setClients([...mappedAgents, ...mappedStudents]);
+      }
 
-      if (appRes.data?.success) {
+      if (appRes.data?.success && Array.isArray(appRes.data.data)) {
         const mapped = appRes.data.data.map((app, idx) => ({
           id: app._id,
           camsId: `CAMS-${10001 + idx}`,
@@ -115,7 +119,9 @@ export default function AdminPortal({ onLogout }) {
         setApplications(mapped);
       }
     } catch (err) {
-      console.warn('Backend API connection failed, using local mock data store:', err.message);
+      console.warn('Backend API connection failed, using local master data store:', err.message);
+    } finally {
+      setIsDataSyncing(false);
     }
   };
 
@@ -187,8 +193,124 @@ export default function AdminPortal({ onLogout }) {
     'Visa Pending'
   ]);
 
-  const [universities, setUniversities] = useState([]);
-  const [courses, setCourses] = useState([]);
+  const [universities, setUniversities] = useState([
+    {
+      _id: 'univ-1',
+      id: 'univ-1',
+      name: 'University of Hertfordshire',
+      country: 'United Kingdom',
+      city: 'Hatfield',
+      ranking: 'Top 50 UK',
+      logoUrl: '',
+      description: 'Public university in Hertfordshire, United Kingdom.',
+      requirements: ['IELTS 6.0', 'High School Diploma'],
+      status: 'Active',
+      courses: ['course-1', 'course-2']
+    },
+    {
+      _id: 'univ-2',
+      id: 'univ-2',
+      name: 'University of Toronto',
+      country: 'Canada',
+      city: 'Toronto',
+      ranking: '#21 Global',
+      logoUrl: '',
+      description: 'Leading public research university in Toronto, Ontario, Canada.',
+      requirements: ['IELTS 6.5', 'High School Diploma'],
+      status: 'Active',
+      courses: ['course-3']
+    },
+    {
+      _id: 'univ-3',
+      id: 'univ-3',
+      name: 'University of Oxford',
+      country: 'United Kingdom',
+      city: 'Oxford',
+      ranking: '#1 Global',
+      logoUrl: '',
+      description: 'World-renowned collegiate research university in Oxford, England.',
+      requirements: ['IELTS 7.5', 'GPA 3.8+'],
+      status: 'Active',
+      courses: ['course-4']
+    },
+    {
+      _id: 'univ-4',
+      id: 'univ-4',
+      name: 'University of Melbourne',
+      country: 'Australia',
+      city: 'Melbourne',
+      ranking: '#14 Global',
+      logoUrl: '',
+      description: 'Top ranked public research university in Melbourne, Australia.',
+      requirements: ['IELTS 6.5', 'Bachelor Degree'],
+      status: 'Active',
+      courses: []
+    },
+    {
+      _id: 'univ-5',
+      id: 'univ-5',
+      name: 'Harvard University',
+      country: 'United States',
+      city: 'Cambridge, MA',
+      ranking: '#4 Global',
+      logoUrl: '',
+      description: 'Private Ivy League research university in Cambridge, Massachusetts.',
+      requirements: ['SAT/GRE', 'TOEFL 100+'],
+      status: 'Active',
+      courses: []
+    }
+  ]);
+
+  const [courses, setCourses] = useState([
+    {
+      _id: 'course-1',
+      id: 'course-1',
+      title: 'MSc Data Science & Artificial Intelligence',
+      university: { name: 'University of Hertfordshire' },
+      degreeLevel: 'Master',
+      duration: '1 Year',
+      tuitionFee: '£15,400 / year',
+      category: 'Technology',
+      description: 'Advanced postgraduate program in data analytics, machine learning, and AI application.',
+      intakes: ['September/October 2026', 'January/February 2027']
+    },
+    {
+      _id: 'course-2',
+      id: 'course-2',
+      title: 'MBA International Business Management',
+      university: { name: 'University of Hertfordshire' },
+      degreeLevel: 'Master',
+      duration: '1 Year',
+      tuitionFee: '£16,500 / year',
+      category: 'Business',
+      description: 'Comprehensive business leadership and global trade management degree.',
+      intakes: ['September/October 2026']
+    },
+    {
+      _id: 'course-3',
+      id: 'course-3',
+      title: 'BSc Computer Science & Software Engineering',
+      university: { name: 'University of Toronto' },
+      degreeLevel: 'Bachelor',
+      duration: '4 Years',
+      tuitionFee: 'CAD $45,000 / year',
+      category: 'Engineering',
+      description: 'Undergraduate computer science program covering algorithms, system design, and software.',
+      intakes: ['September/October 2026']
+    },
+    {
+      _id: 'course-4',
+      id: 'course-4',
+      title: 'MSc Precision Health & Biomedical Sciences',
+      university: { name: 'University of Oxford' },
+      degreeLevel: 'Master',
+      duration: '1 Year',
+      tuitionFee: '£28,900 / year',
+      category: 'Healthcare',
+      description: 'Advanced medical science research degree focused on genomic and precision therapies.',
+      intakes: ['September/October 2026']
+    }
+  ]);
 
   const [intakes, setIntakes] = useState([
     'September/October 2026',
@@ -455,6 +577,8 @@ export default function AdminPortal({ onLogout }) {
             onToggleSidebar={() => setSidebarOpen(!sidebarOpen)}
             onLogout={onLogout}
             onBack={handleBack}
+            isSyncing={isDataSyncing}
+            onRefreshData={fetchInitialData}
           />
 
           <main key={`${activeTab}-${activeSubTab}`} className="flex-1 flex flex-col pb-16 animate-fade-in-up">
