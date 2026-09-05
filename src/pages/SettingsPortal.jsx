@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import API from '../api/axios';
 
@@ -20,6 +20,14 @@ export default function SettingsPortal({
   const isWritable = currentUser?.role === 'Director';
 
   const [modalType, setModalType] = useState(null);
+
+  // Pagination State Variables
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(5);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [activeSubTab]);
 
   // University Full State
   const [univName, setUnivName] = useState('');
@@ -560,7 +568,10 @@ export default function SettingsPortal({
 
   const renderSettingsView = () => {
     switch (activeSubTab) {
-      case 'settings-university':
+      case 'settings-university': {
+        const univStartIndex = (currentPage - 1) * itemsPerPage;
+        const paginatedUnivs = universities.slice(univStartIndex, univStartIndex + itemsPerPage);
+
         return (
           <div className="space-y-4">
             <div className="flex justify-between items-center">
@@ -596,7 +607,7 @@ export default function SettingsPortal({
                       </td>
                     </tr>
                   ) : (
-                    universities.map((univ) => {
+                    paginatedUnivs.map((univ) => {
                       const uId = univ._id || univ.id;
                       const reqs = Array.isArray(univ.requirements) ? univ.requirements : (univ.requirements ? [univ.requirements] : []);
                       return (
@@ -678,11 +689,22 @@ export default function SettingsPortal({
                   )}
                 </tbody>
               </table>
+              <PaginationFooter
+                totalItems={universities.length}
+                currentPage={currentPage}
+                setCurrentPage={setCurrentPage}
+                itemsPerPage={itemsPerPage}
+                setItemsPerPage={setItemsPerPage}
+              />
             </div>
           </div>
         );
+      }
 
-      case 'settings-course':
+      case 'settings-course': {
+        const courseStartIndex = (currentPage - 1) * itemsPerPage;
+        const paginatedCourses = courses.slice(courseStartIndex, courseStartIndex + itemsPerPage);
+
         return (
           <div className="space-y-4">
             <div className="flex justify-between items-center">
@@ -718,7 +740,7 @@ export default function SettingsPortal({
                       </td>
                     </tr>
                   ) : (
-                    courses.map((course) => {
+                    paginatedCourses.map((course) => {
                       const cId = course._id || course.id;
                       const uniName = typeof course.university === 'object' ? (course.university?.name || 'Assigned') : 'Assigned';
                       const intakeList = Array.isArray(course.intakes) ? course.intakes : [];
@@ -791,11 +813,22 @@ export default function SettingsPortal({
                   )}
                 </tbody>
               </table>
+              <PaginationFooter
+                totalItems={courses.length}
+                currentPage={currentPage}
+                setCurrentPage={setCurrentPage}
+                itemsPerPage={itemsPerPage}
+                setItemsPerPage={setItemsPerPage}
+              />
             </div>
           </div>
         );
+      }
 
-      case 'settings-intake':
+      case 'settings-intake': {
+        const intakeStartIndex = (currentPage - 1) * itemsPerPage;
+        const paginatedIntakes = intakes.slice(intakeStartIndex, intakeStartIndex + itemsPerPage);
+
         return (
           <div className="space-y-4">
             <div className="flex justify-between items-center">
@@ -829,7 +862,7 @@ export default function SettingsPortal({
                       </td>
                     </tr>
                   ) : (
-                    intakes.map((intake) => {
+                    paginatedIntakes.map((intake) => {
                       const iId = intake._id || intake.id;
                       return (
                         <tr key={iId} className="hover:bg-slate-50/60 transition-colors">
@@ -878,11 +911,22 @@ export default function SettingsPortal({
                   )}
                 </tbody>
               </table>
+              <PaginationFooter
+                totalItems={intakes.length}
+                currentPage={currentPage}
+                setCurrentPage={setCurrentPage}
+                itemsPerPage={itemsPerPage}
+                setItemsPerPage={setItemsPerPage}
+              />
             </div>
           </div>
         );
+      }
 
-      case 'settings-course-docs':
+      case 'settings-course-docs': {
+        const docStartIndex = (currentPage - 1) * itemsPerPage;
+        const paginatedCourseDocs = courseDocuments.slice(docStartIndex, docStartIndex + itemsPerPage);
+
         return (
           <div className="space-y-4">
             <div className="flex justify-between items-center">
@@ -908,9 +952,9 @@ export default function SettingsPortal({
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 text-xs font-semibold text-slate-700">
-                  {courseDocuments.map((doc) => (
-                    <tr key={doc.siNo} className="hover:bg-slate-50/50 transition-colors">
-                      <td className="px-6 py-4 font-bold text-slate-400">{doc.siNo}</td>
+                  {paginatedCourseDocs.map((doc, idx) => (
+                    <tr key={doc.siNo || idx} className="hover:bg-slate-50/50 transition-colors">
+                      <td className="px-6 py-4 font-bold text-slate-400">{docStartIndex + idx + 1}</td>
                       <td className="px-6 py-4 text-slate-950 font-black">{doc.name}</td>
                       <td className="px-6 py-4"><span className="bg-blue-50 border border-blue-100 text-blue-700 font-extrabold rounded-md px-2 py-0.5 text-[9px]">{doc.format}</span></td>
                       <td className="px-6 py-4 text-slate-500">{doc.minSize} MB</td>
@@ -927,11 +971,22 @@ export default function SettingsPortal({
                   ))}
                 </tbody>
               </table>
+              <PaginationFooter
+                totalItems={courseDocuments.length}
+                currentPage={currentPage}
+                setCurrentPage={setCurrentPage}
+                itemsPerPage={itemsPerPage}
+                setItemsPerPage={setItemsPerPage}
+              />
             </div>
           </div>
         );
+      }
 
-      case 'settings-agent':
+      case 'settings-agent': {
+        const agentStartIndex = (currentPage - 1) * itemsPerPage;
+        const paginatedAgents = referralAgents.slice(agentStartIndex, agentStartIndex + itemsPerPage);
+
         return (
           <div className="space-y-4">
             <div className="flex justify-between items-center">
@@ -955,9 +1010,9 @@ export default function SettingsPortal({
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 text-xs font-semibold text-slate-700">
-                  {referralAgents.map((agent) => (
-                    <tr key={agent.siNo} className="hover:bg-slate-50/50 transition-colors">
-                      <td className="px-6 py-4 font-bold text-slate-400">{agent.siNo}</td>
+                  {paginatedAgents.map((agent, idx) => (
+                    <tr key={agent.siNo || idx} className="hover:bg-slate-50/50 transition-colors">
+                      <td className="px-6 py-4 font-bold text-slate-400">{agentStartIndex + idx + 1}</td>
                       <td className="px-6 py-4 text-slate-950 font-black">{agent.agentName}</td>
                       <td className="px-6 py-4 text-[#2563EB] font-bold">{agent.email}</td>
                       <td className="px-6 py-4 text-right">
@@ -972,11 +1027,22 @@ export default function SettingsPortal({
                   ))}
                 </tbody>
               </table>
+              <PaginationFooter
+                totalItems={referralAgents.length}
+                currentPage={currentPage}
+                setCurrentPage={setCurrentPage}
+                itemsPerPage={itemsPerPage}
+                setItemsPerPage={setItemsPerPage}
+              />
             </div>
           </div>
         );
+      }
 
-      case 'settings-stages':
+      case 'settings-stages': {
+        const stageStartIndex = (currentPage - 1) * itemsPerPage;
+        const paginatedStages = stages.slice(stageStartIndex, stageStartIndex + itemsPerPage);
+
         return (
           <div className="space-y-4">
             <div className="flex justify-between items-center">
@@ -992,50 +1058,63 @@ export default function SettingsPortal({
               </button>
             </div>
 
-            <div className="bg-white border border-[#E2E8F0] border-t-4 border-t-[#D99A1C] p-6 rounded-2xl shadow-xs space-y-4">
-              {stages.map((stage, idx) => (
-                <div 
-                  key={stage}
-                  className="flex items-center justify-between p-4 bg-slate-50 border border-slate-200 rounded-xl hover:border-[#D99A1C] hover:bg-white transition-all group"
-                >
-                  <div className="flex items-center gap-3">
-                    <span className="w-6 h-6 rounded-full bg-slate-200 text-slate-700 flex items-center justify-center font-bold text-xs">
-                      {idx + 1}
-                    </span>
-                    <span className="text-xs font-black text-slate-900">{stage}</span>
-                  </div>
+            <div className="bg-white border border-[#E2E8F0] border-t-4 border-t-[#D99A1C] rounded-2xl shadow-xs overflow-hidden">
+              <div className="p-6 space-y-4">
+                {paginatedStages.map((stage, idx) => {
+                  const globalIdx = stageStartIndex + idx;
+                  return (
+                    <div 
+                      key={stage}
+                      className="flex items-center justify-between p-4 bg-slate-50 border border-slate-200 rounded-xl hover:border-[#D99A1C] hover:bg-white transition-all group"
+                    >
+                      <div className="flex items-center gap-3">
+                        <span className="w-6 h-6 rounded-full bg-slate-200 text-slate-700 flex items-center justify-center font-bold text-xs">
+                          {globalIdx + 1}
+                        </span>
+                        <span className="text-xs font-black text-slate-900">{stage}</span>
+                      </div>
 
-                  <div className="flex items-center gap-2">
-                    <button 
-                      onClick={() => moveStage(idx, 'up')}
-                      disabled={idx === 0}
-                      className="p-1.5 bg-white text-slate-400 hover:text-slate-950 border border-slate-200 rounded-lg hover:shadow-2xs disabled:opacity-30 disabled:pointer-events-none cursor-pointer"
-                    >
-                      ▲
-                    </button>
-                    <button 
-                      onClick={() => moveStage(idx, 'down')}
-                      disabled={idx === stages.length - 1}
-                      className="p-1.5 bg-white text-slate-400 hover:text-slate-950 border border-slate-200 rounded-lg hover:shadow-2xs disabled:opacity-30 disabled:pointer-events-none cursor-pointer"
-                    >
-                      ▼
-                    </button>
-                    <button 
-                      onClick={() => handleDeleteItem(stage, setStages, 'stage')}
-                      className="p-1.5 bg-rose-50 hover:bg-rose-100 text-rose-500 rounded-lg cursor-pointer"
-                    >
-                      ✕
-                    </button>
-                  </div>
-                </div>
-              ))}
+                      <div className="flex items-center gap-2">
+                        <button 
+                          onClick={() => moveStage(globalIdx, 'up')}
+                          disabled={globalIdx === 0}
+                          className="p-1.5 bg-white text-slate-400 hover:text-slate-950 border border-slate-200 rounded-lg hover:shadow-2xs disabled:opacity-30 disabled:pointer-events-none cursor-pointer"
+                        >
+                          ▲
+                        </button>
+                        <button 
+                          onClick={() => moveStage(globalIdx, 'down')}
+                          disabled={globalIdx === stages.length - 1}
+                          className="p-1.5 bg-white text-slate-400 hover:text-slate-950 border border-slate-200 rounded-lg hover:shadow-2xs disabled:opacity-30 disabled:pointer-events-none cursor-pointer"
+                        >
+                          ▼
+                        </button>
+                        <button 
+                          onClick={() => handleDeleteItem(stage, setStages, 'stage')}
+                          className="p-1.5 bg-rose-50 hover:bg-rose-100 text-rose-500 rounded-lg cursor-pointer"
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+              <PaginationFooter
+                totalItems={stages.length}
+                currentPage={currentPage}
+                setCurrentPage={setCurrentPage}
+                itemsPerPage={itemsPerPage}
+                setItemsPerPage={setItemsPerPage}
+              />
             </div>
           </div>
         );
+      }
 
       case null:
       case undefined:
-      case '':
+      case '': {
         const configCards = [
           { id: 'settings-university', title: 'Universities Directory', desc: 'Configure partner institutions, logos, and regional parameters.', count: universities.length, icon: '🏛️' },
           { id: 'settings-course', title: 'Academic Programs', desc: 'Add or modify degrees, course codes, and catalog details.', count: courses.length, icon: '🎓' },
@@ -1084,57 +1163,53 @@ export default function SettingsPortal({
             </div>
           </div>
         );
+      }
 
-      default:
+      default: {
         let list = [];
         let listSetter = null;
         let title = '';
         let addLabel = '';
-        let inputPlaceholder = '';
 
         if (activeSubTab === 'settings-university') {
           list = universities;
           listSetter = setUniversities;
           title = 'Universities Master List';
           addLabel = 'Add University';
-          inputPlaceholder = 'e.g. University of Exeter';
         } else if (activeSubTab === 'settings-course') {
           list = courses;
           listSetter = setCourses;
           title = 'Courses Master List';
           addLabel = 'Add Academic Course';
-          inputPlaceholder = 'e.g. MBA General Management';
         } else if (activeSubTab === 'settings-intake') {
           list = intakes;
           listSetter = setIntakes;
           title = 'Intake Seasons';
           addLabel = 'Add Intake Option';
-          inputPlaceholder = 'e.g. May/June 2027';
         } else if (activeSubTab === 'settings-formats') {
           list = fileFormats;
           listSetter = setFileFormats;
           title = 'Supported File Formats';
           addLabel = 'Add File Format Extension';
-          inputPlaceholder = 'e.g. .png';
         } else if (activeSubTab === 'settings-qualifications') {
           list = qualifications;
           listSetter = setQualifications;
           title = 'Qualifications Level';
           addLabel = 'Add Qualification Tier';
-          inputPlaceholder = 'e.g. Diploma';
         } else if (activeSubTab === 'settings-documents') {
           list = verificationDocuments;
           listSetter = setVerificationDocuments;
           title = 'Verification Checklist Documents';
           addLabel = 'Add Document Requirement';
-          inputPlaceholder = 'e.g. Statement of Purpose (SOP)';
         } else if (activeSubTab === 'settings-actions') {
           list = stagedActions;
           listSetter = setStagedActions;
           title = 'Staged Automation Actions';
           addLabel = 'Add Automation Action';
-          inputPlaceholder = 'e.g. Send SMS Welcome Template';
         }
+
+        const listStartIndex = (currentPage - 1) * itemsPerPage;
+        const paginatedList = list.slice(listStartIndex, listStartIndex + itemsPerPage);
 
         return (
           <div className="space-y-4">
@@ -1150,57 +1225,67 @@ export default function SettingsPortal({
               )}
             </div>
 
-            <div className="bg-white border border-[#E2E8F0] border-t-4 border-t-[#D99A1C] p-6 rounded-2xl shadow-xs space-y-3">
-              {list.map((item, idx) => {
-                const itemId = typeof item === 'object' ? item._id : item;
-                
-                let displayName = '';
-                let detailsLabel = '';
+            <div className="bg-white border border-[#E2E8F0] border-t-4 border-t-[#D99A1C] rounded-2xl shadow-xs overflow-hidden">
+              <div className="p-6 space-y-3">
+                {paginatedList.map((item, idx) => {
+                  const itemId = typeof item === 'object' ? item._id : item;
+                  
+                  let displayName = '';
+                  let detailsLabel = '';
 
-                if (activeSubTab === 'settings-university') {
-                  displayName = typeof item === 'object' ? item.name : item;
-                  detailsLabel = typeof item === 'object' ? `Country: ${item.country}` : '';
-                } else if (activeSubTab === 'settings-course') {
-                  displayName = typeof item === 'object' ? item.title : item;
-                  const uniName = typeof item === 'object' ? (item.university?.name || 'Assigned') : '';
-                  detailsLabel = typeof item === 'object' ? `${item.degreeLevel || 'Master'} Degree | University: ${uniName}` : '';
-                } else if (activeSubTab === 'settings-intake') {
-                  displayName = typeof item === 'object' ? item.title : item;
-                  detailsLabel = typeof item === 'object' ? item.description : '';
-                } else {
-                  displayName = item;
-                }
+                  if (activeSubTab === 'settings-university') {
+                    displayName = typeof item === 'object' ? item.name : item;
+                    detailsLabel = typeof item === 'object' ? `Country: ${item.country}` : '';
+                  } else if (activeSubTab === 'settings-course') {
+                    displayName = typeof item === 'object' ? item.title : item;
+                    const uniName = typeof item === 'object' ? (item.university?.name || 'Assigned') : '';
+                    detailsLabel = typeof item === 'object' ? `${item.degreeLevel || 'Master'} Degree | University: ${uniName}` : '';
+                  } else if (activeSubTab === 'settings-intake') {
+                    displayName = typeof item === 'object' ? item.title : item;
+                    detailsLabel = typeof item === 'object' ? item.description : '';
+                  } else {
+                    displayName = item;
+                  }
 
-                return (
-                  <div key={itemId || idx} className="flex items-center justify-between p-3.5 bg-slate-50 border border-slate-200 rounded-xl hover:border-slate-350 transition-colors">
-                    <div>
-                      <p className="text-xs font-bold text-slate-800">{displayName}</p>
-                      {detailsLabel && <p className="text-[10px] text-slate-400 font-semibold mt-0.5">{detailsLabel}</p>}
+                  return (
+                    <div key={itemId || idx} className="flex items-center justify-between p-3.5 bg-slate-50 border border-slate-200 rounded-xl hover:border-slate-350 transition-colors">
+                      <div>
+                        <p className="text-xs font-bold text-slate-800">{displayName}</p>
+                        {detailsLabel && <p className="text-[10px] text-slate-400 font-semibold mt-0.5">{detailsLabel}</p>}
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {activeSubTab === 'settings-intake' && listSetter && (
+                          <button
+                            onClick={() => openEditIntakeModal(item)}
+                            className="text-indigo-500 hover:text-indigo-700 font-extrabold text-xs cursor-pointer bg-white px-2.5 py-1 border border-slate-200 rounded-lg hover:border-indigo-200 hover:bg-indigo-50/20 transition-all shadow-3xs"
+                          >
+                            Edit
+                          </button>
+                        )}
+                        {listSetter && (
+                          <button
+                            onClick={() => handleDeleteSettingItem(item, listSetter, activeSubTab.replace('settings-', ''))}
+                            className="text-rose-500 hover:text-rose-700 font-extrabold text-xs cursor-pointer bg-white px-2.5 py-1 border border-slate-200 rounded-lg hover:border-rose-200 hover:bg-rose-50/20 transition-all shadow-3xs"
+                          >
+                            Delete
+                          </button>
+                        )}
+                      </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      {activeSubTab === 'settings-intake' && listSetter && (
-                        <button
-                          onClick={() => openEditIntakeModal(item)}
-                          className="text-indigo-500 hover:text-indigo-700 font-extrabold text-xs cursor-pointer bg-white px-2.5 py-1 border border-slate-200 rounded-lg hover:border-indigo-200 hover:bg-indigo-50/20 transition-all shadow-3xs"
-                        >
-                          Edit
-                        </button>
-                      )}
-                      {listSetter && (
-                        <button
-                          onClick={() => handleDeleteSettingItem(item, listSetter, activeSubTab.replace('settings-', ''))}
-                          className="text-rose-500 hover:text-rose-700 font-extrabold text-xs cursor-pointer bg-white px-2.5 py-1 border border-slate-200 rounded-lg hover:border-rose-200 hover:bg-rose-50/20 transition-all shadow-3xs"
-                        >
-                          Delete
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
+                  );
+                })}
+              </div>
+              <PaginationFooter
+                totalItems={list.length}
+                currentPage={currentPage}
+                setCurrentPage={setCurrentPage}
+                itemsPerPage={itemsPerPage}
+                setItemsPerPage={setItemsPerPage}
+              />
             </div>
           </div>
         );
+      }
     }
   };
 
@@ -2004,6 +2089,71 @@ export default function SettingsPortal({
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+function PaginationFooter({ totalItems, currentPage, setCurrentPage, itemsPerPage, setItemsPerPage }) {
+  if (totalItems <= 0) return null;
+
+  const totalPages = Math.ceil(totalItems / itemsPerPage) || 1;
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = Math.min(startIndex + itemsPerPage, totalItems);
+
+  return (
+    <div className="px-6 py-4 bg-slate-50 border-t border-[#E2E8F0] flex flex-col sm:flex-row items-center justify-between gap-4">
+      <div className="flex items-center gap-3">
+        <span className="text-xs font-semibold text-slate-500">Rows per page:</span>
+        <select
+          value={itemsPerPage}
+          onChange={(e) => {
+            setItemsPerPage(Number(e.target.value));
+            setCurrentPage(1);
+          }}
+          className="bg-white border border-slate-200 rounded-lg px-2.5 py-1 text-xs font-bold text-slate-700 focus:outline-none focus:border-[#D99A1C] cursor-pointer"
+        >
+          <option value={5}>5</option>
+          <option value={10}>10</option>
+          <option value={20}>20</option>
+          <option value={50}>50</option>
+          <option value={100}>100</option>
+        </select>
+        <span className="text-xs font-semibold text-slate-400">
+          Showing {totalItems > 0 ? startIndex + 1 : 0} to {endIndex} of {totalItems} entries
+        </span>
+      </div>
+
+      <div className="flex items-center gap-1.5">
+        <button
+          disabled={currentPage === 1}
+          onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+          className="px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-bold bg-white text-slate-600 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer"
+        >
+          ◀ Prev
+        </button>
+
+        {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+          <button
+            key={page}
+            onClick={() => setCurrentPage(page)}
+            className={`px-3 py-1.5 rounded-lg text-xs font-extrabold transition-all cursor-pointer ${
+              currentPage === page
+                ? 'bg-[#D99A1C] text-white shadow-xs'
+                : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-100'
+            }`}
+          >
+            {page}
+          </button>
+        ))}
+
+        <button
+          disabled={currentPage === totalPages}
+          onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+          className="px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-bold bg-white text-slate-600 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer"
+        >
+          Next ▶
+        </button>
+      </div>
     </div>
   );
 }
