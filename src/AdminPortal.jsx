@@ -462,7 +462,11 @@ export default function AdminPortal({ onLogout }) {
 
   const renderActiveTabContent = () => {
     if (activeTab === 'daily-report') {
-      return <DailyReport applications={scopedApplications} />;
+      return <DailyReport applications={scopedApplications} onNavigateToBecomePartner={() => setActiveTab('become-partner')} />;
+    }
+
+    if (activeTab === 'become-partner') {
+      return <BecomePartner onPartnerOnboarded={fetchInitialData} />;
     }
 
     if (activeTab === 'applications') {

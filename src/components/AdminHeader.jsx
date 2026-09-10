@@ -25,6 +25,8 @@ export default function AdminHeader({
       if (activeSubTab === 'report-country') crumbs.push('By Country');
     } else if (activeTab === 'applications') {
       crumbs.push('Applications');
+    } else if (activeTab === 'become-partner') {
+      crumbs.push('Become our Partner');
     } else if (activeTab === 'partners') {
       crumbs.push('Partners');
     } else if (activeTab === 'students') {
