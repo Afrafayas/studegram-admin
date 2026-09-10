@@ -32,7 +32,7 @@ export default function Staff({ staffList, setStaffList, applications }) {
   const [newStaffRole, setNewStaffRole] = useState('Executive');
   const [newStaffAccess, setNewStaffAccess] = useState('Read & Write');
   const [newStaffStatus, setNewStaffStatus] = useState('Active');
-  const [newStaffCountry, setNewStaffCountry] = useState('India');
+  const [newStaffCountries, setNewStaffCountries] = useState(['India']);
   const [passwordMode, setPasswordMode] = useState('auto'); // 'auto' | 'manual'
   const [manualPassword, setManualPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -46,6 +46,13 @@ export default function Staff({ staffList, setStaffList, applications }) {
     setManualPassword(res);
   };
 
+  
+  const getStaffCountries = (s) => {
+    if (Array.isArray(s?.countries) && s.countries.length > 0) return s.countries;
+    if (s?.country) return [s.country];
+    return ['India'];
+  };
+
   const safeStaffList = Array.isArray(staffList) ? staffList : [];
 
   // Dynamic list of assigned countries derived from staff database & master list
@@ -53,7 +60,7 @@ export default function Staff({ staffList, setStaffList, applications }) {
   const availableCountries = Array.from(
     new Set([
       ...defaultCountries,
-      ...safeStaffList.map(s => s.country).filter(Boolean)
+      ...safeStaffList.flatMap(s => getStaffCountries(s))
     ])
   );
 
@@ -86,7 +93,8 @@ export default function Staff({ staffList, setStaffList, applications }) {
       phone.includes(searchTerm);
 
     const statusMatch = statusFilter === 'All' || s.status === statusFilter;
-    const countryMatch = countryFilter === 'All' || country.toLowerCase() === countryFilter.toLowerCase();
+    const staffCountries = getStaffCountries(s);
+    const countryMatch = countryFilter === 'All' || staffCountries.some(c => c.toLowerCase() === countryFilter.toLowerCase());
 
     return searchMatch && statusMatch && countryMatch;
   });
@@ -135,7 +143,8 @@ export default function Staff({ staffList, setStaffList, applications }) {
       return;
     }
 
-    const assignedCountry = currentUser.role === 'Country Head' ? currentUser.country : newStaffCountry;
+    const assignedCountries = currentUser.role === 'Country Head' ? [currentUser.country] : (newStaffCountries.length > 0 ? newStaffCountries : ['India']);
+    const assignedCountry = assignedCountries[0];
 
     const newStaff = {
       id: Date.now(),
@@ -146,6 +155,7 @@ export default function Staff({ staffList, setStaffList, applications }) {
       status: newStaffStatus,
       accessLevel: `${newStaffRole} (${newStaffAccess})`,
       country: assignedCountry,
+      countries: assignedCountries,
       passwordType: passwordMode === 'auto' ? 'Auto-generated & Emailed' : 'Manual Initial Password',
       dateAdded: new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
     };
@@ -160,7 +170,7 @@ export default function Staff({ staffList, setStaffList, applications }) {
     setNewStaffRole('Executive');
     setNewStaffAccess('Read & Write');
     setNewStaffStatus('Active');
-    setNewStaffCountry('India');
+    setNewStaffCountries(['India']);
     setManualPassword('');
     setPasswordMode('auto');
     setIsModalOpen(false);
@@ -295,9 +305,13 @@ export default function Staff({ staffList, setStaffList, applications }) {
                           </div>
                         </td>
                         <td className="px-6 py-4">
-                          <span className="px-2 py-0.5 bg-slate-100 border border-slate-200 text-slate-700 rounded-md text-[10px] font-bold">
-                            📍 {staff.country || 'India'}
-                          </span>
+                          <div className="flex flex-wrap gap-1 max-w-[180px]">
+                            {getStaffCountries(staff).map(c => (
+                              <span key={c} className="px-2 py-0.5 bg-slate-100 border border-slate-200 text-slate-700 rounded-md text-[10px] font-bold">
+                                📍 {c}
+                              </span>
+                            ))}
+                          </div>
                         </td>
                         <td className="px-6 py-4 text-slate-500 font-bold">{staff.email}</td>
                         <td className="px-6 py-4 text-slate-500 font-semibold">{staff.phone}</td>
@@ -344,8 +358,14 @@ export default function Staff({ staffList, setStaffList, applications }) {
                                   <span className="text-slate-900 font-bold text-xs">{staff.role}</span>
                                 </div>
                                 <div>
-                                  <span className="text-[9px] font-extrabold uppercase text-slate-400 block tracking-wider">Assigned Country</span>
-                                  <span className="text-slate-900 font-extrabold text-xs">📍 {staff.country || 'India'}</span>
+                                  <span className="text-[9px] font-extrabold uppercase text-slate-400 block tracking-wider mb-1">Assigned Countries ({getStaffCountries(staff).length})</span>
+                                  <div className="flex flex-wrap gap-1">
+                                    {getStaffCountries(staff).map(c => (
+                                      <span key={c} className="px-2 py-0.5 bg-amber-50 border border-amber-200 text-amber-800 rounded-md text-[10px] font-black">
+                                        📍 {c}
+                                      </span>
+                                    ))}
+                                  </div>
                                 </div>
                                 <div>
                                   <span className="text-[9px] font-extrabold uppercase text-slate-400 block tracking-wider">System Access Tier</span>
@@ -583,18 +603,36 @@ export default function Staff({ staffList, setStaffList, applications }) {
                   />
                 </div>
 
-                <div className="space-y-1.5">
-                  <label className="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">Assigned Country <span className="text-rose-500">*</span></label>
-                  <select
-                    value={newStaffCountry}
-                    onChange={(e) => setNewStaffCountry(e.target.value)}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs font-semibold focus:outline-none focus:bg-white focus:border-[#D99A1C] text-slate-900 cursor-pointer"
-                    disabled={currentUser.role === 'Country Head'}
-                  >
-                    {availableCountries.map(country => (
-                      <option key={country} value={country}>{country}</option>
-                    ))}
-                  </select>
+                <div className="space-y-1.5 col-span-2">
+                  <label className="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">Assigned Countries (Select Multiple) <span className="text-rose-500">*</span></label>
+                  <div className="flex flex-wrap gap-2 bg-slate-50 p-3 border border-slate-200 rounded-xl">
+                    {availableCountries.map(country => {
+                      const isSelected = newStaffCountries.includes(country);
+                      return (
+                        <button
+                          key={country}
+                          type="button"
+                          disabled={currentUser.role === 'Country Head'}
+                          onClick={() => {
+                            if (isSelected) {
+                              if (newStaffCountries.length > 1) {
+                                setNewStaffCountries(newStaffCountries.filter(c => c !== country));
+                              }
+                            } else {
+                              setNewStaffCountries([...newStaffCountries, country]);
+                            }
+                          }}
+                          className={`px-3 py-1.5 rounded-lg text-xs font-extrabold transition-all cursor-pointer border ${
+                            isSelected
+                              ? 'bg-[#D99A1C] text-white border-[#D99A1C] shadow-xs'
+                              : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300'
+                          }`}
+                        >
+                          {isSelected ? '✓ ' : '+ '}{country}
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
               </div>
 
