@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 
-export default function DailyReport({ applications }) {
+export default function DailyReport({ applications, onNavigateToBecomePartner }) {
   const { currentUser } = useAuth();
   const [hoveredBarIndex, setHoveredBarIndex] = useState(null);
   const [hoveredPoint, setHoveredPoint] = useState(null);
@@ -128,6 +128,21 @@ export default function DailyReport({ applications }) {
           <span className="text-[10px] text-[#10B981] font-extrabold uppercase tracking-wider">Live System Sync</span>
         </div>
       </div>
+
+      
+        {/* Dashboard Quick Action Tabs */}
+        <div className="flex items-center gap-2 border-b border-[#E2E8F0] pb-1">
+          <button className="px-4 py-2 text-xs font-black text-[#D99A1C] border-b-2 border-[#D99A1C] bg-white shadow-xs rounded-t-xl cursor-pointer">
+            📊 System Overview
+          </button>
+          <button 
+            onClick={() => onNavigateToBecomePartner && onNavigateToBecomePartner()}
+            className="px-4 py-2 text-xs font-bold text-slate-600 hover:text-slate-900 hover:bg-white rounded-t-xl transition-all flex items-center gap-1.5 cursor-pointer"
+          >
+            <span>🤝 Become our Partner</span>
+            <span className="px-1.5 py-0.5 bg-[#D99A1C]/20 text-[#D99A1C] text-[9px] font-black rounded-md uppercase">Onboard</span>
+          </button>
+        </div>
 
       {/* Metric Cards Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">

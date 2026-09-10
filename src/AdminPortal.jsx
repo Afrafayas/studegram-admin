@@ -15,6 +15,7 @@ import SettingsPortal from './pages/SettingsPortal';
 import TodoList from './pages/TodoList';
 import CommissionManagement from './pages/CommissionManagement';
 import RoleHierarchy from './pages/RoleHierarchy';
+import BecomePartner from './pages/BecomePartner';
 
 // Auth & API
 import { useAuth } from './context/AuthContext';
