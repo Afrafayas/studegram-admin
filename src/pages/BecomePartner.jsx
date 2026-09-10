@@ -7,8 +7,10 @@ export default function BecomePartner({ setClients, onBack }) {
   const toast = useToast();
   const { addAuditLog } = useAuth();
 
+  // Section 1: Partner Classification
   const [partnerType, setPartnerType] = useState('Company'); // 'Company' | 'Individual'
 
+  // Section 2: Partner Profile Details
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -18,10 +20,13 @@ export default function BecomePartner({ setClients, onBack }) {
     country: 'India'
   });
 
+  // Section 3: Document Verification Uploads
   const [documents, setDocuments] = useState({
+    // For Company Agent
     incorporationCert: null,
     taxCert: null,
     signatoryIdProof: null,
+    // For Individual Agent
     idProof: null,
     addressProof: null
   });
@@ -45,7 +50,7 @@ export default function BecomePartner({ setClients, onBack }) {
     if (!file) return;
 
     if (file.size > 15 * 1024 * 1024) {
-      toast.error('File size exceeds 15MB limit.');
+      toast.error('File size exceeds 15MB limit. Please select a smaller file.');
       return;
     }
 
@@ -69,7 +74,7 @@ export default function BecomePartner({ setClients, onBack }) {
     e.preventDefault();
 
     if (!formData.name || !formData.email || !formData.phone) {
-      toast.error('Please fill out all required contact fields.');
+      toast.error('Please complete all required contact details.');
       return;
     }
 
@@ -78,6 +83,7 @@ export default function BecomePartner({ setClients, onBack }) {
       return;
     }
 
+    // Required Documents Check
     if (partnerType === 'Company') {
       if (!documents.incorporationCert) {
         toast.error('Please upload Company Incorporation Certificate.');
@@ -85,7 +91,7 @@ export default function BecomePartner({ setClients, onBack }) {
       }
     } else {
       if (!documents.idProof) {
-        toast.error('Please upload Individual ID Proof.');
+        toast.error('Please upload Individual ID Proof (Passport / National ID).');
         return;
       }
     }
@@ -98,11 +104,11 @@ export default function BecomePartner({ setClients, onBack }) {
       if (documents.taxCert) docsPayload.push({ title: 'Tax / GST Registration Certificate', fileName: documents.taxCert.name });
       if (documents.signatoryIdProof) docsPayload.push({ title: 'Authorised Signatory ID Proof', fileName: documents.signatoryIdProof.name });
     } else {
-      if (documents.idProof) docsPayload.push({ title: 'Individual ID Proof', fileName: documents.idProof.name });
+      if (documents.idProof) docsPayload.push({ title: 'Individual ID Proof (Passport/National ID)', fileName: documents.idProof.name });
       if (documents.addressProof) docsPayload.push({ title: 'Address Proof / Resume', fileName: documents.addressProof.name });
     }
 
-    const randomCode = `PRT-${Math.floor(10000 + Math.random() * 90000)}`;
+    const generatedCode = `PRT-${Math.floor(10000 + Math.random() * 90000)}`;
 
     try {
       const token = localStorage.getItem('admin_token');
@@ -120,14 +126,14 @@ export default function BecomePartner({ setClients, onBack }) {
         });
 
         if (res.data?.success) {
-          setSubmittedPartnerCode(res.data.data._id || randomCode);
+          setSubmittedPartnerCode(res.data.data._id || generatedCode);
           setIsSubmittedSuccess(true);
-          toast.success('New Partner Successfully Onboarded!');
+          toast.success('Partner Onboarded Successfully in Database!');
         } else {
-          throw new Error(res.data?.message || 'API failed');
+          throw new Error(res.data?.message || 'API error');
         }
       } else {
-        // Fallback local update
+        // Fallback local state update
         const newPartnerObj = {
           id: Date.now(),
           name: formData.name,
@@ -138,7 +144,7 @@ export default function BecomePartner({ setClients, onBack }) {
           country: formData.country,
           email: formData.email,
           phone: formData.phone,
-          partnerCode: randomCode,
+          partnerCode: generatedCode,
           status: 'Active',
           activeApps: 0,
           documents: docsPayload,
@@ -149,10 +155,10 @@ export default function BecomePartner({ setClients, onBack }) {
           setClients(prev => [newPartnerObj, ...prev]);
         }
 
-        setSubmittedPartnerCode(randomCode);
+        setSubmittedPartnerCode(generatedCode);
         setIsSubmittedSuccess(true);
-        addAuditLog('ONBOARD_PARTNER', 'Partner', randomCode, `Onboarded ${formData.name} as ${partnerType} Agent`);
-        toast.success('Partner Onboarded Successfully!');
+        addAuditLog('ONBOARD_PARTNER', 'Partner', generatedCode, `Onboarded ${formData.name} as ${partnerType} Agent`);
+        toast.success('Partner Successfully Registered & Onboarded!');
       }
     } catch (err) {
       toast.error(err.message || 'Submission error');
@@ -173,26 +179,30 @@ export default function BecomePartner({ setClients, onBack }) {
 
           <div className="space-y-2">
             <span className="px-3 py-1 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-full text-[10px] font-extrabold uppercase tracking-wider">
-              Onboarding Completed
+              Onboarding Successful
             </span>
-            <h2 className="text-xl font-black text-slate-900 tracking-tight">Partner Successfully Onboarded!</h2>
+            <h2 className="text-xl font-black text-slate-900 tracking-tight">Partner Registered Successfully!</h2>
             <p className="text-xs text-slate-500 font-medium leading-relaxed">
-              <strong className="text-slate-800">{formData.name}</strong> has been registered as an active <strong className="text-slate-800">{partnerType === 'Company' ? 'Company Partner Agency' : 'Individual Recruitment Agent'}</strong> with verified document proofs.
+              <strong className="text-slate-800">{formData.name}</strong> has been onboarded as an active <strong className="text-slate-800">{partnerType === 'Company' ? 'Company Partner Agency' : 'Individual Recruitment Agent'}</strong> with verified compliance documents.
             </p>
           </div>
 
           <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 text-left space-y-2 text-xs">
             <div className="flex justify-between items-center text-slate-600">
-              <span className="font-semibold text-slate-400">Partner Code / ID:</span>
+              <span className="font-semibold text-slate-400">Partner Code / Reference:</span>
               <span className="font-mono font-bold text-[#2563EB]">{submittedPartnerCode}</span>
             </div>
             <div className="flex justify-between items-center text-slate-600">
-              <span className="font-semibold text-slate-400">Account Classification:</span>
+              <span className="font-semibold text-slate-400">Account Structure:</span>
               <span className="font-extrabold text-slate-800">{partnerType} Agent</span>
             </div>
             <div className="flex justify-between items-center text-slate-600">
-              <span className="font-semibold text-slate-400">Primary Email:</span>
+              <span className="font-semibold text-slate-400">Email Address:</span>
               <span className="font-bold text-slate-800">{formData.email}</span>
+            </div>
+            <div className="flex justify-between items-center text-slate-600">
+              <span className="font-semibold text-slate-400">Compliance Documents:</span>
+              <span className="font-extrabold text-emerald-600">Verified & Uploaded</span>
             </div>
           </div>
 
@@ -213,14 +223,14 @@ export default function BecomePartner({ setClients, onBack }) {
 
   return (
     <div className="flex-1 p-6 md:p-8 space-y-6 bg-[#F0F2F5] animate-fade-in-up">
-      {/* Top Header Card */}
+      {/* Header Banner */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center bg-white border border-[#E2E8F0] border-t-4 border-t-[#D99A1C] p-6 rounded-2xl shadow-xs gap-4">
         <div className="space-y-1">
           <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 bg-amber-50 text-amber-700 border border-amber-200 rounded-full text-[10px] font-black uppercase tracking-wider">
             <span>🤝 Admin Onboarding Console</span>
           </div>
           <h1 className="text-xl font-black text-slate-900 tracking-tight">Become our Partner — Onboard New Referral Agency</h1>
-          <p className="text-xs text-slate-500 font-medium">Configure entity classification (Company vs Individual Agent) and upload compliance verification proofs.</p>
+          <p className="text-xs text-slate-500 font-medium">Select partner classification (Company vs Individual Agent) and upload mandatory verification proofs.</p>
         </div>
 
         <button
@@ -237,10 +247,11 @@ export default function BecomePartner({ setClients, onBack }) {
           <div className="space-y-0.5">
             <span className="text-[10px] font-black text-blue-600 uppercase tracking-widest block">SECTION 1</span>
             <h2 className="text-base font-black text-slate-900">Select Partner Entity Structure</h2>
-            <p className="text-xs text-slate-500 font-medium">Choose whether this partner operates as a registered company consultancy or an independent agent.</p>
+            <p className="text-xs text-slate-500 font-medium">Choose whether this partner operates as a registered company consultancy or an independent counselor.</p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Option A: Company Agent */}
             <div
               onClick={() => setPartnerType('Company')}
               className={`p-5 rounded-2xl border-2 transition-all cursor-pointer flex items-center gap-4 ${
@@ -255,10 +266,11 @@ export default function BecomePartner({ setClients, onBack }) {
               <div>
                 <h3 className="text-sm font-black text-slate-900">Company Agent</h3>
                 <p className="text-[11px] text-slate-500 font-semibold mt-0.5">Registered Consultancy / Corporate Entity</p>
-                <p className="text-[10px] text-emerald-600 font-extrabold mt-1">✓ Business License & Tax ID Verification Required</p>
+                <p className="text-[10px] text-emerald-600 font-extrabold mt-1">✓ Business License & Tax ID Verification</p>
               </div>
             </div>
 
+            {/* Option B: Individual Agent */}
             <div
               onClick={() => setPartnerType('Individual')}
               className={`p-5 rounded-2xl border-2 transition-all cursor-pointer flex items-center gap-4 ${
@@ -283,7 +295,8 @@ export default function BecomePartner({ setClients, onBack }) {
         <div className="bg-white border border-[#E2E8F0] border-t-4 border-t-[#D99A1C] rounded-2xl p-6 shadow-xs space-y-5">
           <div className="space-y-0.5">
             <span className="text-[10px] font-black text-[#D99A1C] uppercase tracking-widest block">SECTION 2</span>
-            <h2 className="text-base font-black text-slate-900">Partner Information & Contact Details</h2>
+            <h2 className="text-base font-black text-slate-900">Partner Information & Credentials</h2>
+            <p className="text-xs text-slate-500 font-medium">Enter primary contact details for contract execution and portal login authentication.</p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs font-semibold">
@@ -313,7 +326,7 @@ export default function BecomePartner({ setClients, onBack }) {
               <>
                 <div className="space-y-1.5">
                   <label className="block text-[10px] font-extrabold text-slate-600 uppercase tracking-wider">Registered Company Name <span className="text-rose-500">*</span></label>
-                  <input type="text" required name="companyName" value={formData.companyName} onChange={handleInputChange} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs font-semibold focus:outline-none focus:bg-white focus:border-[#D99A1C]" placeholder="e.g. Apex Global Education" />
+                  <input type="text" required name="companyName" value={formData.companyName} onChange={handleInputChange} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs font-semibold focus:outline-none focus:bg-white focus:border-[#D99A1C]" placeholder="e.g. Apex Global Education Pvt Ltd" />
                 </div>
                 <div className="space-y-1.5">
                   <label className="block text-[10px] font-extrabold text-slate-600 uppercase tracking-wider">Tax Registration / GST ID</label>
@@ -335,14 +348,14 @@ export default function BecomePartner({ setClients, onBack }) {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {partnerType === 'Company' ? (
               <>
-                <DocumentUploadSlot label="Company Incorporation Certificate" description="Official Business License" docKey="incorporationCert" fileObj={documents.incorporationCert} required={true} onFileChange={handleFileChange} onRemoveFile={handleRemoveFile} />
+                <DocumentUploadSlot label="Company Incorporation Certificate" description="Official Business Registration License" docKey="incorporationCert" fileObj={documents.incorporationCert} required={true} onFileChange={handleFileChange} onRemoveFile={handleRemoveFile} />
                 <DocumentUploadSlot label="Tax / GST Registration Certificate" description="Tax Identification Copy" docKey="taxCert" fileObj={documents.taxCert} required={false} onFileChange={handleFileChange} onRemoveFile={handleRemoveFile} />
                 <DocumentUploadSlot label="Authorised Signatory ID Proof" description="Director Passport or Photo ID" docKey="signatoryIdProof" fileObj={documents.signatoryIdProof} required={false} onFileChange={handleFileChange} onRemoveFile={handleRemoveFile} />
               </>
             ) : (
               <>
                 <DocumentUploadSlot label="Individual ID Proof (Passport / National ID)" description="Government Photo ID" docKey="idProof" fileObj={documents.idProof} required={true} onFileChange={handleFileChange} onRemoveFile={handleRemoveFile} />
-                <DocumentUploadSlot label="Address Proof / Resume" description="Utility Bill or Bio" docKey="addressProof" fileObj={documents.addressProof} required={false} onFileChange={handleFileChange} onRemoveFile={handleRemoveFile} />
+                <DocumentUploadSlot label="Address Proof / Resume" description="Utility Bill or Professional Bio" docKey="addressProof" fileObj={documents.addressProof} required={false} onFileChange={handleFileChange} onRemoveFile={handleRemoveFile} />
               </>
             )}
           </div>
@@ -363,7 +376,7 @@ export default function BecomePartner({ setClients, onBack }) {
 
 function DocumentUploadSlot({ label, description, docKey, fileObj, required, onFileChange, onRemoveFile }) {
   return (
-    <div className={`border-2 border-dashed rounded-xl p-4 transition-all flex flex-col justify-between min-h-[140px] ${fileObj ? 'border-emerald-300 bg-emerald-50/30' : 'border-slate-200 bg-slate-50/50'}`}>
+    <div className={`border-2 border-dashed rounded-xl p-4 transition-all flex flex-col justify-between min-h-[140px] ${fileObj ? 'border-emerald-300 bg-emerald-50/30' : 'border-slate-200 bg-slate-50/50 hover:border-[#D99A1C]'}`}>
       <div>
         <div className="flex justify-between items-start">
           <label className="text-xs font-black text-slate-900">{label} {required && <span className="text-rose-500">*</span>}</label>
@@ -374,13 +387,16 @@ function DocumentUploadSlot({ label, description, docKey, fileObj, required, onF
 
       {fileObj ? (
         <div className="bg-white border border-emerald-200 p-2.5 rounded-lg flex items-center justify-between mt-3">
-          <span className="text-xs font-bold text-slate-900 truncate">{fileObj.name}</span>
-          <button type="button" onClick={() => onRemoveFile(docKey)} className="text-rose-500 font-bold text-xs">✕</button>
+          <div className="flex items-center gap-2 overflow-hidden">
+            <span className="text-xs font-bold text-emerald-600">📄</span>
+            <span className="text-xs font-bold text-slate-900 truncate">{fileObj.name}</span>
+          </div>
+          <button type="button" onClick={() => onRemoveFile(docKey)} className="text-rose-500 font-bold text-xs p-1 hover:bg-rose-50 rounded">✕</button>
         </div>
       ) : (
         <label className="cursor-pointer bg-white border border-slate-200 p-2.5 rounded-lg text-center block mt-3 hover:border-[#D99A1C]">
           <input type="file" accept=".pdf,.png,.jpg,.jpeg" onChange={(e) => onFileChange(docKey, e)} className="hidden" />
-          <p className="text-xs font-bold text-slate-700">Upload File</p>
+          <p className="text-xs font-bold text-slate-700">Select File to Upload</p>
           <span className="text-[9px] text-slate-400">PDF, PNG, JPG (Max 15MB)</span>
         </label>
       )}
