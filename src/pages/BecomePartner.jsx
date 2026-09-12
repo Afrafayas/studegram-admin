@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
 import API from '../api/axios';
 import { useToast } from '../context/ToastContext';
 import { useAuth } from '../context/AuthContext';
@@ -375,10 +376,10 @@ export default function BecomePartner({ setClients, onBack }) {
           </button>
         </div>
       </form>
-      {/* Document Preview Modal */}
-      {previewModalDoc && (
-        <div className="fixed inset-0 z-50 overflow-y-auto bg-black/75 backdrop-blur-xs p-3 sm:p-6 flex justify-center items-start sm:items-center select-none animate-fade-in">
-          <div className="relative bg-white border border-[#E2E8F0] border-t-4 border-t-[#D99A1C] rounded-2xl p-4 sm:p-6 w-full max-w-3xl shadow-2xl flex flex-col my-auto max-h-[90vh]">
+      {/* Document Preview Modal mounted to document.body via Portal to prevent parent transform containing-block offset */}
+      {previewModalDoc && createPortal(
+        <div className="fixed inset-0 z-[9999] bg-black/75 backdrop-blur-xs p-3 sm:p-6 flex justify-center items-center select-none animate-fade-in">
+          <div className="relative bg-white border border-[#E2E8F0] border-t-4 border-t-[#D99A1C] rounded-2xl p-4 sm:p-6 w-full max-w-3xl shadow-2xl flex flex-col max-h-[85vh] my-auto">
             {/* Modal Header */}
             <div className="flex justify-between items-center pb-3 border-b border-slate-100 shrink-0">
               <div className="space-y-0.5">
@@ -443,7 +444,8 @@ export default function BecomePartner({ setClients, onBack }) {
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
