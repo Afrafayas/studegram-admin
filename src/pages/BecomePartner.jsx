@@ -186,7 +186,7 @@ export default function BecomePartner({ clients = [], setClients, applications =
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleFileChange = (docKey, e) => {
+  const handleFileChange = async (docKey, e) => {
     const file = e.target.files[0];
     if (!file) return;
 
@@ -195,20 +195,52 @@ export default function BecomePartner({ clients = [], setClients, applications =
       return;
     }
 
-    const previewUrl = URL.createObjectURL(file);
-
-    setDocuments(prev => ({
-      ...prev,
-      [docKey]: {
-        fileObj: file,
-        name: file.name,
-        previewUrl: previewUrl,
-        size: (file.size / (1024 * 1024)).toFixed(2) + ' MB',
-        type: file.type.includes('pdf') ? 'pdf' : 'image',
-        uploadedAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    let uploadedUrl = '';
+    try {
+      const uploadFormData = new FormData();
+      uploadFormData.append('file', file);
+      const uploadRes = await API.post('/upload', uploadFormData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      if (uploadRes.data?.success && (uploadRes.data.url || uploadRes.data.fileUrl)) {
+        uploadedUrl = uploadRes.data.url || uploadRes.data.fileUrl;
       }
-    }));
-    toast.success(`Uploaded ${file.name}`);
+    } catch (uploadErr) {
+      console.warn('Backend file upload fallback to base64:', uploadErr.message);
+    }
+
+    if (uploadedUrl) {
+      setDocuments(prev => ({
+        ...prev,
+        [docKey]: {
+          fileObj: file,
+          name: file.name,
+          previewUrl: uploadedUrl,
+          size: (file.size / (1024 * 1024)).toFixed(2) + ' MB',
+          type: file.type.includes('pdf') ? 'pdf' : 'image',
+          uploadedAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        }
+      }));
+      toast.success(`Uploaded '${file.name}' successfully!`);
+    } else {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const base64Url = reader.result;
+        setDocuments(prev => ({
+          ...prev,
+          [docKey]: {
+            fileObj: file,
+            name: file.name,
+            previewUrl: base64Url,
+            size: (file.size / (1024 * 1024)).toFixed(2) + ' MB',
+            type: file.type.includes('pdf') ? 'pdf' : 'image',
+            uploadedAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+          }
+        }));
+        toast.success(`Uploaded '${file.name}'`);
+      };
+      reader.readAsDataURL(file);
+    }
   };
 
   const handleRemoveFile = (docKey) => {
@@ -791,8 +823,18 @@ export default function BecomePartner({ clients = [], setClients, applications =
                                               })}
                                             </div>
                                           ) : (
-                                            <div className="bg-amber-50/60 border border-amber-200/80 rounded-xl p-4 text-center">
-                                              <p className="text-xs font-semibold text-amber-800">No verification document proofs attached to this partner profile yet.</p>
+                                            <div className="bg-amber-50/70 border border-amber-200/90 rounded-xl p-4 flex flex-col sm:flex-row items-center justify-between gap-3 text-center sm:text-left">
+                                              <div>
+                                                <p className="text-xs font-bold text-amber-900">No verification document proofs attached to this partner profile yet.</p>
+                                                <p className="text-[10px] font-medium text-amber-700 mt-0.5">Upload required compliance documents (Incorporation Cert, Tax ID, Signatory ID) to verify account.</p>
+                                              </div>
+                                              <button
+                                                type="button"
+                                                onClick={(e) => handleOpenEditModal(partner, e)}
+                                                className="px-3.5 py-1.5 bg-[#D99A1C] hover:bg-[#F5B025] text-white rounded-xl text-xs font-extrabold cursor-pointer transition-all shadow-xs shrink-0 flex items-center gap-1.5"
+                                              >
+                                                <span>📎 Attach Documents Now</span>
+                                              </button>
                                             </div>
                                           )}
                                         </div>
@@ -1156,31 +1198,85 @@ export default function BecomePartner({ clients = [], setClients, applications =
 
               {/* Uploaded Compliance Documents Manager inside Edit Modal */}
               <div className="bg-slate-50 border border-slate-200/90 rounded-2xl p-4 space-y-3 mt-2">
-                <div className="flex justify-between items-center">
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 pb-2 border-b border-slate-200/60">
                   <div>
                     <span className="text-[9px] font-extrabold text-[#D99A1C] uppercase tracking-wider block">Compliance Documents Manager</span>
                     <h4 className="text-xs font-black text-slate-900 uppercase tracking-wider">
                       Attached Proofs ({editingPartner.documents ? editingPartner.documents.length : 0})
                     </h4>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const title = prompt('Enter Document Title (e.g. Company Incorporation Certificate, ID Proof):', 'Compliance Certificate');
-                      if (!title) return;
-                      const fileName = prompt('Enter File Name (e.g. Document.pdf):', title + '.pdf');
-                      if (!fileName) return;
-                      const newDocObj = { title, fileName, type: fileName.endsWith('.pdf') ? 'pdf' : 'image' };
-                      setEditingPartner(prev => ({
-                        ...prev,
-                        documents: [...(prev.documents || []), newDocObj]
-                      }));
-                      toast.success(`Attached '${title}' to edit draft`);
-                    }}
-                    className="px-3 py-1.5 bg-[#D99A1C] hover:bg-[#F5B025] text-white rounded-xl text-[10px] font-black cursor-pointer shadow-xs flex items-center gap-1"
-                  >
-                    <span>+ Add / Attach Document</span>
-                  </button>
+
+                  <div className="flex flex-wrap items-center gap-2">
+                    <select
+                      id="editDocTypeSelect"
+                      className="px-2.5 py-1 bg-white border border-slate-300 rounded-xl text-[11px] font-bold text-slate-800 focus:outline-none focus:border-[#D99A1C]"
+                      defaultValue="Company Incorporation Certificate"
+                    >
+                      <option value="Company Incorporation Certificate">Company Incorporation Certificate</option>
+                      <option value="Tax / GST Registration Certificate">Tax / GST Certificate</option>
+                      <option value="Authorised Signatory ID Proof">Authorised Signatory ID</option>
+                      <option value="Individual ID Proof (Passport / National ID)">Individual ID Proof</option>
+                      <option value="Address Proof / Resume">Address Proof / Resume</option>
+                      <option value="Other Compliance Proof">Other Compliance Proof</option>
+                    </select>
+
+                    <label className="px-3 py-1.5 bg-[#D99A1C] hover:bg-[#F5B025] text-white rounded-xl text-[10px] font-black cursor-pointer shadow-xs flex items-center gap-1 transition-all">
+                      <span>+ Attach File Proof</span>
+                      <input
+                        type="file"
+                        accept=".pdf,.png,.jpg,.jpeg"
+                        className="hidden"
+                        onChange={async (e) => {
+                          const file = e.target.files[0];
+                          if (!file) return;
+                          if (file.size > 15 * 1024 * 1024) {
+                            toast.error('File size exceeds 15MB limit.');
+                            return;
+                          }
+                          const typeSelect = document.getElementById('editDocTypeSelect');
+                          const docTitle = typeSelect ? typeSelect.value : 'Compliance Proof';
+
+                          let fileUrl = '';
+                          try {
+                            const uploadFormData = new FormData();
+                            uploadFormData.append('file', file);
+                            const uploadRes = await API.post('/upload', uploadFormData, {
+                              headers: { 'Content-Type': 'multipart/form-data' }
+                            });
+                            if (uploadRes.data?.success && (uploadRes.data.url || uploadRes.data.fileUrl)) {
+                              fileUrl = uploadRes.data.url || uploadRes.data.fileUrl;
+                            }
+                          } catch (err) {
+                            console.warn('Upload API fallback to Base64:', err.message);
+                          }
+
+                          const attachDocObj = (preview) => {
+                            const newDocObj = {
+                              title: docTitle,
+                              fileName: file.name,
+                              previewUrl: preview,
+                              type: file.type.includes('pdf') ? 'pdf' : 'image'
+                            };
+                            setEditingPartner(prev => ({
+                              ...prev,
+                              documents: [...(prev.documents || []), newDocObj]
+                            }));
+                            toast.success(`Attached '${file.name}' to profile!`);
+                          };
+
+                          if (fileUrl) {
+                            attachDocObj(fileUrl);
+                          } else {
+                            const reader = new FileReader();
+                            reader.onloadend = () => {
+                              attachDocObj(reader.result);
+                            };
+                            reader.readAsDataURL(file);
+                          }
+                        }}
+                      />
+                    </label>
+                  </div>
                 </div>
 
                 {editingPartner.documents && editingPartner.documents.length > 0 ? (
@@ -1227,8 +1323,9 @@ export default function BecomePartner({ clients = [], setClients, applications =
                     })}
                   </div>
                 ) : (
-                  <div className="bg-amber-50/60 border border-amber-200/80 rounded-xl p-3 text-center">
-                    <p className="text-[11px] font-semibold text-amber-800">No verification documents attached yet. Click "+ Add / Attach Document" above.</p>
+                  <div className="bg-amber-50/60 border border-amber-200/80 rounded-xl p-3.5 text-center flex flex-col sm:flex-row items-center justify-between gap-2">
+                    <p className="text-[11px] font-semibold text-amber-800">No verification documents attached yet to this partner profile.</p>
+                    <span className="text-[10px] font-bold text-[#D99A1C]">Select document type and click "+ Attach File Proof" above.</span>
                   </div>
                 )}
               </div>

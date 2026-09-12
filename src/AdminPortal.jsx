@@ -67,7 +67,7 @@ export default function AdminPortal({ onLogout }) {
           companyName: agent.companyName || agent.name,
           partnerType: agent.partnerType || 'Company',
           taxId: agent.taxId || '',
-          documents: agent.documents || [],
+          documents: Array.isArray(agent.documents) ? agent.documents : (agent.documents ? [agent.documents] : []),
           activeApps: 0,
           partnerCode: `PRTNR-${10001 + idx}`,
           dateAdded: new Date(agent.createdAt || Date.now()).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
