@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
 import API from '../api/axios';
 import { useToast } from '../context/ToastContext';
 
@@ -9,6 +10,7 @@ export default function Partners({ clients, setClients }) {
   const [locationFilter, setLocationFilter] = useState('All');
   const [expandedId, setExpandedId] = useState(null);
   const [partnerSubTabs, setPartnerSubTabs] = useState({});
+  const [previewDocModal, setPreviewDocModal] = useState(null);
   
   // Modal State for adding new Partner
   const [isModalOpen, setIsModalOpen] = useState(false);

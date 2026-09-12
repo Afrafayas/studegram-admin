@@ -4,7 +4,7 @@ import API from '../api/axios';
 import { useToast } from '../context/ToastContext';
 import { useAuth } from '../context/AuthContext';
 
-export default function BecomePartner({ setClients, onBack }) {
+export default function BecomePartner({ setClients, onBack, onPartnerOnboarded }) {
   const toast = useToast();
   const { addAuditLog } = useAuth();
 
@@ -133,9 +133,32 @@ export default function BecomePartner({ setClients, onBack }) {
         });
 
         if (res.data?.success) {
-          setSubmittedPartnerCode(res.data.data._id || generatedCode);
+          const newlyCreated = res.data.data;
+          const newPartnerObj = {
+            id: newlyCreated._id || Date.now(),
+            name: formData.name,
+            type: 'Agent',
+            partnerType: partnerType,
+            companyName: partnerType === 'Company' ? formData.companyName : formData.name,
+            taxId: formData.taxId,
+            country: formData.country,
+            email: formData.email,
+            phone: formData.phone,
+            partnerCode: generatedCode,
+            status: 'Active',
+            activeApps: 0,
+            documents: docsPayload,
+            dateAdded: new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
+          };
+
+          if (setClients) {
+            setClients(prev => [newPartnerObj, ...prev]);
+          }
+
+          setSubmittedPartnerCode(newlyCreated._id || generatedCode);
           setIsSubmittedSuccess(true);
-          toast.success('Partner Onboarded Successfully in Database!');
+          if (onPartnerOnboarded) onPartnerOnboarded();
+          toast.success('Partner Onboarded Successfully & Added to Directory!');
         } else {
           throw new Error(res.data?.message || 'API error');
         }

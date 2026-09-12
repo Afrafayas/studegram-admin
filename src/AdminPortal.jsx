@@ -64,9 +64,13 @@ export default function AdminPortal({ onLogout }) {
           type: 'Agent',
           email: agent.email,
           phone: agent.phone || '',
+          companyName: agent.companyName || agent.name,
+          partnerType: agent.partnerType || 'Company',
+          taxId: agent.taxId || '',
+          documents: agent.documents || [],
           activeApps: 0,
           partnerCode: `PRTNR-${10001 + idx}`,
-          dateAdded: new Date(agent.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
+          dateAdded: new Date(agent.createdAt || Date.now()).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
           country: agent.country || 'India',
           status: agent.status || 'Active'
         }));
