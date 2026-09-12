@@ -59,7 +59,7 @@ export default function BecomePartner({ clients = [], setClients, applications =
   const handleUpdateStatus = async (partnerId, newStatus) => {
     const token = localStorage.getItem('admin_token');
     try {
-      if (token && token !== 'mock-admin-token-12345') {
+      if (partnerId) {
         const response = await API.put(`/partners/${partnerId}`, { status: newStatus });
         if (response.data?.success) {
           if (setClients) {
@@ -107,7 +107,7 @@ export default function BecomePartner({ clients = [], setClients, applications =
 
     try {
       const token = localStorage.getItem('admin_token');
-      if (token && token !== 'mock-admin-token-12345' && editingPartner.id) {
+      if (editingPartner && editingPartner.id) {
         const res = await API.put(`/partners/${editingPartner.id}`, {
           name: editingPartner.name,
           email: editingPartner.email,
@@ -288,7 +288,7 @@ export default function BecomePartner({ clients = [], setClients, applications =
 
     try {
       const token = localStorage.getItem('admin_token');
-      if (token && token !== 'mock-admin-token-12345') {
+      if (true) {
         const res = await API.post('/partners', {
           password: 'Partner@123',
           name: formData.name,
