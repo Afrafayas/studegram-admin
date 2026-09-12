@@ -11,8 +11,11 @@ export default function BecomePartner({ clients = [], setClients, applications =
   // Sub-view mode: 'directory' | 'onboard'
   const [subView, setSubView] = useState('directory');
 
-  // Document Preview Modal State (Shared)
+  // Document Preview Modal State
   const [previewModalDoc, setPreviewModalDoc] = useState(null);
+
+  // Edit Partner Modal State
+  const [editingPartner, setEditingPartner] = useState(null);
 
   // --- DIRECTORY STATES & LOGIC ---
   const [searchTerm, setSearchTerm] = useState('');
@@ -25,15 +28,17 @@ export default function BecomePartner({ clients = [], setClients, applications =
   const partners = clients.filter(c => c.type === 'Agent');
 
   const filteredPartners = partners.filter(p => {
-    const code = p.partnerCode || '';
-    const name = p.name || '';
-    const email = p.email || '';
-    const phone = p.phone || '';
+    const codeStr = p.partnerCode || '';
+    const nameStr = p.name || '';
+    const emailStr = p.email || '';
+    const phoneStr = p.phone || '';
+    const companyStr = p.companyName || '';
 
-    const searchMatch = name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                        code.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                        email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                        phone.includes(searchTerm);
+    const searchMatch = nameStr.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                        codeStr.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                        emailStr.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                        phoneStr.includes(searchTerm) ||
+                        companyStr.toLowerCase().includes(searchTerm.toLowerCase());
 
     const statusMatch = statusFilter === 'All' || 
                         (statusFilter === 'Pending' && p.status === 'Pending') ||
@@ -69,6 +74,73 @@ export default function BecomePartner({ clients = [], setClients, applications =
       }
     } catch (err) {
       toast.error(err.message || 'Failed to update status');
+    }
+  };
+
+  const handleOpenEditModal = (partner, e) => {
+    if (e) e.stopPropagation();
+    setEditingPartner({
+      id: partner.id,
+      name: partner.name || '',
+      email: partner.email || '',
+      phone: partner.phone || '',
+      partnerType: partner.partnerType || 'Company',
+      companyName: partner.companyName || partner.name || '',
+      taxId: partner.taxId || '',
+      country: partner.country || 'India',
+      status: partner.status || 'Active',
+      documents: partner.documents || []
+    });
+  };
+
+  const handleSavePartnerEdit = async (e) => {
+    e.preventDefault();
+    if (!editingPartner) return;
+
+    if (!editingPartner.name || !editingPartner.email || !editingPartner.phone) {
+      toast.error('Please fill in required fields (Name, Email, Phone).');
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem('admin_token');
+      if (token && token !== 'mock-admin-token-12345' && editingPartner.id) {
+        const res = await API.put(`/partners/${editingPartner.id}`, {
+          name: editingPartner.name,
+          email: editingPartner.email,
+          phone: editingPartner.phone,
+          partnerType: editingPartner.partnerType,
+          companyName: editingPartner.companyName,
+          taxId: editingPartner.taxId,
+          country: editingPartner.country,
+          status: editingPartner.status
+        });
+
+        if (!res.data?.success) {
+          throw new Error(res.data?.message || 'Failed to update partner details');
+        }
+      }
+
+      if (setClients) {
+        setClients(prev => prev.map(c => c.id === editingPartner.id ? {
+          ...c,
+          name: editingPartner.name,
+          email: editingPartner.email,
+          phone: editingPartner.phone,
+          partnerType: editingPartner.partnerType,
+          companyName: editingPartner.companyName,
+          taxId: editingPartner.taxId,
+          country: editingPartner.country,
+          status: editingPartner.status
+        } : c));
+      }
+
+      toast.success(`Partner '${editingPartner.name}' details updated successfully!`);
+      setEditingPartner(null);
+      if (onPartnerOnboarded) onPartnerOnboarded();
+    } catch (err) {
+      const errMsg = err.response?.data?.message || err.message || 'Update failed';
+      toast.error(errMsg);
     }
   };
 
@@ -167,12 +239,12 @@ export default function BecomePartner({ clients = [], setClients, applications =
 
     const docsPayload = [];
     if (partnerType === 'Company') {
-      if (documents.incorporationCert) docsPayload.push({ title: 'Company Incorporation Certificate', fileName: documents.incorporationCert.name });
-      if (documents.taxCert) docsPayload.push({ title: 'Tax / GST Registration Certificate', fileName: documents.taxCert.name });
-      if (documents.signatoryIdProof) docsPayload.push({ title: 'Authorised Signatory ID Proof', fileName: documents.signatoryIdProof.name });
+      if (documents.incorporationCert) docsPayload.push({ title: 'Company Incorporation Certificate', fileName: documents.incorporationCert.name, previewUrl: documents.incorporationCert.previewUrl, type: documents.incorporationCert.type });
+      if (documents.taxCert) docsPayload.push({ title: 'Tax / GST Registration Certificate', fileName: documents.taxCert.name, previewUrl: documents.taxCert.previewUrl, type: documents.taxCert.type });
+      if (documents.signatoryIdProof) docsPayload.push({ title: 'Authorised Signatory ID Proof', fileName: documents.signatoryIdProof.name, previewUrl: documents.signatoryIdProof.previewUrl, type: documents.signatoryIdProof.type });
     } else {
-      if (documents.idProof) docsPayload.push({ title: 'Individual ID Proof (Passport/National ID)', fileName: documents.idProof.name });
-      if (documents.addressProof) docsPayload.push({ title: 'Address Proof / Resume', fileName: documents.addressProof.name });
+      if (documents.idProof) docsPayload.push({ title: 'Individual ID Proof (Passport/National ID)', fileName: documents.idProof.name, previewUrl: documents.idProof.previewUrl, type: documents.idProof.type });
+      if (documents.addressProof) docsPayload.push({ title: 'Address Proof / Resume', fileName: documents.addressProof.name, previewUrl: documents.addressProof.previewUrl, type: documents.addressProof.type });
     }
 
     const generatedCode = `PRT-${Math.floor(10000 + Math.random() * 90000)}`;
@@ -286,7 +358,7 @@ export default function BecomePartner({ clients = [], setClients, applications =
             <span>🤝 Partner Management Portal</span>
           </div>
           <h1 className="text-xl font-black text-slate-900 tracking-tight">Become our Partner — Directory & Onboarding</h1>
-          <p className="text-xs text-slate-500 font-medium">Manage registered agency partners, view compliance documents, and onboard new referral agents.</p>
+          <p className="text-xs text-slate-500 font-medium">Manage registered agency partners, edit profile details, view uploaded compliance proofs, and onboard new referral agents.</p>
         </div>
 
         {/* View Switcher Toggle */}
@@ -339,19 +411,13 @@ export default function BecomePartner({ clients = [], setClients, applications =
             </div>
 
             <div className="flex w-full sm:w-auto items-center gap-3">
-              {/* Location Filter Dropdown */}
               <select
                 value={locationFilter}
                 onChange={(e) => setLocationFilter(e.target.value)}
                 className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs text-slate-900 focus:outline-none focus:border-[#D99A1C] font-semibold cursor-pointer"
               >
                 <option value="All">All Locations</option>
-                <option value="United Kingdom">United Kingdom</option>
-                <option value="Canada">Canada</option>
-                <option value="United States">United States</option>
-                <option value="Australia">Australia</option>
-                <option value="India">India</option>
-                <option value="United Arab Emirates">United Arab Emirates</option>
+                {countriesList.map(c => <option key={c} value={c}>{c}</option>)}
               </select>
 
               <div className="relative w-full sm:max-w-xs">
@@ -365,7 +431,7 @@ export default function BecomePartner({ clients = [], setClients, applications =
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-4 py-2.5 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:bg-white focus:border-[#D99A1C] transition-all font-medium"
-                  placeholder="Search by name, code, email, phone..."
+                  placeholder="Search by name, company, code, email, phone..."
                 />
               </div>
             </div>
@@ -374,7 +440,7 @@ export default function BecomePartner({ clients = [], setClients, applications =
           {/* Directory Table */}
           <div className="bg-white border border-[#E2E8F0] border-t-4 border-t-[#D99A1C] rounded-2xl shadow-xs overflow-hidden">
             <div className="px-6 py-4 border-b border-[#E2E8F0] flex justify-between items-center">
-              <h2 className="text-xs font-black text-slate-900 uppercase tracking-wider">Registered Agent & Partner channels</h2>
+              <h2 className="text-xs font-black text-slate-900 uppercase tracking-wider">Registered Referral Partners & Agencies ({filteredPartners.length})</h2>
               <button
                 onClick={() => {
                   setSubView('onboard');
@@ -395,10 +461,9 @@ export default function BecomePartner({ clients = [], setClients, applications =
                       <th className="px-6 py-3 text-slate-400 text-[10px] font-extrabold uppercase tracking-wider w-[60px]">SI.NO.</th>
                       <th className="px-6 py-3 text-slate-400 text-[10px] font-extrabold uppercase tracking-wider">Partner details</th>
                       <th className="px-6 py-3 text-slate-400 text-[10px] font-extrabold uppercase tracking-wider">Partner Code</th>
-                      <th className="px-6 py-3 text-slate-400 text-[10px] font-extrabold uppercase tracking-wider">Email Address</th>
-                      <th className="px-6 py-3 text-slate-400 text-[10px] font-extrabold uppercase tracking-wider">Phone Number</th>
+                      <th className="px-6 py-3 text-slate-400 text-[10px] font-extrabold uppercase tracking-wider">Contact Info</th>
                       <th className="px-6 py-3 text-slate-400 text-[10px] font-extrabold uppercase tracking-wider">Referred Students</th>
-                      <th className="px-6 py-3 text-slate-400 text-[10px] font-extrabold uppercase tracking-wider text-right">Status</th>
+                      <th className="px-6 py-3 text-slate-400 text-[10px] font-extrabold uppercase tracking-wider text-right">Actions / Status</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 text-xs font-semibold text-slate-700">
@@ -416,23 +481,38 @@ export default function BecomePartner({ clients = [], setClients, applications =
                             </td>
                             <td className="px-6 py-4 font-bold text-slate-400">{idx + 1}</td>
                             <td className="px-6 py-4 flex items-center gap-3">
-                              <div className="w-8 h-8 rounded-full flex items-center justify-center font-bold text-white text-xs bg-gradient-to-tr from-amber-500 to-indigo-500 shrink-0">
+                              <div className="w-9 h-9 rounded-full flex items-center justify-center font-bold text-white text-xs bg-gradient-to-tr from-amber-500 to-indigo-500 shrink-0 shadow-xs">
                                 {partner.name ? partner.name.split(' ').map(n => n[0]).join('') : 'P'}
                               </div>
                               <div>
-                                <p className="text-slate-950 font-black">{partner.name}</p>
-                                <p className="text-[10px] text-slate-400 font-semibold">{partner.partnerType || 'Company'} Partner</p>
+                                <p className="text-slate-950 font-black text-xs">{partner.name}</p>
+                                <p className="text-[10px] text-slate-500 font-semibold">{partner.companyName || partner.name}</p>
+                                <span className="inline-block text-[9px] font-extrabold text-amber-700 bg-amber-50 px-1.5 py-0.2 rounded mt-0.5 border border-amber-200">
+                                  {partner.partnerType || 'Company'} Agent
+                                </span>
                               </div>
                             </td>
                             <td className="px-6 py-4">
-                              <span className="px-2 py-0.5 rounded-full text-[9px] font-extrabold border bg-amber-50 text-amber-700 border-amber-200">
+                              <span className="px-2.5 py-0.5 rounded-full text-[9px] font-mono font-black border bg-blue-50 text-blue-700 border-blue-200">
                                 {partner.partnerCode}
                               </span>
                             </td>
-                            <td className="px-6 py-4 text-slate-500 font-bold">{partner.email}</td>
-                            <td className="px-6 py-4 text-slate-500 font-semibold">{partner.phone}</td>
+                            <td className="px-6 py-4">
+                              <p className="text-indigo-600 font-bold text-xs">{partner.email}</p>
+                              <p className="text-slate-500 text-[10px] font-medium">{partner.phone} ({partner.country || 'India'})</p>
+                            </td>
                             <td className="px-6 py-4 font-black text-indigo-600">{referredStudents.length} Students</td>
                             <td className="px-6 py-4 text-right flex items-center justify-end gap-2" onClick={(e) => e.stopPropagation()}>
+                              {/* Edit Button */}
+                              <button
+                                type="button"
+                                onClick={(e) => handleOpenEditModal(partner, e)}
+                                className="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 rounded-md text-[10px] font-extrabold transition-all cursor-pointer flex items-center gap-1 shadow-2xs"
+                                title="Edit Partner Details"
+                              >
+                                <span>✏️ Edit</span>
+                              </button>
+
                               <span className={`px-2 py-0.5 border rounded-full text-[9px] font-extrabold ${
                                 partner.status === 'Active' 
                                   ? 'bg-emerald-50 text-emerald-700 border-emerald-100' 
@@ -469,7 +549,7 @@ export default function BecomePartner({ clients = [], setClients, applications =
                             </td>
                           </tr>
 
-                          {/* Expanded Row */}
+                          {/* Expanded Partner Details View */}
                           {isExpanded && (() => {
                             const currentSubTab = partnerSubTabs[partner.id] || 'overview';
                             const setSubTab = (tab) => {
@@ -490,7 +570,7 @@ export default function BecomePartner({ clients = [], setClients, applications =
                                               : 'border-transparent text-slate-400 hover:text-slate-700'
                                           }`}
                                         >
-                                          Overview & Compliance
+                                          Overview & Onboarding Proofs
                                         </button>
                                         <button 
                                           onClick={() => setSubTab('applications')}
@@ -503,64 +583,106 @@ export default function BecomePartner({ clients = [], setClients, applications =
                                           Referred Applications ({referredStudents.length})
                                         </button>
                                       </div>
-                                      <p className="text-[10px] text-slate-400 font-semibold">
-                                        Joined On: {partner.dateAdded || 'N/A'}
-                                      </p>
+                                      <div className="flex items-center gap-2">
+                                        <button
+                                          type="button"
+                                          onClick={(e) => handleOpenEditModal(partner, e)}
+                                          className="px-2.5 py-1 bg-amber-50 text-[#D99A1C] border border-amber-200 rounded-md text-[10px] font-black hover:bg-amber-100 cursor-pointer"
+                                        >
+                                          ✏️ Edit Partner Profile
+                                        </button>
+                                        <span className="text-[10px] text-slate-400 font-semibold">
+                                          Onboarded Date: {partner.dateAdded || 'N/A'}
+                                        </span>
+                                      </div>
                                     </div>
 
                                     {currentSubTab === 'overview' && (
                                       <div className="space-y-4 animate-fade-in">
                                         <div className="flex justify-between items-center border-b border-slate-100 pb-2">
                                           <h3 className="text-xs font-black text-slate-900 uppercase tracking-wider">
-                                            Partner Information Sheet — {partner.name}
+                                            Partner Complete Onboarding Sheet — {partner.name}
                                           </h3>
                                           <span className="px-2.5 py-0.5 bg-amber-50 text-amber-700 border border-amber-200 rounded-full text-[10px] font-black uppercase">
                                             {partner.partnerType || 'Company'} Agent
                                           </span>
                                         </div>
 
-                                        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-[11px] font-semibold text-slate-600">
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 text-[11px] font-semibold text-slate-600 bg-slate-50 p-4 rounded-xl border border-slate-200">
                                           <div>
                                             <span className="text-[9px] font-extrabold uppercase text-slate-400 block tracking-wider">Partner Code</span>
-                                            <span className="text-slate-900 font-bold text-xs font-mono">{partner.partnerCode}</span>
+                                            <span className="text-slate-900 font-bold text-xs font-mono text-blue-600">{partner.partnerCode}</span>
                                           </div>
                                           <div>
                                             <span className="text-[9px] font-extrabold uppercase text-slate-400 block tracking-wider">Company / Entity Name</span>
                                             <span className="text-slate-900 font-bold text-xs">{partner.companyName || partner.name}</span>
                                           </div>
                                           <div>
-                                            <span className="text-[9px] font-extrabold uppercase text-slate-400 block tracking-wider">Tax ID / GSTIN</span>
+                                            <span className="text-[9px] font-extrabold uppercase text-slate-400 block tracking-wider">Tax Registration / GST ID</span>
                                             <span className="text-slate-900 font-medium text-xs">{partner.taxId || 'N/A'}</span>
                                           </div>
                                           <div>
-                                            <span className="text-[9px] font-extrabold uppercase text-slate-400 block tracking-wider">Contact Email</span>
+                                            <span className="text-[9px] font-extrabold uppercase text-slate-400 block tracking-wider">Operating Country</span>
+                                            <span className="text-slate-900 font-bold text-xs">{partner.country || 'India'}</span>
+                                          </div>
+                                          <div>
+                                            <span className="text-[9px] font-extrabold uppercase text-slate-400 block tracking-wider">Contact Person Name</span>
+                                            <span className="text-slate-900 font-bold text-xs">{partner.name}</span>
+                                          </div>
+                                          <div>
+                                            <span className="text-[9px] font-extrabold uppercase text-slate-400 block tracking-wider">Contact Email Address</span>
                                             <span className="text-indigo-600 font-bold text-xs">{partner.email}</span>
+                                          </div>
+                                          <div>
+                                            <span className="text-[9px] font-extrabold uppercase text-slate-400 block tracking-wider">Direct Phone Line</span>
+                                            <span className="text-slate-900 font-medium text-xs">{partner.phone}</span>
+                                          </div>
+                                          <div>
+                                            <span className="text-[9px] font-extrabold uppercase text-slate-400 block tracking-wider">Account Status</span>
+                                            <span className="text-emerald-600 font-extrabold text-xs">{partner.status || 'Active'}</span>
                                           </div>
                                         </div>
 
-                                        {/* Compliance Proofs */}
-                                        {partner.documents && partner.documents.length > 0 && (
-                                          <div className="bg-slate-50 border border-slate-200 rounded-xl p-3.5 space-y-2 mt-3">
-                                            <h4 className="text-[10px] font-black text-slate-500 uppercase tracking-wider">Uploaded Compliance Verification Proofs</h4>
-                                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
+                                        {/* Uploaded Compliance Documents */}
+                                        <div className="bg-white border border-slate-200 rounded-xl p-4 space-y-3">
+                                          <div className="flex justify-between items-center">
+                                            <h4 className="text-[10px] font-black text-slate-500 uppercase tracking-wider">
+                                              Saved Compliance & Verification Documents ({partner.documents ? partner.documents.length : 0})
+                                            </h4>
+                                            {partner.documents && partner.documents.length > 0 && (
+                                              <span className="text-[9px] font-extrabold text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200 uppercase">
+                                                ✓ Verification Documents Onboarded
+                                              </span>
+                                            )}
+                                          </div>
+
+                                          {partner.documents && partner.documents.length > 0 ? (
+                                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
                                               {partner.documents.map((doc, dIdx) => (
-                                                <div key={dIdx} className="bg-white border border-slate-200 p-2 rounded-lg flex items-center justify-between text-xs">
-                                                  <div className="truncate pr-2">
-                                                    <p className="text-[11px] font-bold text-slate-800 truncate">{doc.title || doc.fileName}</p>
-                                                    <p className="text-[9px] text-slate-400 font-semibold truncate">{doc.fileName}</p>
+                                                <div key={dIdx} className="bg-slate-50 border border-slate-200 p-3 rounded-xl flex items-center justify-between text-xs shadow-2xs hover:border-amber-300 transition-all">
+                                                  <div className="flex items-center gap-2 overflow-hidden pr-2">
+                                                    <span className="text-lg">📄</span>
+                                                    <div className="truncate">
+                                                      <p className="text-[11px] font-bold text-slate-900 truncate">{doc.title || doc.fileName}</p>
+                                                      <p className="text-[9px] text-slate-400 font-semibold truncate">{doc.fileName}</p>
+                                                    </div>
                                                   </div>
                                                   <button
                                                     type="button"
                                                     onClick={() => setPreviewModalDoc({ title: doc.title || doc.fileName, fileName: doc.fileName, previewUrl: doc.previewUrl })}
-                                                    className="px-2.5 py-1 bg-amber-50 hover:bg-amber-100 text-[#D99A1C] border border-amber-200 rounded-md text-[10px] font-black shrink-0 cursor-pointer transition-all"
+                                                    className="px-2.5 py-1 bg-amber-50 hover:bg-amber-100 text-[#D99A1C] border border-amber-200 rounded-lg text-[10px] font-black shrink-0 cursor-pointer transition-all flex items-center gap-1 shadow-2xs"
                                                   >
-                                                    👁️ View
+                                                    <span>👁️ View</span>
                                                   </button>
                                                 </div>
                                               ))}
                                             </div>
-                                          </div>
-                                        )}
+                                          ) : (
+                                            <div className="bg-amber-50/60 border border-amber-200/80 rounded-xl p-3 text-center">
+                                              <p className="text-[11px] font-semibold text-amber-800">No verification documents attached to this partner profile yet.</p>
+                                            </div>
+                                          )}
+                                        </div>
                                       </div>
                                     )}
 
@@ -800,6 +922,162 @@ export default function BecomePartner({ clients = [], setClients, applications =
             </form>
           )}
         </div>
+      )}
+
+      {/* EDIT PARTNER MODAL PORTAL */}
+      {editingPartner && createPortal(
+        <div className="fixed inset-0 z-[9999] bg-black/70 backdrop-blur-xs p-4 flex justify-center items-center select-none animate-fade-in">
+          <div className="bg-white border border-[#E2E8F0] border-t-4 border-t-[#D99A1C] rounded-2xl p-6 w-full max-w-xl shadow-2xl space-y-4 max-h-[90vh] flex flex-col my-auto overflow-y-auto">
+            <div className="flex justify-between items-center pb-3 border-b border-slate-100 shrink-0">
+              <div>
+                <span className="text-[10px] font-extrabold text-[#D99A1C] uppercase tracking-wider block">Admin Management</span>
+                <h3 className="text-sm font-black text-slate-900">Edit Partner Details — {editingPartner.name}</h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setEditingPartner(null)}
+                className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold flex items-center justify-center cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleSavePartnerEdit} className="space-y-4 text-xs font-semibold">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label className="block text-[10px] font-extrabold text-slate-600 uppercase tracking-wider">Contact Person Name <span className="text-rose-500">*</span></label>
+                  <input
+                    type="text"
+                    required
+                    value={editingPartner.name}
+                    onChange={(e) => setEditingPartner(prev => ({ ...prev, name: e.target.value }))}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-semibold focus:outline-none focus:border-[#D99A1C]"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="block text-[10px] font-extrabold text-slate-600 uppercase tracking-wider">Email Address <span className="text-rose-500">*</span></label>
+                  <input
+                    type="email"
+                    required
+                    value={editingPartner.email}
+                    onChange={(e) => setEditingPartner(prev => ({ ...prev, email: e.target.value }))}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-semibold focus:outline-none focus:border-[#D99A1C]"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="block text-[10px] font-extrabold text-slate-600 uppercase tracking-wider">Phone Number <span className="text-rose-500">*</span></label>
+                  <input
+                    type="tel"
+                    required
+                    value={editingPartner.phone}
+                    onChange={(e) => setEditingPartner(prev => ({ ...prev, phone: e.target.value }))}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-semibold focus:outline-none focus:border-[#D99A1C]"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="block text-[10px] font-extrabold text-slate-600 uppercase tracking-wider">Partner Entity Structure</label>
+                  <select
+                    value={editingPartner.partnerType}
+                    onChange={(e) => setEditingPartner(prev => ({ ...prev, partnerType: e.target.value }))}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-semibold focus:outline-none focus:border-[#D99A1C]"
+                  >
+                    <option value="Company">Company Agent</option>
+                    <option value="Individual">Individual Agent</option>
+                  </select>
+                </div>
+
+                {editingPartner.partnerType === 'Company' && (
+                  <>
+                    <div className="space-y-1.5">
+                      <label className="block text-[10px] font-extrabold text-slate-600 uppercase tracking-wider">Company Name</label>
+                      <input
+                        type="text"
+                        value={editingPartner.companyName}
+                        onChange={(e) => setEditingPartner(prev => ({ ...prev, companyName: e.target.value }))}
+                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-semibold focus:outline-none focus:border-[#D99A1C]"
+                      />
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <label className="block text-[10px] font-extrabold text-slate-600 uppercase tracking-wider">Tax Registration / GST ID</label>
+                      <input
+                        type="text"
+                        value={editingPartner.taxId}
+                        onChange={(e) => setEditingPartner(prev => ({ ...prev, taxId: e.target.value }))}
+                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-semibold focus:outline-none focus:border-[#D99A1C]"
+                      />
+                    </div>
+                  </>
+                )}
+
+                <div className="space-y-1.5">
+                  <label className="block text-[10px] font-extrabold text-slate-600 uppercase tracking-wider">Operating Country</label>
+                  <select
+                    value={editingPartner.country}
+                    onChange={(e) => setEditingPartner(prev => ({ ...prev, country: e.target.value }))}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-semibold focus:outline-none focus:border-[#D99A1C]"
+                  >
+                    {countriesList.map(c => <option key={c} value={c}>{c}</option>)}
+                  </select>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="block text-[10px] font-extrabold text-slate-600 uppercase tracking-wider">Account Status</label>
+                  <select
+                    value={editingPartner.status}
+                    onChange={(e) => setEditingPartner(prev => ({ ...prev, status: e.target.value }))}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-semibold focus:outline-none focus:border-[#D99A1C]"
+                  >
+                    <option value="Active">Active</option>
+                    <option value="Pending">Pending</option>
+                    <option value="Inactive">Inactive</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Uploaded Documents List inside Edit Modal */}
+              {editingPartner.documents && editingPartner.documents.length > 0 && (
+                <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 space-y-2 mt-2">
+                  <span className="text-[10px] font-black text-slate-500 uppercase tracking-wider block">Attached Onboarding Proofs ({editingPartner.documents.length})</span>
+                  <div className="space-y-1.5">
+                    {editingPartner.documents.map((doc, dIdx) => (
+                      <div key={dIdx} className="bg-white border border-slate-200 p-2 rounded-lg flex items-center justify-between text-xs">
+                        <span className="truncate text-slate-800 font-bold">{doc.title || doc.fileName}</span>
+                        <button
+                          type="button"
+                          onClick={() => setPreviewModalDoc({ title: doc.title || doc.fileName, fileName: doc.fileName, previewUrl: doc.previewUrl })}
+                          className="px-2 py-0.5 bg-amber-50 text-[#D99A1C] border border-amber-200 rounded text-[9px] font-black hover:bg-amber-100 cursor-pointer"
+                        >
+                          👁️ View
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <div className="flex justify-end gap-2 pt-3 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setEditingPartner(null)}
+                  className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-extrabold text-xs rounded-xl cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2 bg-[#D99A1C] hover:bg-[#F5B025] text-white font-extrabold text-xs rounded-xl shadow-md cursor-pointer"
+                >
+                  Save Partner Changes
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>,
+        document.body
       )}
 
       {/* Document Preview Modal Portal */}
