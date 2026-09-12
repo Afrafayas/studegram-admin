@@ -116,7 +116,8 @@ export default function BecomePartner({ clients = [], setClients, applications =
           companyName: editingPartner.companyName,
           taxId: editingPartner.taxId,
           country: editingPartner.country,
-          status: editingPartner.status
+          status: editingPartner.status,
+          documents: editingPartner.documents || []
         });
 
         if (!res.data?.success) {
@@ -134,7 +135,8 @@ export default function BecomePartner({ clients = [], setClients, applications =
           companyName: editingPartner.companyName,
           taxId: editingPartner.taxId,
           country: editingPartner.country,
-          status: editingPartner.status
+          status: editingPartner.status,
+          documents: editingPartner.documents || []
         } : c));
       }
 
@@ -1152,11 +1154,37 @@ export default function BecomePartner({ clients = [], setClients, applications =
                 </div>
               </div>
 
-              {/* Uploaded Documents List inside Edit Modal */}
-              {editingPartner.documents && editingPartner.documents.length > 0 && (
-                <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 space-y-2 mt-2">
-                  <span className="text-[10px] font-black text-slate-500 uppercase tracking-wider block">Attached Onboarding Proofs ({editingPartner.documents.length})</span>
-                  <div className="space-y-1.5">
+              {/* Uploaded Compliance Documents Manager inside Edit Modal */}
+              <div className="bg-slate-50 border border-slate-200/90 rounded-2xl p-4 space-y-3 mt-2">
+                <div className="flex justify-between items-center">
+                  <div>
+                    <span className="text-[9px] font-extrabold text-[#D99A1C] uppercase tracking-wider block">Compliance Documents Manager</span>
+                    <h4 className="text-xs font-black text-slate-900 uppercase tracking-wider">
+                      Attached Proofs ({editingPartner.documents ? editingPartner.documents.length : 0})
+                    </h4>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const title = prompt('Enter Document Title (e.g. Company Incorporation Certificate, ID Proof):', 'Compliance Certificate');
+                      if (!title) return;
+                      const fileName = prompt('Enter File Name (e.g. Document.pdf):', title + '.pdf');
+                      if (!fileName) return;
+                      const newDocObj = { title, fileName, type: fileName.endsWith('.pdf') ? 'pdf' : 'image' };
+                      setEditingPartner(prev => ({
+                        ...prev,
+                        documents: [...(prev.documents || []), newDocObj]
+                      }));
+                      toast.success(`Attached '${title}' to edit draft`);
+                    }}
+                    className="px-3 py-1.5 bg-[#D99A1C] hover:bg-[#F5B025] text-white rounded-xl text-[10px] font-black cursor-pointer shadow-xs flex items-center gap-1"
+                  >
+                    <span>+ Add / Attach Document</span>
+                  </button>
+                </div>
+
+                {editingPartner.documents && editingPartner.documents.length > 0 ? (
+                  <div className="space-y-2">
                     {editingPartner.documents.map((doc, dIdx) => {
                       const docTitle = typeof doc === 'string' ? doc : (doc.title || doc.fileName || `Document ${dIdx + 1}`);
                       const docFileName = typeof doc === 'string' ? doc : (doc.fileName || doc.title || 'Attached Proof');
@@ -1164,21 +1192,46 @@ export default function BecomePartner({ clients = [], setClients, applications =
                       const docType = typeof doc === 'object' ? doc.type : 'pdf';
 
                       return (
-                        <div key={dIdx} className="bg-white border border-slate-200 p-2.5 rounded-lg flex items-center justify-between text-xs">
-                          <span className="truncate text-slate-800 font-bold">{docTitle}</span>
-                          <button
-                            type="button"
-                            onClick={() => setPreviewModalDoc({ title: docTitle, fileName: docFileName, previewUrl: docUrl, type: docType })}
-                            className="px-2.5 py-1 bg-amber-50 text-[#D99A1C] border border-amber-200 rounded-md text-[9px] font-black hover:bg-amber-100 cursor-pointer"
-                          >
-                            👁️ View
-                          </button>
+                        <div key={dIdx} className="bg-white border border-slate-200 p-2.5 rounded-xl flex items-center justify-between text-xs shadow-2xs">
+                          <div className="flex items-center gap-2 truncate pr-2">
+                            <span className="text-sm">📄</span>
+                            <div className="truncate">
+                              <p className="font-bold text-slate-900 truncate text-[11px]">{docTitle}</p>
+                              <p className="text-[9px] text-slate-400 font-semibold truncate">{docFileName}</p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-1.5 shrink-0">
+                            <button
+                              type="button"
+                              onClick={() => setPreviewModalDoc({ title: docTitle, fileName: docFileName, previewUrl: docUrl, type: docType })}
+                              className="px-2.5 py-1 bg-amber-50 text-[#D99A1C] border border-amber-200 rounded-lg text-[10px] font-black hover:bg-amber-100 cursor-pointer"
+                            >
+                              👁️ View
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setEditingPartner(prev => ({
+                                  ...prev,
+                                  documents: prev.documents.filter((_, idx) => idx !== dIdx)
+                                }));
+                              }}
+                              className="text-rose-500 font-bold text-xs p-1 hover:bg-rose-50 rounded cursor-pointer"
+                              title="Remove Document"
+                            >
+                              ✕
+                            </button>
+                          </div>
                         </div>
                       );
                     })}
                   </div>
-                </div>
-              )}
+                ) : (
+                  <div className="bg-amber-50/60 border border-amber-200/80 rounded-xl p-3 text-center">
+                    <p className="text-[11px] font-semibold text-amber-800">No verification documents attached yet. Click "+ Add / Attach Document" above.</p>
+                  </div>
+                )}
+              </div>
 
               <div className="flex justify-end gap-2 pt-3 border-t border-slate-100">
                 <button
