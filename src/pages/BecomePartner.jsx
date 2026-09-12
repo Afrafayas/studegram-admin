@@ -375,7 +375,7 @@ export default function BecomePartner({ setClients, onBack }) {
   );
 }
 
-function DocumentUploadSlot({ label, description, docKey, fileObj, required, onFileChange, onRemoveFile }) {
+function DocumentUploadSlot({ label, description, docKey, fileObj, required, onFileChange, onRemoveFile, onViewFile }) {
   return (
     <div className={`border-2 border-dashed rounded-xl p-4 transition-all flex flex-col justify-between min-h-[140px] ${fileObj ? 'border-emerald-300 bg-emerald-50/30' : 'border-slate-200 bg-slate-50/50 hover:border-[#D99A1C]'}`}>
       <div>
@@ -387,15 +387,28 @@ function DocumentUploadSlot({ label, description, docKey, fileObj, required, onF
       </div>
 
       {fileObj ? (
-        <div className="bg-white border border-emerald-200 p-2.5 rounded-lg flex items-center justify-between mt-3">
-          <div className="flex items-center gap-2 overflow-hidden">
+        <div className="bg-white border border-emerald-200 p-2.5 rounded-lg flex items-center justify-between mt-3 gap-2">
+          <div className="flex items-center gap-2 overflow-hidden flex-1">
             <span className="text-xs font-bold text-emerald-600">📄</span>
-            <span className="text-xs font-bold text-slate-900 truncate">{fileObj.name}</span>
+            <div className="truncate">
+              <p className="text-xs font-bold text-slate-900 truncate">{fileObj.name}</p>
+              {fileObj.size && <p className="text-[9px] text-slate-400 font-semibold">{fileObj.size}</p>}
+            </div>
           </div>
-          <button type="button" onClick={() => onRemoveFile(docKey)} className="text-rose-500 font-bold text-xs p-1 hover:bg-rose-50 rounded">✕</button>
+          <div className="flex items-center gap-1.5 shrink-0">
+            <button 
+              type="button" 
+              onClick={() => onViewFile && onViewFile({ title: label, fileName: fileObj.name, previewUrl: fileObj.previewUrl, type: fileObj.type })} 
+              className="px-2.5 py-1 bg-amber-50 hover:bg-amber-100 text-[#D99A1C] border border-amber-200 rounded-md text-[10px] font-black flex items-center gap-1 cursor-pointer transition-all shadow-2xs"
+              title="Preview / View Uploaded Document"
+            >
+              <span>👁️ View Document</span>
+            </button>
+            <button type="button" onClick={() => onRemoveFile(docKey)} className="text-rose-500 font-bold text-xs p-1 hover:bg-rose-50 rounded" title="Remove Document">✕</button>
+          </div>
         </div>
       ) : (
-        <label className="cursor-pointer bg-white border border-slate-200 p-2.5 rounded-lg text-center block mt-3 hover:border-[#D99A1C]">
+        <label className="cursor-pointer bg-white border border-slate-200 p-2.5 rounded-lg text-center block mt-3 hover:border-[#D99A1C] transition-all">
           <input type="file" accept=".pdf,.png,.jpg,.jpeg" onChange={(e) => onFileChange(docKey, e)} className="hidden" />
           <p className="text-xs font-bold text-slate-700">Select File to Upload</p>
           <span className="text-[9px] text-slate-400">PDF, PNG, JPG (Max 15MB)</span>
