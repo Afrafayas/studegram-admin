@@ -377,8 +377,8 @@ export default function BecomePartner({ setClients, onBack }) {
       </form>
       {/* Document Preview Modal */}
       {previewModalDoc && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 select-none animate-fade-in">
-          <div className="bg-white border border-[#E2E8F0] border-t-4 border-t-[#D99A1C] rounded-2xl p-6 w-full max-w-3xl shadow-2xl space-y-4 max-h-[90vh] flex flex-col">
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-black/70 backdrop-blur-xs p-4 flex items-center justify-center select-none animate-fade-in">
+          <div className="bg-white border border-[#E2E8F0] border-t-4 border-t-[#D99A1C] rounded-2xl p-5 md:p-6 w-full max-w-3xl shadow-2xl flex flex-col max-h-[85vh] my-auto">
             {/* Modal Header */}
             <div className="flex justify-between items-center pb-3 border-b border-slate-100 shrink-0">
               <div className="space-y-0.5">
@@ -389,30 +389,30 @@ export default function BecomePartner({ setClients, onBack }) {
               <button
                 type="button"
                 onClick={() => setPreviewModalDoc(null)}
-                className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-800 font-bold flex items-center justify-center transition-all cursor-pointer"
+                className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-800 font-bold flex items-center justify-center transition-all cursor-pointer shrink-0"
               >
                 ✕
               </button>
             </div>
 
             {/* Modal Body / Document Preview Area */}
-            <div className="flex-1 overflow-auto bg-slate-50 rounded-xl border border-slate-200 p-4 flex items-center justify-center min-h-[350px]">
+            <div className="flex-1 overflow-hidden bg-slate-50 rounded-xl border border-slate-200 p-2 md:p-3 flex items-center justify-center my-3 min-h-[220px]">
               {previewModalDoc.previewUrl ? (
                 previewModalDoc.type === 'pdf' ? (
                   <iframe
                     src={previewModalDoc.previewUrl}
                     title={previewModalDoc.title}
-                    className="w-full h-[480px] rounded-lg border border-slate-200 shadow-inner bg-white"
+                    className="w-full h-full min-h-[280px] max-h-[50vh] rounded-lg border border-slate-200 shadow-inner bg-white"
                   />
                 ) : (
                   <img
                     src={previewModalDoc.previewUrl}
                     alt={previewModalDoc.title}
-                    className="max-h-[480px] w-auto max-w-full object-contain rounded-lg shadow-md"
+                    className="max-h-[50vh] w-auto max-w-full object-contain rounded-lg shadow-md"
                   />
                 )
               ) : (
-                <div className="text-center space-y-2 p-8">
+                <div className="text-center space-y-2 p-6">
                   <div className="w-12 h-12 bg-amber-100 text-[#D99A1C] rounded-full flex items-center justify-center mx-auto text-xl font-bold">
                     📄
                   </div>
@@ -445,7 +445,6 @@ export default function BecomePartner({ setClients, onBack }) {
           </div>
         </div>
       )}
-
     </div>
   );
 }
