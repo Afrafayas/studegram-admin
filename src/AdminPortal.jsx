@@ -466,7 +466,7 @@ export default function AdminPortal({ onLogout }) {
     }
 
     if (activeTab === 'become-partner') {
-      return <BecomePartner onPartnerOnboarded={fetchInitialData} />;
+      return <BecomePartner setClients={setClients} onPartnerOnboarded={fetchInitialData} onBack={() => setActiveTab('daily-report')} />;
     }
 
     if (activeTab === 'applications') {
