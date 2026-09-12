@@ -26,8 +26,13 @@ API.interceptors.request.use(
 API.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response && error.response.status === 401) {
-      console.warn('Unauthorized admin request - Token may be expired.');
+    if (error.response && error.response.status === 401 && !error.config?.url?.includes('/auth/login')) {
+      console.warn('Unauthorized admin request - Token expired or invalid. Prompting re-authentication.');
+      localStorage.removeItem('admin_token');
+      localStorage.removeItem('studegram_user');
+      window.dispatchEvent(new CustomEvent('auth:unauthorized', { 
+        detail: { message: error.response.data?.message || 'Your session has expired. Please log in again.' } 
+      }));
     }
     return Promise.reject(error);
   }
