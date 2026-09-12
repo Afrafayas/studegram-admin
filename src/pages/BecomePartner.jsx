@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import API from '../api/axios';
 import { useToast } from '../context/ToastContext';
@@ -14,6 +14,38 @@ export default function BecomePartner({ clients = [], setClients, applications =
   // Document Preview Modal State
   const [previewModalDoc, setPreviewModalDoc] = useState(null);
 
+  // Helper to convert base64 string or data URL to Blob URL for clean PDF/Image rendering in iframe
+  const getDocumentBlobUrl = (urlOrBase64, mimeType = 'application/pdf') => {
+    if (!urlOrBase64) return '';
+    if (typeof urlOrBase64 !== 'string') return '';
+    if (urlOrBase64.startsWith('blob:') || urlOrBase64.startsWith('http://') || urlOrBase64.startsWith('https://')) {
+      return urlOrBase64;
+    }
+
+    let base64 = urlOrBase64;
+    let type = mimeType;
+
+    if (urlOrBase64.startsWith('data:')) {
+      const parts = urlOrBase64.split(',');
+      const match = parts[0].match(/:(.*?);/);
+      if (match) type = match[1];
+      base64 = parts[1] || '';
+    }
+
+    try {
+      const binary = atob(base64.replace(/\s/g, ''));
+      const bytes = new Uint8Array(binary.length);
+      for (let i = 0; i < binary.length; i++) {
+        bytes[i] = binary.charCodeAt(i);
+      }
+      const blob = new Blob([bytes], { type });
+      return URL.createObjectURL(blob);
+    } catch (err) {
+      console.error('Failed to convert base64 to Blob URL:', err);
+      return urlOrBase64;
+    }
+  };
+
   // Edit Partner Modal State
   const [editingPartner, setEditingPartner] = useState(null);
 
@@ -23,6 +55,15 @@ export default function BecomePartner({ clients = [], setClients, applications =
   const [locationFilter, setLocationFilter] = useState('All');
   const [expandedId, setExpandedId] = useState(null);
   const [partnerSubTabs, setPartnerSubTabs] = useState({});
+
+  // Pagination State
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(5);
+
+  // Reset page on filter change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, statusFilter, locationFilter]);
 
   // Filter partners (type === 'Agent')
   const partners = clients.filter(c => c.type === 'Agent');
@@ -51,6 +92,13 @@ export default function BecomePartner({ clients = [], setClients, applications =
 
     return searchMatch && statusMatch && locationMatch;
   });
+
+  // Pagination Math
+  const totalItems = filteredPartners.length;
+  const totalPages = Math.ceil(totalItems / itemsPerPage) || 1;
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = Math.min(startIndex + itemsPerPage, totalItems);
+  const paginatedPartners = filteredPartners.slice(startIndex, startIndex + itemsPerPage);
 
   const toggleExpand = (id) => {
     setExpandedId(expandedId === id ? null : id);
@@ -543,7 +591,7 @@ export default function BecomePartner({ clients = [], setClients, applications =
                 </h2>
               </div>
               <span className="text-[10px] text-slate-400 font-bold">
-                Showing {filteredPartners.length} of {partners.length} Channels
+                Showing {totalItems > 0 ? startIndex + 1 : 0} to {endIndex} of {totalItems} Channels
               </span>
             </div>
 
@@ -562,7 +610,7 @@ export default function BecomePartner({ clients = [], setClients, applications =
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 text-xs font-semibold text-slate-700">
-                    {filteredPartners.map((partner, idx) => {
+                    {paginatedPartners.map((partner, idx) => {
                       const isExpanded = expandedId === partner.id;
                       const referredStudents = getReferredStudents(partner.name);
 
@@ -583,7 +631,7 @@ export default function BecomePartner({ clients = [], setClients, applications =
                                 </svg>
                               </div>
                             </td>
-                            <td className="px-4 py-4 font-extrabold text-slate-400">{idx + 1}</td>
+                            <td className="px-4 py-4 font-extrabold text-slate-400">{startIndex + idx + 1}</td>
                             <td className="px-6 py-4">
                               <div className="flex items-center gap-3">
                                 <div className="w-10 h-10 rounded-2xl flex items-center justify-center font-black text-white text-xs bg-gradient-to-tr from-slate-800 via-slate-700 to-[#D99A1C] shrink-0 shadow-md shadow-slate-900/10">
@@ -813,7 +861,17 @@ export default function BecomePartner({ clients = [], setClients, applications =
                                                     </div>
                                                     <button
                                                       type="button"
-                                                      onClick={() => setPreviewModalDoc({ title: docTitle, fileName: docFileName, previewUrl: docUrl, type: docType })}
+                                                      onClick={() => {
+                                                        const isImg = docType === 'image' || (typeof docUrl === 'string' && (docUrl.startsWith('data:image/') || docFileName.match(/\.(png|jpg|jpeg|gif|svg|webp)$/i)));
+                                                        const safeBlobUrl = getDocumentBlobUrl(docUrl, isImg ? 'image/png' : 'application/pdf');
+                                                        setPreviewModalDoc({
+                                                          title: docTitle,
+                                                          fileName: docFileName,
+                                                          previewUrl: safeBlobUrl,
+                                                          rawUrl: docUrl,
+                                                          type: isImg ? 'image' : 'pdf'
+                                                        });
+                                                      }}
                                                       className="px-3 py-1.5 bg-gradient-to-r from-[#D99A1C] to-[#F5B025] hover:from-[#c28815] hover:to-[#e09e1d] text-white rounded-lg text-[10px] font-black shrink-0 cursor-pointer transition-all flex items-center gap-1 shadow-2xs"
                                                     >
                                                       <span>👁️ View</span>
@@ -899,6 +957,64 @@ export default function BecomePartner({ clients = [], setClients, applications =
                 </div>
               )}
             </div>
+
+            {/* Pagination Footer */}
+            {totalItems > 0 && (
+              <div className="px-6 py-4 bg-slate-50 border-t border-[#E2E8F0] flex flex-col sm:flex-row items-center justify-between gap-4">
+                <div className="flex items-center gap-3">
+                  <span className="text-xs font-semibold text-slate-500">Rows per page:</span>
+                  <select
+                    value={itemsPerPage}
+                    onChange={(e) => {
+                      setItemsPerPage(Number(e.target.value));
+                      setCurrentPage(1);
+                    }}
+                    className="bg-white border border-slate-200 rounded-lg px-2.5 py-1 text-xs font-bold text-slate-700 focus:outline-none focus:border-[#D99A1C] cursor-pointer"
+                  >
+                    <option value={5}>5</option>
+                    <option value={10}>10</option>
+                    <option value={20}>20</option>
+                    <option value={50}>50</option>
+                    <option value={100}>100</option>
+                  </select>
+                  <span className="text-xs font-semibold text-slate-400">
+                    Showing {totalItems > 0 ? startIndex + 1 : 0} to {endIndex} of {totalItems} entries
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-1.5">
+                  <button
+                    disabled={currentPage === 1}
+                    onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                    className="px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-bold bg-white text-slate-600 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer"
+                  >
+                    ◀ Prev
+                  </button>
+
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+                    <button
+                      key={page}
+                      onClick={() => setCurrentPage(page)}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-extrabold transition-all cursor-pointer ${
+                        currentPage === page
+                          ? 'bg-[#D99A1C] text-white shadow-xs'
+                          : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-100'
+                      }`}
+                    >
+                      {page}
+                    </button>
+                  ))}
+
+                  <button
+                    disabled={currentPage === totalPages}
+                    onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                    className="px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-bold bg-white text-slate-600 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer"
+                  >
+                    Next ▶
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -1370,19 +1486,19 @@ export default function BecomePartner({ clients = [], setClients, applications =
               </button>
             </div>
 
-            <div className="flex-1 overflow-auto bg-slate-50 rounded-2xl border border-slate-200 p-2 sm:p-3 flex items-center justify-center my-3 min-h-[260px]">
+            <div className="flex-1 overflow-auto bg-slate-50 rounded-2xl border border-slate-200 p-2 sm:p-3 flex items-center justify-center my-3 min-h-[300px]">
               {previewModalDoc.previewUrl ? (
-                (previewModalDoc.type === 'pdf' || previewModalDoc.fileName?.endsWith('.pdf') || (typeof previewModalDoc.previewUrl === 'string' && previewModalDoc.previewUrl.startsWith('data:application/pdf'))) ? (
-                  <iframe
-                    src={previewModalDoc.previewUrl}
-                    title={previewModalDoc.title}
-                    className="w-full h-[320px] sm:h-[420px] rounded-xl border border-slate-200 shadow-inner bg-white"
-                  />
-                ) : (
+                (previewModalDoc.type === 'image' || (typeof previewModalDoc.fileName === 'string' && previewModalDoc.fileName.match(/\.(png|jpg|jpeg|gif|svg|webp)$/i))) ? (
                   <img
                     src={previewModalDoc.previewUrl}
                     alt={previewModalDoc.title}
-                    className="max-h-[320px] sm:max-h-[420px] w-auto max-w-full object-contain rounded-xl shadow-md"
+                    className="max-h-[350px] sm:max-h-[460px] w-auto max-w-full object-contain rounded-xl shadow-md"
+                  />
+                ) : (
+                  <iframe
+                    src={previewModalDoc.previewUrl}
+                    title={previewModalDoc.title}
+                    className="w-full h-[350px] sm:h-[460px] rounded-xl border border-slate-200 shadow-inner bg-white"
                   />
                 )
               ) : (
@@ -1403,14 +1519,17 @@ export default function BecomePartner({ clients = [], setClients, applications =
 
             <div className="flex justify-between items-center pt-3 border-t border-slate-100 shrink-0">
               {previewModalDoc.previewUrl ? (
-                <a
-                  href={previewModalDoc.previewUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="px-3 py-1.5 sm:px-4 sm:py-2 bg-amber-50 hover:bg-amber-100 text-[#D99A1C] border border-amber-200 font-extrabold text-[11px] sm:text-xs rounded-xl transition-all flex items-center gap-1.5"
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (previewModalDoc.previewUrl) {
+                      window.open(previewModalDoc.previewUrl, '_blank');
+                    }
+                  }}
+                  className="px-3 py-1.5 sm:px-4 sm:py-2 bg-amber-50 hover:bg-amber-100 text-[#D99A1C] border border-amber-200 font-extrabold text-[11px] sm:text-xs rounded-xl transition-all flex items-center gap-1.5 cursor-pointer shadow-xs"
                 >
                   <span>↗ Open in New Tab</span>
-                </a>
+                </button>
               ) : <div />}
               <button
                 type="button"
@@ -1451,7 +1570,13 @@ function DocumentUploadSlot({ label, description, docKey, fileObj, required, onF
           <div className="flex items-center gap-1.5 shrink-0">
             <button 
               type="button" 
-              onClick={() => onViewFile && onViewFile({ title: label, fileName: fileObj.name, previewUrl: fileObj.previewUrl, type: fileObj.type })} 
+              onClick={() => {
+                if (onViewFile) {
+                  const isImg = fileObj.type === 'image' || fileObj.name.match(/\.(png|jpg|jpeg|gif|svg|webp)$/i);
+                  const safeUrl = getDocumentBlobUrl(fileObj.previewUrl, isImg ? 'image/png' : 'application/pdf');
+                  onViewFile({ title: label, fileName: fileObj.name, previewUrl: safeUrl, type: isImg ? 'image' : 'pdf' });
+                }
+              }} 
               className="px-2.5 py-1 bg-amber-50 hover:bg-amber-100 text-[#D99A1C] border border-amber-200 rounded-md text-[10px] font-black flex items-center gap-1 cursor-pointer transition-all shadow-2xs"
               title="Preview / View Uploaded Document"
             >
