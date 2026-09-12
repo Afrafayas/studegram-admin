@@ -658,24 +658,31 @@ export default function BecomePartner({ clients = [], setClients, applications =
 
                                           {partner.documents && partner.documents.length > 0 ? (
                                             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
-                                              {partner.documents.map((doc, dIdx) => (
-                                                <div key={dIdx} className="bg-slate-50 border border-slate-200 p-3 rounded-xl flex items-center justify-between text-xs shadow-2xs hover:border-amber-300 transition-all">
-                                                  <div className="flex items-center gap-2 overflow-hidden pr-2">
-                                                    <span className="text-lg">📄</span>
-                                                    <div className="truncate">
-                                                      <p className="text-[11px] font-bold text-slate-900 truncate">{doc.title || doc.fileName}</p>
-                                                      <p className="text-[9px] text-slate-400 font-semibold truncate">{doc.fileName}</p>
+                                              {partner.documents.map((doc, dIdx) => {
+                                                const docTitle = typeof doc === 'string' ? doc : (doc.title || doc.fileName || `Document ${dIdx + 1}`);
+                                                const docFileName = typeof doc === 'string' ? doc : (doc.fileName || doc.title || 'Attached Proof');
+                                                const docUrl = typeof doc === 'object' ? doc.previewUrl : null;
+                                                const docType = typeof doc === 'object' ? doc.type : 'pdf';
+
+                                                return (
+                                                  <div key={dIdx} className="bg-slate-50 border border-slate-200 p-3 rounded-xl flex items-center justify-between text-xs shadow-2xs hover:border-amber-300 transition-all">
+                                                    <div className="flex items-center gap-2 overflow-hidden pr-2">
+                                                      <span className="text-lg">📄</span>
+                                                      <div className="truncate">
+                                                        <p className="text-[11px] font-bold text-slate-900 truncate">{docTitle}</p>
+                                                        <p className="text-[9px] text-slate-400 font-semibold truncate">{docFileName}</p>
+                                                      </div>
                                                     </div>
+                                                    <button
+                                                      type="button"
+                                                      onClick={() => setPreviewModalDoc({ title: docTitle, fileName: docFileName, previewUrl: docUrl, type: docType })}
+                                                      className="px-2.5 py-1 bg-amber-50 hover:bg-amber-100 text-[#D99A1C] border border-amber-200 rounded-lg text-[10px] font-black shrink-0 cursor-pointer transition-all flex items-center gap-1 shadow-2xs"
+                                                    >
+                                                      <span>👁️ View</span>
+                                                    </button>
                                                   </div>
-                                                  <button
-                                                    type="button"
-                                                    onClick={() => setPreviewModalDoc({ title: doc.title || doc.fileName, fileName: doc.fileName, previewUrl: doc.previewUrl })}
-                                                    className="px-2.5 py-1 bg-amber-50 hover:bg-amber-100 text-[#D99A1C] border border-amber-200 rounded-lg text-[10px] font-black shrink-0 cursor-pointer transition-all flex items-center gap-1 shadow-2xs"
-                                                  >
-                                                    <span>👁️ View</span>
-                                                  </button>
-                                                </div>
-                                              ))}
+                                                );
+                                              })}
                                             </div>
                                           ) : (
                                             <div className="bg-amber-50/60 border border-amber-200/80 rounded-xl p-3 text-center">
