@@ -167,7 +167,8 @@ export default function BecomePartner({ setClients, onBack }) {
         toast.success('Partner Successfully Registered & Onboarded!');
       }
     } catch (err) {
-      toast.error(err.message || 'Submission error');
+      const errMsg = err.response?.data?.message || err.message || 'Submission error';
+      toast.error(errMsg);
     } finally {
       setIsSubmitting(false);
     }
