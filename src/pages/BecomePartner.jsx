@@ -27,6 +27,9 @@ export default function BecomePartner({ clients = [], setClients, applications =
   // Filter partners (type === 'Agent')
   const partners = clients.filter(c => c.type === 'Agent');
 
+  const activeCount = partners.filter(p => p.status === 'Active').length;
+  const pendingCount = partners.filter(p => p.status === 'Pending').length;
+
   const filteredPartners = partners.filter(p => {
     const codeStr = p.partnerCode || '';
     const nameStr = p.name || '';
@@ -135,7 +138,7 @@ export default function BecomePartner({ clients = [], setClients, applications =
         } : c));
       }
 
-      toast.success(`Partner '${editingPartner.name}' details updated successfully!`);
+      toast.success(`Partner '${editingPartner.name}' profile updated successfully!`);
       setEditingPartner(null);
       if (onPartnerOnboarded) onPartnerOnboarded();
     } catch (err) {
@@ -350,120 +353,178 @@ export default function BecomePartner({ clients = [], setClients, applications =
   };
 
   return (
-    <div className="flex-1 p-6 md:p-8 space-y-6 bg-[#F0F2F5] animate-fade-in-up">
-      {/* Header Banner with Sub-tab Navigation */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center bg-white border border-[#E2E8F0] border-t-4 border-t-[#D99A1C] p-6 rounded-2xl shadow-xs gap-4">
-        <div className="space-y-1">
-          <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 bg-amber-50 text-amber-700 border border-amber-200 rounded-full text-[10px] font-black uppercase tracking-wider">
-            <span>🤝 Partner Management Portal</span>
-          </div>
-          <h1 className="text-xl font-black text-slate-900 tracking-tight">Become our Partner — Directory & Onboarding</h1>
-          <p className="text-xs text-slate-500 font-medium">Manage registered agency partners, edit profile details, view uploaded compliance proofs, and onboard new referral agents.</p>
-        </div>
+    <div className="flex-1 p-5 md:p-8 space-y-6 bg-[#F8FAFC] animate-fade-in-up">
+      {/* Premium Header Banner with Metrics & View Switcher */}
+      <div className="bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 border border-slate-700/60 p-6 rounded-3xl shadow-xl text-white relative overflow-hidden">
+        {/* Subtle background glow */}
+        <div className="absolute top-0 right-0 w-96 h-96 bg-[#D99A1C]/10 rounded-full blur-3xl pointer-events-none"></div>
+        <div className="absolute bottom-0 left-1/3 w-80 h-80 bg-blue-500/10 rounded-full blur-3xl pointer-events-none"></div>
 
-        {/* View Switcher Toggle */}
-        <div className="flex items-center bg-slate-100 p-1.5 rounded-xl gap-1 shrink-0">
-          <button
-            onClick={() => setSubView('directory')}
-            className={`px-4 py-2 text-xs font-extrabold rounded-lg transition-all cursor-pointer flex items-center gap-1.5 ${
-              subView === 'directory'
-                ? 'bg-white text-[#D99A1C] shadow-sm font-black'
-                : 'text-slate-500 hover:text-slate-900'
-            }`}
-          >
-            <span>👥 Referral Partners Directory ({partners.length})</span>
-          </button>
-          <button
-            onClick={() => {
-              setSubView('onboard');
-              resetOnboardingForm();
-            }}
-            className={`px-4 py-2 text-xs font-extrabold rounded-lg transition-all cursor-pointer flex items-center gap-1.5 ${
-              subView === 'onboard'
-                ? 'bg-[#D99A1C] text-white shadow-md font-black'
-                : 'bg-amber-500/10 text-amber-700 hover:bg-amber-500/20'
-            }`}
-          >
-            <span>➕ Onboard New Partner</span>
-          </button>
+        <div className="relative z-10 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
+          <div className="space-y-2">
+            <div className="inline-flex items-center gap-2 px-3 py-1 bg-amber-500/10 border border-[#D99A1C]/40 rounded-full backdrop-blur-md">
+              <span className="w-2 h-2 rounded-full bg-[#D99A1C] animate-pulse"></span>
+              <span className="text-[10px] font-black text-[#F5B025] uppercase tracking-widest">
+                Partner Network Console
+              </span>
+            </div>
+            <h1 className="text-2xl font-black tracking-tight text-white flex items-center gap-2">
+              <span>Become Our Partner</span>
+              <span className="text-xs font-bold text-slate-400 bg-slate-800/80 px-2.5 py-0.5 rounded-lg border border-slate-700">
+                v2.4
+              </span>
+            </h1>
+            <p className="text-xs text-slate-300 font-medium max-w-xl leading-relaxed">
+              Unified directory management, referral partner onboarding, tax compliance verification, and instant document inspection.
+            </p>
+
+            {/* Quick Metrics Cards */}
+            <div className="flex flex-wrap items-center gap-3 pt-2">
+              <div className="bg-slate-800/80 border border-slate-700/80 px-3 py-1.5 rounded-xl flex items-center gap-2">
+                <span className="text-[10px] font-extrabold uppercase text-slate-400">Total Partners:</span>
+                <span className="text-xs font-black text-amber-400">{partners.length}</span>
+              </div>
+              <div className="bg-slate-800/80 border border-slate-700/80 px-3 py-1.5 rounded-xl flex items-center gap-2">
+                <span className="text-[10px] font-extrabold uppercase text-slate-400">Active Agencies:</span>
+                <span className="text-xs font-black text-emerald-400">{activeCount}</span>
+              </div>
+              <div className="bg-slate-800/80 border border-slate-700/80 px-3 py-1.5 rounded-xl flex items-center gap-2">
+                <span className="text-[10px] font-extrabold uppercase text-slate-400">Pending Review:</span>
+                <span className="text-xs font-black text-blue-400">{pendingCount}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Premium Sub-Tab Switcher */}
+          <div className="flex items-center bg-slate-800/90 border border-slate-700/80 p-1.5 rounded-2xl gap-1.5 shrink-0 shadow-inner backdrop-blur-md">
+            <button
+              onClick={() => setSubView('directory')}
+              className={`px-5 py-2.5 text-xs font-black rounded-xl transition-all cursor-pointer flex items-center gap-2 ${
+                subView === 'directory'
+                  ? 'bg-gradient-to-r from-[#D99A1C] to-[#F5B025] text-slate-950 shadow-lg shadow-[#D99A1C]/25'
+                  : 'text-slate-300 hover:text-white hover:bg-slate-700/50'
+              }`}
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+              </svg>
+              <span>Referral Partners Directory ({partners.length})</span>
+            </button>
+
+            <button
+              onClick={() => {
+                setSubView('onboard');
+                resetOnboardingForm();
+              }}
+              className={`px-5 py-2.5 text-xs font-black rounded-xl transition-all cursor-pointer flex items-center gap-2 ${
+                subView === 'onboard'
+                  ? 'bg-gradient-to-r from-[#D99A1C] to-[#F5B025] text-slate-950 shadow-lg shadow-[#D99A1C]/25'
+                  : 'text-slate-300 hover:text-white hover:bg-slate-700/50'
+              }`}
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 4v16m8-8H4" />
+              </svg>
+              <span>Onboard New Partner</span>
+            </button>
+          </div>
         </div>
       </div>
 
       {/* VIEW 1: REFERRAL PARTNERS DIRECTORY */}
       {subView === 'directory' && (
         <div className="space-y-6 animate-fade-in">
-          {/* Directory Filters & Search */}
-          <div className="bg-white border border-[#E2E8F0] border-t-4 border-t-[#2563EB] rounded-2xl p-5 shadow-xs flex flex-col sm:flex-row gap-4 items-center justify-between">
-            <div className="bg-slate-100 p-1 rounded-xl flex w-full sm:w-auto">
+          {/* Directory Toolbar: Filters, Search & Action Button */}
+          <div className="bg-white border border-slate-200/90 rounded-2xl p-4 md:p-5 shadow-xs flex flex-col lg:flex-row gap-4 items-center justify-between">
+            {/* Status Filter Tabs */}
+            <div className="bg-slate-100/90 p-1 rounded-xl flex w-full lg:w-auto border border-slate-200/60">
               {['All', 'Pending', 'Approved'].map((status) => (
                 <button
                   key={status}
                   onClick={() => setStatusFilter(status)}
-                  className={`flex-1 sm:flex-none px-4 py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+                  className={`flex-1 lg:flex-none px-4 py-2 text-xs font-black rounded-lg transition-all cursor-pointer ${
                     statusFilter === status 
-                      ? 'bg-white text-[#D99A1C] shadow-sm font-black' 
+                      ? 'bg-white text-slate-900 shadow-sm border border-slate-200/80 font-black' 
                       : 'text-slate-500 hover:text-slate-900'
                   }`}
                 >
-                  {status}
+                  {status === 'All' ? 'All Channels' : status === 'Pending' ? 'Pending Review' : 'Approved Active'}
                 </button>
               ))}
             </div>
 
-            <div className="flex w-full sm:w-auto items-center gap-3">
+            {/* Location & Search */}
+            <div className="flex flex-col sm:flex-row w-full lg:w-auto items-center gap-3">
               <select
                 value={locationFilter}
                 onChange={(e) => setLocationFilter(e.target.value)}
-                className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs text-slate-900 focus:outline-none focus:border-[#D99A1C] font-semibold cursor-pointer"
+                className="w-full sm:w-auto bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-800 font-bold focus:outline-none focus:border-[#D99A1C] focus:bg-white transition-all cursor-pointer"
               >
-                <option value="All">All Locations</option>
-                {countriesList.map(c => <option key={c} value={c}>{c}</option>)}
+                <option value="All">🌐 All Operating Countries</option>
+                {countriesList.map(c => <option key={c} value={c}>📍 {c}</option>)}
               </select>
 
-              <div className="relative w-full sm:max-w-xs">
-                <span className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-slate-400">
+              <div className="relative w-full sm:w-72">
+                <span className="absolute inset-y-0 left-0 flex items-center pl-3.5 pointer-events-none text-slate-400">
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                   </svg>
                 </span>
                 <input
                   type="text"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-4 py-2.5 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:bg-white focus:border-[#D99A1C] transition-all font-medium"
-                  placeholder="Search by name, company, code, email, phone..."
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-8 py-2.5 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:bg-white focus:border-[#D99A1C] transition-all font-semibold"
+                  placeholder="Search agency, code, email..."
                 />
+                {searchTerm && (
+                  <button
+                    onClick={() => setSearchTerm('')}
+                    className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600 font-bold text-xs"
+                  >
+                    ✕
+                  </button>
+                )}
               </div>
-            </div>
-          </div>
 
-          {/* Directory Table */}
-          <div className="bg-white border border-[#E2E8F0] border-t-4 border-t-[#D99A1C] rounded-2xl shadow-xs overflow-hidden">
-            <div className="px-6 py-4 border-b border-[#E2E8F0] flex justify-between items-center">
-              <h2 className="text-xs font-black text-slate-900 uppercase tracking-wider">Registered Referral Partners & Agencies ({filteredPartners.length})</h2>
               <button
                 onClick={() => {
                   setSubView('onboard');
                   resetOnboardingForm();
                 }}
-                className="bg-[#D99A1C] hover:bg-[#F5B025] text-white font-black text-xs px-3.5 py-1.5 rounded-xl shadow-xs transition-all cursor-pointer flex items-center gap-1"
+                className="w-full sm:w-auto bg-gradient-to-r from-[#D99A1C] to-[#F5B025] hover:from-[#c28815] hover:to-[#e09e1d] text-white font-black text-xs px-4 py-2.5 rounded-xl shadow-md transition-all cursor-pointer flex items-center justify-center gap-1.5 shrink-0"
               >
-                <span>+ Onboard New Referral Agency</span>
+                <span>+ Onboard Agency</span>
               </button>
+            </div>
+          </div>
+
+          {/* Directory Master Card & Table */}
+          <div className="bg-white border border-slate-200/90 rounded-3xl shadow-sm overflow-hidden">
+            <div className="px-6 py-4 bg-slate-50/70 border-b border-slate-200/80 flex justify-between items-center">
+              <div className="flex items-center gap-2">
+                <span className="w-2.5 h-2.5 rounded-full bg-[#D99A1C]"></span>
+                <h2 className="text-xs font-black text-slate-900 uppercase tracking-wider">
+                  Referral Agency Directory ({filteredPartners.length})
+                </h2>
+              </div>
+              <span className="text-[10px] text-slate-400 font-bold">
+                Showing {filteredPartners.length} of {partners.length} Channels
+              </span>
             </div>
 
             <div className="overflow-x-auto">
               {filteredPartners.length > 0 ? (
                 <table className="w-full text-left border-collapse">
                   <thead>
-                    <tr className="bg-slate-50 border-b border-[#E2E8F0]">
-                      <th className="px-6 py-3 text-slate-400 text-[10px] font-extrabold uppercase tracking-wider w-[50px]"></th>
-                      <th className="px-6 py-3 text-slate-400 text-[10px] font-extrabold uppercase tracking-wider w-[60px]">SI.NO.</th>
-                      <th className="px-6 py-3 text-slate-400 text-[10px] font-extrabold uppercase tracking-wider">Partner details</th>
-                      <th className="px-6 py-3 text-slate-400 text-[10px] font-extrabold uppercase tracking-wider">Partner Code</th>
-                      <th className="px-6 py-3 text-slate-400 text-[10px] font-extrabold uppercase tracking-wider">Contact Info</th>
-                      <th className="px-6 py-3 text-slate-400 text-[10px] font-extrabold uppercase tracking-wider">Referred Students</th>
-                      <th className="px-6 py-3 text-slate-400 text-[10px] font-extrabold uppercase tracking-wider text-right">Actions / Status</th>
+                    <tr className="bg-slate-100/60 border-b border-slate-200/80">
+                      <th className="px-5 py-3.5 text-slate-400 text-[10px] font-black uppercase tracking-wider w-[45px]"></th>
+                      <th className="px-4 py-3.5 text-slate-400 text-[10px] font-black uppercase tracking-wider w-[50px]">#</th>
+                      <th className="px-6 py-3.5 text-slate-400 text-[10px] font-black uppercase tracking-wider">Partner Details</th>
+                      <th className="px-5 py-3.5 text-slate-400 text-[10px] font-black uppercase tracking-wider">Agency Code</th>
+                      <th className="px-6 py-3.5 text-slate-400 text-[10px] font-black uppercase tracking-wider">Contact Credentials</th>
+                      <th className="px-5 py-3.5 text-slate-400 text-[10px] font-black uppercase tracking-wider">Referred Students</th>
+                      <th className="px-6 py-3.5 text-slate-400 text-[10px] font-black uppercase tracking-wider text-right">Actions / Status</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 text-xs font-semibold text-slate-700">
@@ -473,83 +534,106 @@ export default function BecomePartner({ clients = [], setClients, applications =
 
                       return (
                         <React.Fragment key={partner.id || idx}>
-                          <tr className="hover:bg-slate-50/50 transition-colors cursor-pointer" onClick={() => toggleExpand(partner.id)}>
-                            <td className="pl-6 py-4 w-[40px]">
-                              <svg className={`w-4 h-4 text-slate-400 transition-transform ${isExpanded ? 'rotate-90 text-indigo-500' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M9 5l7 7-7 7" />
-                              </svg>
-                            </td>
-                            <td className="px-6 py-4 font-bold text-slate-400">{idx + 1}</td>
-                            <td className="px-6 py-4 flex items-center gap-3">
-                              <div className="w-9 h-9 rounded-full flex items-center justify-center font-bold text-white text-xs bg-gradient-to-tr from-amber-500 to-indigo-500 shrink-0 shadow-xs">
-                                {partner.name ? partner.name.split(' ').map(n => n[0]).join('') : 'P'}
-                              </div>
-                              <div>
-                                <p className="text-slate-950 font-black text-xs">{partner.name}</p>
-                                <p className="text-[10px] text-slate-500 font-semibold">{partner.companyName || partner.name}</p>
-                                <span className="inline-block text-[9px] font-extrabold text-amber-700 bg-amber-50 px-1.5 py-0.2 rounded mt-0.5 border border-amber-200">
-                                  {partner.partnerType || 'Company'} Agent
-                                </span>
+                          <tr 
+                            className={`hover:bg-slate-50/80 transition-colors cursor-pointer ${
+                              isExpanded ? 'bg-amber-50/20' : ''
+                            }`} 
+                            onClick={() => toggleExpand(partner.id)}
+                          >
+                            <td className="pl-5 py-4 w-[45px]">
+                              <div className={`w-6 h-6 rounded-full flex items-center justify-center transition-all ${
+                                isExpanded ? 'bg-indigo-100 text-indigo-600 rotate-90' : 'bg-slate-100 text-slate-400'
+                              }`}>
+                                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M9 5l7 7-7 7" />
+                                </svg>
                               </div>
                             </td>
+                            <td className="px-4 py-4 font-extrabold text-slate-400">{idx + 1}</td>
                             <td className="px-6 py-4">
-                              <span className="px-2.5 py-0.5 rounded-full text-[9px] font-mono font-black border bg-blue-50 text-blue-700 border-blue-200">
+                              <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 rounded-2xl flex items-center justify-center font-black text-white text-xs bg-gradient-to-tr from-slate-800 via-slate-700 to-[#D99A1C] shrink-0 shadow-md shadow-slate-900/10">
+                                  {partner.name ? partner.name.split(' ').map(n => n[0]).join('').slice(0, 2) : 'PR'}
+                                </div>
+                                <div>
+                                  <p className="text-slate-950 font-black text-xs tracking-tight">{partner.name}</p>
+                                  <p className="text-[10px] text-slate-500 font-semibold">{partner.companyName || partner.name}</p>
+                                  <div className="flex items-center gap-1.5 mt-0.5">
+                                    <span className="px-1.5 py-0.2 bg-amber-50 text-amber-700 border border-amber-200 rounded text-[9px] font-black uppercase">
+                                      {partner.partnerType === 'Individual' ? '👤 Individual Agent' : '🏢 Company Agency'}
+                                    </span>
+                                  </div>
+                                </div>
+                              </div>
+                            </td>
+                            <td className="px-5 py-4">
+                              <span className="px-2.5 py-1 rounded-xl text-[10px] font-mono font-black border bg-slate-50 text-blue-700 border-blue-200 shadow-2xs">
                                 {partner.partnerCode}
                               </span>
                             </td>
                             <td className="px-6 py-4">
-                              <p className="text-indigo-600 font-bold text-xs">{partner.email}</p>
-                              <p className="text-slate-500 text-[10px] font-medium">{partner.phone} ({partner.country || 'India'})</p>
+                              <p className="text-indigo-600 font-black text-xs">{partner.email}</p>
+                              <p className="text-slate-500 text-[10px] font-medium flex items-center gap-1 mt-0.5">
+                                <span>📞 {partner.phone}</span>
+                                <span>•</span>
+                                <span className="font-bold text-slate-700">{partner.country || 'India'}</span>
+                              </p>
                             </td>
-                            <td className="px-6 py-4 font-black text-indigo-600">{referredStudents.length} Students</td>
-                            <td className="px-6 py-4 text-right flex items-center justify-end gap-2" onClick={(e) => e.stopPropagation()}>
-                              {/* Edit Button */}
-                              <button
-                                type="button"
-                                onClick={(e) => handleOpenEditModal(partner, e)}
-                                className="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 rounded-md text-[10px] font-extrabold transition-all cursor-pointer flex items-center gap-1 shadow-2xs"
-                                title="Edit Partner Details"
-                              >
-                                <span>✏️ Edit</span>
-                              </button>
+                            <td className="px-5 py-4">
+                              <div className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-indigo-50 text-indigo-700 rounded-xl border border-indigo-100 font-black text-[10px]">
+                                <span>🎓 {referredStudents.length} Students</span>
+                              </div>
+                            </td>
+                            <td className="px-6 py-4 text-right" onClick={(e) => e.stopPropagation()}>
+                              <div className="flex items-center justify-end gap-2">
+                                <button
+                                  type="button"
+                                  onClick={(e) => handleOpenEditModal(partner, e)}
+                                  className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200/80 rounded-xl text-[10px] font-black transition-all cursor-pointer flex items-center gap-1 shadow-2xs"
+                                  title="Edit Partner Profile Details"
+                                >
+                                  <span>✏️ Edit</span>
+                                </button>
 
-                              <span className={`px-2 py-0.5 border rounded-full text-[9px] font-extrabold ${
-                                partner.status === 'Active' 
-                                  ? 'bg-emerald-50 text-emerald-700 border-emerald-100' 
-                                  : partner.status === 'Pending'
-                                    ? 'bg-amber-50 text-amber-700 border-amber-100'
-                                    : 'bg-rose-50 text-rose-700 border-rose-100'
-                              }`}>
-                                {partner.status}
-                              </span>
-                              {partner.status === 'Pending' && (
-                                <button
-                                  onClick={() => handleUpdateStatus(partner.id, 'Active')}
-                                  className="bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-[9px] px-2 py-1 rounded-md transition-all shadow-3xs cursor-pointer uppercase tracking-wider"
-                                >
-                                  Approve
-                                </button>
-                              )}
-                              {partner.status === 'Active' && (
-                                <button
-                                  onClick={() => handleUpdateStatus(partner.id, 'Inactive')}
-                                  className="bg-rose-500 hover:bg-rose-600 text-white font-extrabold text-[9px] px-2 py-1 rounded-md transition-all shadow-3xs cursor-pointer uppercase tracking-wider"
-                                >
-                                  Deactivate
-                                </button>
-                              )}
-                              {partner.status === 'Inactive' && (
-                                <button
-                                  onClick={() => handleUpdateStatus(partner.id, 'Active')}
-                                  className="bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-[9px] px-2 py-1 rounded-md transition-all shadow-3xs cursor-pointer uppercase tracking-wider"
-                                >
-                                  Activate
-                                </button>
-                              )}
+                                <span className={`px-2.5 py-1 border rounded-full text-[9px] font-black uppercase tracking-wider ${
+                                  partner.status === 'Active' 
+                                    ? 'bg-emerald-50 text-emerald-700 border-emerald-200' 
+                                    : partner.status === 'Pending'
+                                      ? 'bg-amber-50 text-amber-700 border-amber-200'
+                                      : 'bg-rose-50 text-rose-700 border-rose-200'
+                                }`}>
+                                  {partner.status}
+                                </span>
+
+                                {partner.status === 'Pending' && (
+                                  <button
+                                    onClick={() => handleUpdateStatus(partner.id, 'Active')}
+                                    className="bg-emerald-600 hover:bg-emerald-700 text-white font-black text-[9px] px-2.5 py-1.5 rounded-lg transition-all shadow-2xs cursor-pointer uppercase"
+                                  >
+                                    Approve
+                                  </button>
+                                )}
+                                {partner.status === 'Active' && (
+                                  <button
+                                    onClick={() => handleUpdateStatus(partner.id, 'Inactive')}
+                                    className="bg-rose-500 hover:bg-rose-600 text-white font-black text-[9px] px-2.5 py-1.5 rounded-lg transition-all shadow-2xs cursor-pointer uppercase"
+                                  >
+                                    Deactivate
+                                  </button>
+                                )}
+                                {partner.status === 'Inactive' && (
+                                  <button
+                                    onClick={() => handleUpdateStatus(partner.id, 'Active')}
+                                    className="bg-emerald-600 hover:bg-emerald-700 text-white font-black text-[9px] px-2.5 py-1.5 rounded-lg transition-all shadow-2xs cursor-pointer uppercase"
+                                  >
+                                    Activate
+                                  </button>
+                                )}
+                              </div>
                             </td>
                           </tr>
 
-                          {/* Expanded Partner Details View */}
+                          {/* Expanded Partner Detailed Profile Drawer */}
                           {isExpanded && (() => {
                             const currentSubTab = partnerSubTabs[partner.id] || 'overview';
                             const setSubTab = (tab) => {
@@ -558,100 +642,110 @@ export default function BecomePartner({ clients = [], setClients, applications =
 
                             return (
                               <tr>
-                                <td colSpan="8" className="bg-slate-50/50 p-6 border-t border-b border-slate-100">
-                                  <div className="bg-white border border-[#E2E8F0] border-t-4 border-t-[#2563EB] rounded-xl p-5 shadow-xs space-y-4">
-                                    <div className="flex justify-between items-center border-b border-slate-150 pb-2">
+                                <td colSpan="7" className="bg-slate-50/60 p-5 md:p-6 border-t border-b border-slate-200/80">
+                                  <div className="bg-white border border-slate-200/90 rounded-2xl p-6 shadow-sm space-y-5">
+                                    {/* Sub-tab drawer header */}
+                                    <div className="flex justify-between items-center border-b border-slate-100 pb-3">
                                       <div className="flex gap-4">
                                         <button 
                                           onClick={() => setSubTab('overview')}
-                                          className={`pb-1 text-xs font-black uppercase tracking-wider transition-all border-b-2 cursor-pointer ${
+                                          className={`pb-1.5 text-xs font-black uppercase tracking-wider transition-all border-b-2 cursor-pointer ${
                                             currentSubTab === 'overview' 
                                               ? 'border-[#D99A1C] text-[#D99A1C]' 
                                               : 'border-transparent text-slate-400 hover:text-slate-700'
                                           }`}
                                         >
-                                          Overview & Onboarding Proofs
+                                          📋 Onboarding Profile & Document Proofs
                                         </button>
                                         <button 
                                           onClick={() => setSubTab('applications')}
-                                          className={`pb-1 text-xs font-black uppercase tracking-wider transition-all border-b-2 cursor-pointer ${
+                                          className={`pb-1.5 text-xs font-black uppercase tracking-wider transition-all border-b-2 cursor-pointer ${
                                             currentSubTab === 'applications' 
                                               ? 'border-[#D99A1C] text-[#D99A1C]' 
                                               : 'border-transparent text-slate-400 hover:text-slate-700'
                                           }`}
                                         >
-                                          Referred Applications ({referredStudents.length})
+                                          🎓 Referred Applications ({referredStudents.length})
                                         </button>
                                       </div>
-                                      <div className="flex items-center gap-2">
+
+                                      <div className="flex items-center gap-3">
                                         <button
                                           type="button"
                                           onClick={(e) => handleOpenEditModal(partner, e)}
-                                          className="px-2.5 py-1 bg-amber-50 text-[#D99A1C] border border-amber-200 rounded-md text-[10px] font-black hover:bg-amber-100 cursor-pointer"
+                                          className="px-3 py-1.5 bg-amber-50 text-[#D99A1C] border border-amber-200 rounded-xl text-[10px] font-black hover:bg-amber-100 cursor-pointer shadow-2xs transition-all flex items-center gap-1"
                                         >
-                                          ✏️ Edit Partner Profile
+                                          <span>✏️ Edit Profile Details</span>
                                         </button>
-                                        <span className="text-[10px] text-slate-400 font-semibold">
-                                          Onboarded Date: {partner.dateAdded || 'N/A'}
+                                        <span className="text-[10px] text-slate-400 font-extrabold">
+                                          Registered: {partner.dateAdded || 'N/A'}
                                         </span>
                                       </div>
                                     </div>
 
+                                    {/* SUB-TAB 1: Complete Onboarding Profile & Document Proofs */}
                                     {currentSubTab === 'overview' && (
-                                      <div className="space-y-4 animate-fade-in">
-                                        <div className="flex justify-between items-center border-b border-slate-100 pb-2">
-                                          <h3 className="text-xs font-black text-slate-900 uppercase tracking-wider">
-                                            Partner Complete Onboarding Sheet — {partner.name}
-                                          </h3>
-                                          <span className="px-2.5 py-0.5 bg-amber-50 text-amber-700 border border-amber-200 rounded-full text-[10px] font-black uppercase">
-                                            {partner.partnerType || 'Company'} Agent
+                                      <div className="space-y-5 animate-fade-in">
+                                        <div className="flex justify-between items-center bg-slate-50 p-3.5 rounded-xl border border-slate-200/80">
+                                          <div>
+                                            <span className="text-[9px] font-extrabold text-[#D99A1C] uppercase tracking-wider block">Official Onboarding Record</span>
+                                            <h3 className="text-xs font-black text-slate-900 uppercase tracking-wider">
+                                              Partner Profile — {partner.name}
+                                            </h3>
+                                          </div>
+                                          <span className="px-3 py-1 bg-amber-100 text-amber-800 border border-amber-300/80 rounded-full text-[10px] font-black uppercase">
+                                            {partner.partnerType === 'Individual' ? '👤 Individual Agent' : '🏢 Company Agency'}
                                           </span>
                                         </div>
 
-                                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 text-[11px] font-semibold text-slate-600 bg-slate-50 p-4 rounded-xl border border-slate-200">
-                                          <div>
-                                            <span className="text-[9px] font-extrabold uppercase text-slate-400 block tracking-wider">Partner Code</span>
-                                            <span className="text-slate-900 font-bold text-xs font-mono text-blue-600">{partner.partnerCode}</span>
+                                        {/* Grid Cards for All Onboarding Info */}
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 text-[11px] font-semibold text-slate-600 bg-slate-50/80 p-5 rounded-2xl border border-slate-200/80">
+                                          <div className="space-y-1">
+                                            <span className="text-[9px] font-extrabold uppercase text-slate-400 tracking-wider block">Partner Reference Code</span>
+                                            <span className="text-blue-600 font-mono font-black text-xs bg-blue-50 px-2 py-0.5 rounded border border-blue-100 inline-block">{partner.partnerCode}</span>
                                           </div>
-                                          <div>
-                                            <span className="text-[9px] font-extrabold uppercase text-slate-400 block tracking-wider">Company / Entity Name</span>
+                                          <div className="space-y-1">
+                                            <span className="text-[9px] font-extrabold uppercase text-slate-400 tracking-wider block">Company / Entity Name</span>
                                             <span className="text-slate-900 font-bold text-xs">{partner.companyName || partner.name}</span>
                                           </div>
-                                          <div>
-                                            <span className="text-[9px] font-extrabold uppercase text-slate-400 block tracking-wider">Tax Registration / GST ID</span>
-                                            <span className="text-slate-900 font-medium text-xs">{partner.taxId || 'N/A'}</span>
+                                          <div className="space-y-1">
+                                            <span className="text-[9px] font-extrabold uppercase text-slate-400 tracking-wider block">Tax ID / GSTIN</span>
+                                            <span className="text-slate-900 font-bold text-xs">{partner.taxId || 'N/A'}</span>
                                           </div>
-                                          <div>
-                                            <span className="text-[9px] font-extrabold uppercase text-slate-400 block tracking-wider">Operating Country</span>
-                                            <span className="text-slate-900 font-bold text-xs">{partner.country || 'India'}</span>
+                                          <div className="space-y-1">
+                                            <span className="text-[9px] font-extrabold uppercase text-slate-400 tracking-wider block">Operating Country</span>
+                                            <span className="text-slate-900 font-bold text-xs">📍 {partner.country || 'India'}</span>
                                           </div>
-                                          <div>
-                                            <span className="text-[9px] font-extrabold uppercase text-slate-400 block tracking-wider">Contact Person Name</span>
+                                          <div className="space-y-1">
+                                            <span className="text-[9px] font-extrabold uppercase text-slate-400 tracking-wider block">Contact Person Name</span>
                                             <span className="text-slate-900 font-bold text-xs">{partner.name}</span>
                                           </div>
-                                          <div>
-                                            <span className="text-[9px] font-extrabold uppercase text-slate-400 block tracking-wider">Contact Email Address</span>
+                                          <div className="space-y-1">
+                                            <span className="text-[9px] font-extrabold uppercase text-slate-400 tracking-wider block">Official Email Address</span>
                                             <span className="text-indigo-600 font-bold text-xs">{partner.email}</span>
                                           </div>
-                                          <div>
-                                            <span className="text-[9px] font-extrabold uppercase text-slate-400 block tracking-wider">Direct Phone Line</span>
-                                            <span className="text-slate-900 font-medium text-xs">{partner.phone}</span>
+                                          <div className="space-y-1">
+                                            <span className="text-[9px] font-extrabold uppercase text-slate-400 tracking-wider block">Direct Phone Line</span>
+                                            <span className="text-slate-900 font-bold text-xs">{partner.phone}</span>
                                           </div>
-                                          <div>
-                                            <span className="text-[9px] font-extrabold uppercase text-slate-400 block tracking-wider">Account Status</span>
-                                            <span className="text-emerald-600 font-extrabold text-xs">{partner.status || 'Active'}</span>
+                                          <div className="space-y-1">
+                                            <span className="text-[9px] font-extrabold uppercase text-slate-400 tracking-wider block">Account Status</span>
+                                            <span className="text-emerald-600 font-black text-xs uppercase">{partner.status || 'Active'}</span>
                                           </div>
                                         </div>
 
-                                        {/* Uploaded Compliance Documents */}
-                                        <div className="bg-white border border-slate-200 rounded-xl p-4 space-y-3">
-                                          <div className="flex justify-between items-center">
-                                            <h4 className="text-[10px] font-black text-slate-500 uppercase tracking-wider">
-                                              Saved Compliance & Verification Documents ({partner.documents ? partner.documents.length : 0})
-                                            </h4>
+                                        {/* Uploaded Compliance Verification Proofs */}
+                                        <div className="bg-slate-50/70 border border-slate-200/80 rounded-2xl p-5 space-y-4">
+                                          <div className="flex justify-between items-center border-b border-slate-200/60 pb-3">
+                                            <div>
+                                              <span className="text-[9px] font-extrabold text-[#D99A1C] uppercase tracking-wider block">Verification & Compliance Proofs</span>
+                                              <h4 className="text-xs font-black text-slate-900 uppercase tracking-wider">
+                                                Saved Onboarding Documents ({partner.documents ? partner.documents.length : 0})
+                                              </h4>
+                                            </div>
                                             {partner.documents && partner.documents.length > 0 && (
-                                              <span className="text-[9px] font-extrabold text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200 uppercase">
-                                                ✓ Verification Documents Onboarded
+                                              <span className="text-[9px] font-extrabold text-emerald-700 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200 uppercase">
+                                                ✓ Verified & Onboarded
                                               </span>
                                             )}
                                           </div>
@@ -665,9 +759,11 @@ export default function BecomePartner({ clients = [], setClients, applications =
                                                 const docType = typeof doc === 'object' ? doc.type : 'pdf';
 
                                                 return (
-                                                  <div key={dIdx} className="bg-slate-50 border border-slate-200 p-3 rounded-xl flex items-center justify-between text-xs shadow-2xs hover:border-amber-300 transition-all">
-                                                    <div className="flex items-center gap-2 overflow-hidden pr-2">
-                                                      <span className="text-lg">📄</span>
+                                                  <div key={dIdx} className="bg-white border border-slate-200 p-3.5 rounded-xl flex items-center justify-between text-xs shadow-2xs hover:border-[#D99A1C] hover:shadow-md transition-all">
+                                                    <div className="flex items-center gap-3 overflow-hidden pr-2">
+                                                      <div className="w-9 h-9 rounded-lg bg-amber-50 text-[#D99A1C] border border-amber-200/80 flex items-center justify-center font-bold text-base shrink-0">
+                                                        📄
+                                                      </div>
                                                       <div className="truncate">
                                                         <p className="text-[11px] font-bold text-slate-900 truncate">{docTitle}</p>
                                                         <p className="text-[9px] text-slate-400 font-semibold truncate">{docFileName}</p>
@@ -676,7 +772,7 @@ export default function BecomePartner({ clients = [], setClients, applications =
                                                     <button
                                                       type="button"
                                                       onClick={() => setPreviewModalDoc({ title: docTitle, fileName: docFileName, previewUrl: docUrl, type: docType })}
-                                                      className="px-2.5 py-1 bg-amber-50 hover:bg-amber-100 text-[#D99A1C] border border-amber-200 rounded-lg text-[10px] font-black shrink-0 cursor-pointer transition-all flex items-center gap-1 shadow-2xs"
+                                                      className="px-3 py-1.5 bg-gradient-to-r from-[#D99A1C] to-[#F5B025] hover:from-[#c28815] hover:to-[#e09e1d] text-white rounded-lg text-[10px] font-black shrink-0 cursor-pointer transition-all flex items-center gap-1 shadow-2xs"
                                                     >
                                                       <span>👁️ View</span>
                                                     </button>
@@ -685,31 +781,34 @@ export default function BecomePartner({ clients = [], setClients, applications =
                                               })}
                                             </div>
                                           ) : (
-                                            <div className="bg-amber-50/60 border border-amber-200/80 rounded-xl p-3 text-center">
-                                              <p className="text-[11px] font-semibold text-amber-800">No verification documents attached to this partner profile yet.</p>
+                                            <div className="bg-amber-50/60 border border-amber-200/80 rounded-xl p-4 text-center">
+                                              <p className="text-xs font-semibold text-amber-800">No verification document proofs attached to this partner profile yet.</p>
                                             </div>
                                           )}
                                         </div>
                                       </div>
                                     )}
 
+                                    {/* SUB-TAB 2: Referred Applications */}
                                     {currentSubTab === 'applications' && (
-                                      <div className="space-y-2 animate-fade-in">
-                                        <h4 className="text-[10px] font-black text-slate-500 uppercase tracking-wider">Referred Students ({referredStudents.length})</h4>
+                                      <div className="space-y-3 animate-fade-in">
+                                        <div className="flex justify-between items-center pb-2">
+                                          <h4 className="text-xs font-black text-slate-900 uppercase tracking-wider">Referred Student Files ({referredStudents.length})</h4>
+                                        </div>
                                         {referredStudents.length > 0 ? (
-                                          <div className="border border-slate-150 rounded-xl overflow-hidden">
+                                          <div className="border border-slate-200 rounded-xl overflow-hidden shadow-2xs">
                                             <table className="w-full text-left border-collapse text-[11px]">
                                               <thead>
-                                                <tr className="bg-slate-50 border-b border-slate-150">
-                                                  <th className="px-4 py-2 text-slate-400 font-extrabold uppercase tracking-wider">Student Name</th>
-                                                  <th className="px-4 py-2 text-slate-400 font-extrabold uppercase tracking-wider">Email Address</th>
-                                                  <th className="px-4 py-2 text-slate-400 font-extrabold uppercase tracking-wider">Phone</th>
-                                                  <th className="px-4 py-2 text-slate-400 font-extrabold uppercase tracking-wider">Status</th>
+                                                <tr className="bg-slate-50 border-b border-slate-200">
+                                                  <th className="px-4 py-2.5 text-slate-400 font-black uppercase tracking-wider">Student Name</th>
+                                                  <th className="px-4 py-2.5 text-slate-400 font-black uppercase tracking-wider">Email Address</th>
+                                                  <th className="px-4 py-2.5 text-slate-400 font-black uppercase tracking-wider">Phone</th>
+                                                  <th className="px-4 py-2.5 text-slate-400 font-black uppercase tracking-wider">Status</th>
                                                 </tr>
                                               </thead>
-                                              <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
+                                              <tbody className="divide-y divide-slate-100 font-semibold text-slate-700">
                                                 {referredStudents.map(student => (
-                                                  <tr key={student.id} className="hover:bg-slate-50/30">
+                                                  <tr key={student.id} className="hover:bg-slate-50/50">
                                                     <td className="px-4 py-2.5 font-bold text-slate-900">{student.name}</td>
                                                     <td className="px-4 py-2.5 text-slate-500">{student.email}</td>
                                                     <td className="px-4 py-2.5 text-slate-500">{student.phone}</td>
@@ -724,7 +823,7 @@ export default function BecomePartner({ clients = [], setClients, applications =
                                             </table>
                                           </div>
                                         ) : (
-                                          <p className="text-[10px] text-slate-400 font-medium italic">No students have been referred by this partner yet.</p>
+                                          <p className="text-xs text-slate-400 font-medium italic">No students have been referred by this partner yet.</p>
                                         )}
                                       </div>
                                     )}
@@ -739,12 +838,12 @@ export default function BecomePartner({ clients = [], setClients, applications =
                   </tbody>
                 </table>
               ) : (
-                <div className="p-8 text-center space-y-2">
-                  <svg className="w-12 h-12 text-slate-300 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
-                  </svg>
-                  <h3 className="text-xs font-black text-slate-900 uppercase">No Partners Found</h3>
-                  <p className="text-[10px] text-slate-400 font-semibold max-w-xs mx-auto">No partner directory entries matched your filter criteria.</p>
+                <div className="p-12 text-center space-y-3">
+                  <div className="w-14 h-14 bg-slate-100 rounded-full flex items-center justify-center mx-auto text-2xl text-slate-400">
+                    🏢
+                  </div>
+                  <h3 className="text-sm font-black text-slate-900 uppercase">No Partners Found</h3>
+                  <p className="text-xs text-slate-400 font-semibold max-w-xs mx-auto">No referral partner entries matched your search or filter options.</p>
                 </div>
               )}
             </div>
@@ -800,7 +899,7 @@ export default function BecomePartner({ clients = [], setClients, applications =
           ) : (
             <form onSubmit={handleSubmit} className="space-y-6">
               {/* STEP 1: Select Partner Classification */}
-              <div className="bg-white border border-[#E2E8F0] border-t-4 border-t-[#2563EB] rounded-2xl p-6 shadow-xs space-y-5">
+              <div className="bg-white border border-slate-200 border-t-4 border-t-[#2563EB] rounded-3xl p-6 shadow-sm space-y-5">
                 <div className="space-y-0.5">
                   <span className="text-[10px] font-black text-blue-600 uppercase tracking-widest block">SECTION 1</span>
                   <h2 className="text-base font-black text-slate-900">Select Partner Entity Structure</h2>
@@ -817,7 +916,7 @@ export default function BecomePartner({ clients = [], setClients, applications =
                         : 'border-slate-200 bg-white hover:border-slate-300'
                     }`}
                   >
-                    <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-xl shrink-0 ${partnerType === 'Company' ? 'bg-[#D99A1C] text-white' : 'bg-slate-100 text-slate-600'}`}>
+                    <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-xl shrink-0 ${partnerType === 'Company' ? 'bg-[#D99A1C] text-white shadow-md' : 'bg-slate-100 text-slate-600'}`}>
                       🏢
                     </div>
                     <div>
@@ -836,7 +935,7 @@ export default function BecomePartner({ clients = [], setClients, applications =
                         : 'border-slate-200 bg-white hover:border-slate-300'
                     }`}
                   >
-                    <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-xl shrink-0 ${partnerType === 'Individual' ? 'bg-[#D99A1C] text-white' : 'bg-slate-100 text-slate-600'}`}>
+                    <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-xl shrink-0 ${partnerType === 'Individual' ? 'bg-[#D99A1C] text-white shadow-md' : 'bg-slate-100 text-slate-600'}`}>
                       👤
                     </div>
                     <div>
@@ -849,7 +948,7 @@ export default function BecomePartner({ clients = [], setClients, applications =
               </div>
 
               {/* STEP 2: Partner Profile Details */}
-              <div className="bg-white border border-[#E2E8F0] border-t-4 border-t-[#D99A1C] rounded-2xl p-6 shadow-xs space-y-5">
+              <div className="bg-white border border-slate-200 border-t-4 border-t-[#D99A1C] rounded-3xl p-6 shadow-sm space-y-5">
                 <div className="space-y-0.5">
                   <span className="text-[10px] font-black text-[#D99A1C] uppercase tracking-widest block">SECTION 2</span>
                   <h2 className="text-base font-black text-slate-900">Partner Information & Credentials</h2>
@@ -859,22 +958,22 @@ export default function BecomePartner({ clients = [], setClients, applications =
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs font-semibold">
                   <div className="space-y-1.5">
                     <label className="block text-[10px] font-extrabold text-slate-600 uppercase tracking-wider">Full Contact Name <span className="text-rose-500">*</span></label>
-                    <input type="text" required name="name" value={formData.name} onChange={handleInputChange} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs font-semibold focus:outline-none focus:bg-white focus:border-[#D99A1C]" placeholder="e.g. Sreelakshmi S" />
+                    <input type="text" required name="name" value={formData.name} onChange={handleInputChange} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs font-semibold focus:outline-none focus:bg-white focus:border-[#D99A1C]" placeholder="e.g. Sreelakshmi S" />
                   </div>
 
                   <div className="space-y-1.5">
                     <label className="block text-[10px] font-extrabold text-slate-600 uppercase tracking-wider">Official Email Address <span className="text-rose-500">*</span></label>
-                    <input type="email" required name="email" value={formData.email} onChange={handleInputChange} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs font-semibold focus:outline-none focus:bg-white focus:border-[#D99A1C]" placeholder="e.g. partner@agency.com" />
+                    <input type="email" required name="email" value={formData.email} onChange={handleInputChange} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs font-semibold focus:outline-none focus:bg-white focus:border-[#D99A1C]" placeholder="e.g. partner@agency.com" />
                   </div>
 
                   <div className="space-y-1.5">
                     <label className="block text-[10px] font-extrabold text-slate-600 uppercase tracking-wider">Phone Number <span className="text-rose-500">*</span></label>
-                    <input type="tel" required name="phone" value={formData.phone} onChange={handleInputChange} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs font-semibold focus:outline-none focus:bg-white focus:border-[#D99A1C]" placeholder="e.g. +91 9876543210" />
+                    <input type="tel" required name="phone" value={formData.phone} onChange={handleInputChange} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs font-semibold focus:outline-none focus:bg-white focus:border-[#D99A1C]" placeholder="e.g. +91 9876543210" />
                   </div>
 
                   <div className="space-y-1.5">
                     <label className="block text-[10px] font-extrabold text-slate-600 uppercase tracking-wider">Operating Country</label>
-                    <select name="country" value={formData.country} onChange={handleInputChange} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs font-semibold focus:outline-none focus:bg-white focus:border-[#D99A1C]">
+                    <select name="country" value={formData.country} onChange={handleInputChange} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs font-semibold focus:outline-none focus:bg-white focus:border-[#D99A1C]">
                       {countriesList.map(c => <option key={c} value={c}>{c}</option>)}
                     </select>
                   </div>
@@ -883,19 +982,19 @@ export default function BecomePartner({ clients = [], setClients, applications =
                     <>
                       <div className="space-y-1.5">
                         <label className="block text-[10px] font-extrabold text-slate-600 uppercase tracking-wider">Registered Company Name <span className="text-rose-500">*</span></label>
-                        <input type="text" required name="companyName" value={formData.companyName} onChange={handleInputChange} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs font-semibold focus:outline-none focus:bg-white focus:border-[#D99A1C]" placeholder="e.g. Apex Global Education Pvt Ltd" />
+                        <input type="text" required name="companyName" value={formData.companyName} onChange={handleInputChange} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs font-semibold focus:outline-none focus:bg-white focus:border-[#D99A1C]" placeholder="e.g. Apex Global Education Pvt Ltd" />
                       </div>
                       <div className="space-y-1.5">
                         <label className="block text-[10px] font-extrabold text-slate-600 uppercase tracking-wider">Tax Registration / GST ID</label>
-                        <input type="text" name="taxId" value={formData.taxId} onChange={handleInputChange} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs font-semibold focus:outline-none focus:bg-white focus:border-[#D99A1C]" placeholder="e.g. GSTIN29ABCDE1234F" />
+                        <input type="text" name="taxId" value={formData.taxId} onChange={handleInputChange} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs font-semibold focus:outline-none focus:bg-white focus:border-[#D99A1C]" placeholder="e.g. GSTIN29ABCDE1234F" />
                       </div>
                     </>
                   )}
                 </div>
               </div>
 
-              {/* STEP 3: Compliance Upload Section */}
-              <div className="bg-white border border-[#E2E8F0] border-t-4 border-t-emerald-500 rounded-2xl p-6 shadow-xs space-y-5">
+              {/* STEP 3: Compliance Verification Upload Section */}
+              <div className="bg-white border border-slate-200 border-t-4 border-t-emerald-500 rounded-3xl p-6 shadow-sm space-y-5">
                 <div className="space-y-0.5">
                   <span className="text-[10px] font-black text-emerald-600 uppercase tracking-widest block">SECTION 3</span>
                   <h2 className="text-base font-black text-slate-900">Compliance & Verification Document Proofs</h2>
@@ -918,7 +1017,7 @@ export default function BecomePartner({ clients = [], setClients, applications =
                 </div>
               </div>
 
-              <div className="flex justify-end gap-3 bg-white border border-[#E2E8F0] p-4 rounded-2xl shadow-xs">
+              <div className="flex justify-end gap-3 bg-white border border-slate-200 p-4 rounded-2xl shadow-xs">
                 <button type="button" onClick={() => setSubView('directory')} className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-extrabold text-xs rounded-xl cursor-pointer">
                   Cancel
                 </button>
@@ -933,8 +1032,8 @@ export default function BecomePartner({ clients = [], setClients, applications =
 
       {/* EDIT PARTNER MODAL PORTAL */}
       {editingPartner && createPortal(
-        <div className="fixed inset-0 z-[9999] bg-black/70 backdrop-blur-xs p-4 flex justify-center items-center select-none animate-fade-in">
-          <div className="bg-white border border-[#E2E8F0] border-t-4 border-t-[#D99A1C] rounded-2xl p-6 w-full max-w-xl shadow-2xl space-y-4 max-h-[90vh] flex flex-col my-auto overflow-y-auto">
+        <div className="fixed inset-0 z-[9999] bg-black/75 backdrop-blur-xs p-4 flex justify-center items-center select-none animate-fade-in">
+          <div className="bg-white border border-slate-200 border-t-4 border-t-[#D99A1C] rounded-3xl p-6 w-full max-w-xl shadow-2xl space-y-4 max-h-[90vh] flex flex-col my-auto overflow-y-auto">
             <div className="flex justify-between items-center pb-3 border-b border-slate-100 shrink-0">
               <div>
                 <span className="text-[10px] font-extrabold text-[#D99A1C] uppercase tracking-wider block">Admin Management</span>
@@ -1050,18 +1149,25 @@ export default function BecomePartner({ clients = [], setClients, applications =
                 <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 space-y-2 mt-2">
                   <span className="text-[10px] font-black text-slate-500 uppercase tracking-wider block">Attached Onboarding Proofs ({editingPartner.documents.length})</span>
                   <div className="space-y-1.5">
-                    {editingPartner.documents.map((doc, dIdx) => (
-                      <div key={dIdx} className="bg-white border border-slate-200 p-2 rounded-lg flex items-center justify-between text-xs">
-                        <span className="truncate text-slate-800 font-bold">{doc.title || doc.fileName}</span>
-                        <button
-                          type="button"
-                          onClick={() => setPreviewModalDoc({ title: doc.title || doc.fileName, fileName: doc.fileName, previewUrl: doc.previewUrl })}
-                          className="px-2 py-0.5 bg-amber-50 text-[#D99A1C] border border-amber-200 rounded text-[9px] font-black hover:bg-amber-100 cursor-pointer"
-                        >
-                          👁️ View
-                        </button>
-                      </div>
-                    ))}
+                    {editingPartner.documents.map((doc, dIdx) => {
+                      const docTitle = typeof doc === 'string' ? doc : (doc.title || doc.fileName || `Document ${dIdx + 1}`);
+                      const docFileName = typeof doc === 'string' ? doc : (doc.fileName || doc.title || 'Attached Proof');
+                      const docUrl = typeof doc === 'object' ? doc.previewUrl : null;
+                      const docType = typeof doc === 'object' ? doc.type : 'pdf';
+
+                      return (
+                        <div key={dIdx} className="bg-white border border-slate-200 p-2.5 rounded-lg flex items-center justify-between text-xs">
+                          <span className="truncate text-slate-800 font-bold">{docTitle}</span>
+                          <button
+                            type="button"
+                            onClick={() => setPreviewModalDoc({ title: docTitle, fileName: docFileName, previewUrl: docUrl, type: docType })}
+                            className="px-2.5 py-1 bg-amber-50 text-[#D99A1C] border border-amber-200 rounded-md text-[9px] font-black hover:bg-amber-100 cursor-pointer"
+                          >
+                            👁️ View
+                          </button>
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
               )}
@@ -1087,10 +1193,10 @@ export default function BecomePartner({ clients = [], setClients, applications =
         document.body
       )}
 
-      {/* Document Preview Modal Portal */}
+      {/* DOCUMENT PREVIEW MODAL PORTAL */}
       {previewModalDoc && createPortal(
         <div className="fixed inset-0 z-[9999] bg-black/75 backdrop-blur-xs p-3 sm:p-6 flex justify-center items-center select-none animate-fade-in">
-          <div className="relative bg-white border border-[#E2E8F0] border-t-4 border-t-[#D99A1C] rounded-2xl p-4 sm:p-6 w-full max-w-3xl shadow-2xl flex flex-col my-auto max-h-[85vh]">
+          <div className="relative bg-white border border-slate-200 border-t-4 border-t-[#D99A1C] rounded-3xl p-4 sm:p-6 w-full max-w-3xl shadow-2xl flex flex-col my-auto max-h-[85vh]">
             <div className="flex justify-between items-center pb-3 border-b border-slate-100 shrink-0">
               <div className="space-y-0.5">
                 <span className="text-[10px] font-extrabold text-[#D99A1C] uppercase tracking-wider block">Document Verification Preview</span>
@@ -1106,19 +1212,19 @@ export default function BecomePartner({ clients = [], setClients, applications =
               </button>
             </div>
 
-            <div className="flex-1 overflow-auto bg-slate-50 rounded-xl border border-slate-200 p-2 sm:p-3 flex items-center justify-center my-3 min-h-[220px]">
+            <div className="flex-1 overflow-auto bg-slate-50 rounded-2xl border border-slate-200 p-2 sm:p-3 flex items-center justify-center my-3 min-h-[220px]">
               {previewModalDoc.previewUrl ? (
                 previewModalDoc.type === 'pdf' ? (
                   <iframe
                     src={previewModalDoc.previewUrl}
                     title={previewModalDoc.title}
-                    className="w-full h-[260px] sm:h-[320px] rounded-lg border border-slate-200 shadow-inner bg-white"
+                    className="w-full h-[260px] sm:h-[340px] rounded-xl border border-slate-200 shadow-inner bg-white"
                   />
                 ) : (
                   <img
                     src={previewModalDoc.previewUrl}
                     alt={previewModalDoc.title}
-                    className="max-h-[260px] sm:max-h-[320px] w-auto max-w-full object-contain rounded-lg shadow-md"
+                    className="max-h-[260px] sm:max-h-[340px] w-auto max-w-full object-contain rounded-xl shadow-md"
                   />
                 )
               ) : (
@@ -1161,7 +1267,7 @@ export default function BecomePartner({ clients = [], setClients, applications =
 
 function DocumentUploadSlot({ label, description, docKey, fileObj, required, onFileChange, onRemoveFile, onViewFile }) {
   return (
-    <div className={`border-2 border-dashed rounded-xl p-4 transition-all flex flex-col justify-between min-h-[140px] ${fileObj ? 'border-emerald-300 bg-emerald-50/30' : 'border-slate-200 bg-slate-50/50 hover:border-[#D99A1C]'}`}>
+    <div className={`border-2 border-dashed rounded-2xl p-4 transition-all flex flex-col justify-between min-h-[140px] ${fileObj ? 'border-emerald-300 bg-emerald-50/30' : 'border-slate-200 bg-slate-50/50 hover:border-[#D99A1C]'}`}>
       <div>
         <div className="flex justify-between items-start">
           <label className="text-xs font-black text-slate-900">{label} {required && <span className="text-rose-500">*</span>}</label>
@@ -1171,7 +1277,7 @@ function DocumentUploadSlot({ label, description, docKey, fileObj, required, onF
       </div>
 
       {fileObj ? (
-        <div className="bg-white border border-emerald-200 p-2.5 rounded-lg flex items-center justify-between mt-3 gap-2">
+        <div className="bg-white border border-emerald-200 p-2.5 rounded-xl flex items-center justify-between mt-3 gap-2">
           <div className="flex items-center gap-2 overflow-hidden flex-1">
             <span className="text-xs font-bold text-emerald-600">📄</span>
             <div className="truncate">
@@ -1192,7 +1298,7 @@ function DocumentUploadSlot({ label, description, docKey, fileObj, required, onF
           </div>
         </div>
       ) : (
-        <label className="cursor-pointer bg-white border border-slate-200 p-2.5 rounded-lg text-center block mt-3 hover:border-[#D99A1C] transition-all">
+        <label className="cursor-pointer bg-white border border-slate-200 p-2.5 rounded-xl text-center block mt-3 hover:border-[#D99A1C] transition-all">
           <input type="file" accept=".pdf,.png,.jpg,.jpeg" onChange={(e) => onFileChange(docKey, e)} className="hidden" />
           <p className="text-xs font-bold text-slate-700">Select File to Upload</p>
           <span className="text-[9px] text-slate-400">PDF, PNG, JPG (Max 15MB)</span>
