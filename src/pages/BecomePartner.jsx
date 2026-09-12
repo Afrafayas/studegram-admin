@@ -55,10 +55,14 @@ export default function BecomePartner({ setClients, onBack }) {
       return;
     }
 
+    const previewUrl = URL.createObjectURL(file);
+
     setDocuments(prev => ({
       ...prev,
       [docKey]: {
+        fileObj: file,
         name: file.name,
+        previewUrl: previewUrl,
         size: (file.size / (1024 * 1024)).toFixed(2) + ' MB',
         type: file.type.includes('pdf') ? 'pdf' : 'image',
         uploadedAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
@@ -371,6 +375,77 @@ export default function BecomePartner({ setClients, onBack }) {
           </button>
         </div>
       </form>
+      {/* Document Preview Modal */}
+      {previewModalDoc && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 select-none animate-fade-in">
+          <div className="bg-white border border-[#E2E8F0] border-t-4 border-t-[#D99A1C] rounded-2xl p-6 w-full max-w-3xl shadow-2xl space-y-4 max-h-[90vh] flex flex-col">
+            {/* Modal Header */}
+            <div className="flex justify-between items-center pb-3 border-b border-slate-100 shrink-0">
+              <div className="space-y-0.5">
+                <span className="text-[10px] font-extrabold text-[#D99A1C] uppercase tracking-wider block">Document Verification Preview</span>
+                <h3 className="text-sm font-black text-slate-900">{previewModalDoc.title}</h3>
+                <p className="text-[11px] text-slate-400 font-semibold">{previewModalDoc.fileName}</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setPreviewModalDoc(null)}
+                className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-800 font-bold flex items-center justify-center transition-all cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Modal Body / Document Preview Area */}
+            <div className="flex-1 overflow-auto bg-slate-50 rounded-xl border border-slate-200 p-4 flex items-center justify-center min-h-[350px]">
+              {previewModalDoc.previewUrl ? (
+                previewModalDoc.type === 'pdf' ? (
+                  <iframe
+                    src={previewModalDoc.previewUrl}
+                    title={previewModalDoc.title}
+                    className="w-full h-[480px] rounded-lg border border-slate-200 shadow-inner bg-white"
+                  />
+                ) : (
+                  <img
+                    src={previewModalDoc.previewUrl}
+                    alt={previewModalDoc.title}
+                    className="max-h-[480px] w-auto max-w-full object-contain rounded-lg shadow-md"
+                  />
+                )
+              ) : (
+                <div className="text-center space-y-2 p-8">
+                  <div className="w-12 h-12 bg-amber-100 text-[#D99A1C] rounded-full flex items-center justify-center mx-auto text-xl font-bold">
+                    📄
+                  </div>
+                  <p className="text-xs font-bold text-slate-800">{previewModalDoc.fileName}</p>
+                  <p className="text-[11px] text-slate-400 font-semibold">Document selected and verified for onboarding.</p>
+                </div>
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="flex justify-between items-center pt-3 border-t border-slate-100 shrink-0">
+              {previewModalDoc.previewUrl ? (
+                <a
+                  href={previewModalDoc.previewUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-4 py-2 bg-amber-50 hover:bg-amber-100 text-[#D99A1C] border border-amber-200 font-extrabold text-xs rounded-xl transition-all flex items-center gap-1.5"
+                >
+                  <span>↗ Open in New Tab</span>
+                </a>
+              ) : <div />}
+              <button
+                type="button"
+                onClick={() => setPreviewModalDoc(null)}
+                className="px-5 py-2 bg-slate-800 hover:bg-slate-900 text-white font-extrabold text-xs rounded-xl shadow-md transition-all cursor-pointer"
+              >
+                Close Preview
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
