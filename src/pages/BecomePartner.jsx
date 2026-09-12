@@ -1370,28 +1370,33 @@ export default function BecomePartner({ clients = [], setClients, applications =
               </button>
             </div>
 
-            <div className="flex-1 overflow-auto bg-slate-50 rounded-2xl border border-slate-200 p-2 sm:p-3 flex items-center justify-center my-3 min-h-[220px]">
+            <div className="flex-1 overflow-auto bg-slate-50 rounded-2xl border border-slate-200 p-2 sm:p-3 flex items-center justify-center my-3 min-h-[260px]">
               {previewModalDoc.previewUrl ? (
-                previewModalDoc.type === 'pdf' ? (
+                (previewModalDoc.type === 'pdf' || previewModalDoc.fileName?.endsWith('.pdf') || (typeof previewModalDoc.previewUrl === 'string' && previewModalDoc.previewUrl.startsWith('data:application/pdf'))) ? (
                   <iframe
                     src={previewModalDoc.previewUrl}
                     title={previewModalDoc.title}
-                    className="w-full h-[260px] sm:h-[340px] rounded-xl border border-slate-200 shadow-inner bg-white"
+                    className="w-full h-[320px] sm:h-[420px] rounded-xl border border-slate-200 shadow-inner bg-white"
                   />
                 ) : (
                   <img
                     src={previewModalDoc.previewUrl}
                     alt={previewModalDoc.title}
-                    className="max-h-[260px] sm:max-h-[340px] w-auto max-w-full object-contain rounded-xl shadow-md"
+                    className="max-h-[320px] sm:max-h-[420px] w-auto max-w-full object-contain rounded-xl shadow-md"
                   />
                 )
               ) : (
-                <div className="text-center space-y-2 p-6">
-                  <div className="w-12 h-12 bg-amber-100 text-[#D99A1C] rounded-full flex items-center justify-center mx-auto text-xl font-bold">
+                <div className="text-center space-y-3 p-6 bg-white border border-slate-200 rounded-2xl max-w-md w-full shadow-xs">
+                  <div className="w-14 h-14 bg-amber-100 text-[#D99A1C] rounded-2xl flex items-center justify-center mx-auto text-2xl font-bold border border-amber-200 shadow-xs">
                     📄
                   </div>
-                  <p className="text-xs font-bold text-slate-800">{previewModalDoc.fileName}</p>
-                  <p className="text-[11px] text-slate-400 font-semibold">Document verified and attached for partner account.</p>
+                  <div>
+                    <h4 className="text-sm font-black text-slate-900">{previewModalDoc.title}</h4>
+                    <p className="text-xs font-bold text-slate-600 mt-0.5">{previewModalDoc.fileName}</p>
+                    <p className="text-[11px] text-emerald-700 font-extrabold bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200 inline-block mt-2">
+                      ✓ Verified & Compliant Partner Proof
+                    </p>
+                  </div>
                 </div>
               )}
             </div>
