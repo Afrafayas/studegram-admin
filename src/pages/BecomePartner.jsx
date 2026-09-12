@@ -120,6 +120,7 @@ export default function BecomePartner({ setClients, onBack }) {
       const token = localStorage.getItem('admin_token');
       if (token && token !== 'mock-admin-token-12345') {
         const res = await API.post('/partners', {
+          password: 'Partner@123',
           name: formData.name,
           email: formData.email,
           phone: formData.phone,
