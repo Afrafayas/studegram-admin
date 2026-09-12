@@ -559,8 +559,12 @@ export default function BecomePartner({ clients = [], setClients, applications =
                                   <p className="text-slate-950 font-black text-xs tracking-tight">{partner.name}</p>
                                   <p className="text-[10px] text-slate-500 font-semibold">{partner.companyName || partner.name}</p>
                                   <div className="flex items-center gap-1.5 mt-0.5">
-                                    <span className="px-1.5 py-0.2 bg-amber-50 text-amber-700 border border-amber-200 rounded text-[9px] font-black uppercase">
-                                      {partner.partnerType === 'Individual' ? '👤 Individual Agent' : '🏢 Company Agency'}
+                                    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold tracking-tight whitespace-nowrap mt-1 ${
+                                      partner.partnerType === 'Individual'
+                                        ? 'bg-purple-50 text-purple-700 border border-purple-200/80'
+                                        : 'bg-blue-50 text-blue-700 border border-blue-200/80'
+                                    }`}>
+                                      <span>{partner.partnerType === 'Individual' ? '👤 Individual Agent' : '🏢 Company Agent'}</span>
                                     </span>
                                   </div>
                                 </div>
@@ -693,8 +697,12 @@ export default function BecomePartner({ clients = [], setClients, applications =
                                               Partner Profile — {partner.name}
                                             </h3>
                                           </div>
-                                          <span className="px-3 py-1 bg-amber-100 text-amber-800 border border-amber-300/80 rounded-full text-[10px] font-black uppercase">
-                                            {partner.partnerType === 'Individual' ? '👤 Individual Agent' : '🏢 Company Agency'}
+                                          <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wider ${
+                                            partner.partnerType === 'Individual'
+                                              ? 'bg-purple-50 text-purple-700 border border-purple-200'
+                                              : 'bg-blue-50 text-blue-700 border border-blue-200'
+                                          }`}>
+                                            <span>{partner.partnerType === 'Individual' ? '👤 Individual Agent' : '🏢 Company Agency'}</span>
                                           </span>
                                         </div>
 
