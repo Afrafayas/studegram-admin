@@ -34,6 +34,7 @@ export default function BecomePartner({ setClients, onBack }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmittedSuccess, setIsSubmittedSuccess] = useState(false);
   const [submittedPartnerCode, setSubmittedPartnerCode] = useState('');
+  const [previewModalDoc, setPreviewModalDoc] = useState(null);
 
   const countriesList = [
     'India', 'United Kingdom', 'United States', 'Canada', 
@@ -348,14 +349,14 @@ export default function BecomePartner({ setClients, onBack }) {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {partnerType === 'Company' ? (
               <>
-                <DocumentUploadSlot label="Company Incorporation Certificate" description="Official Business Registration License" docKey="incorporationCert" fileObj={documents.incorporationCert} required={true} onFileChange={handleFileChange} onRemoveFile={handleRemoveFile} />
-                <DocumentUploadSlot label="Tax / GST Registration Certificate" description="Tax Identification Copy" docKey="taxCert" fileObj={documents.taxCert} required={false} onFileChange={handleFileChange} onRemoveFile={handleRemoveFile} />
-                <DocumentUploadSlot label="Authorised Signatory ID Proof" description="Director Passport or Photo ID" docKey="signatoryIdProof" fileObj={documents.signatoryIdProof} required={false} onFileChange={handleFileChange} onRemoveFile={handleRemoveFile} />
+                <DocumentUploadSlot label="Company Incorporation Certificate" description="Official Business Registration License" docKey="incorporationCert" fileObj={documents.incorporationCert} required={true} onFileChange={handleFileChange} onRemoveFile={handleRemoveFile} onViewFile={(doc) => setPreviewModalDoc(doc)} />
+                <DocumentUploadSlot label="Tax / GST Registration Certificate" description="Tax Identification Copy" docKey="taxCert" fileObj={documents.taxCert} required={false} onFileChange={handleFileChange} onRemoveFile={handleRemoveFile} onViewFile={(doc) => setPreviewModalDoc(doc)} />
+                <DocumentUploadSlot label="Authorised Signatory ID Proof" description="Director Passport or Photo ID" docKey="signatoryIdProof" fileObj={documents.signatoryIdProof} required={false} onFileChange={handleFileChange} onRemoveFile={handleRemoveFile} onViewFile={(doc) => setPreviewModalDoc(doc)} />
               </>
             ) : (
               <>
-                <DocumentUploadSlot label="Individual ID Proof (Passport / National ID)" description="Government Photo ID" docKey="idProof" fileObj={documents.idProof} required={true} onFileChange={handleFileChange} onRemoveFile={handleRemoveFile} />
-                <DocumentUploadSlot label="Address Proof / Resume" description="Utility Bill or Professional Bio" docKey="addressProof" fileObj={documents.addressProof} required={false} onFileChange={handleFileChange} onRemoveFile={handleRemoveFile} />
+                <DocumentUploadSlot label="Individual ID Proof (Passport / National ID)" description="Government Photo ID" docKey="idProof" fileObj={documents.idProof} required={true} onFileChange={handleFileChange} onRemoveFile={handleRemoveFile} onViewFile={(doc) => setPreviewModalDoc(doc)} />
+                <DocumentUploadSlot label="Address Proof / Resume" description="Utility Bill or Professional Bio" docKey="addressProof" fileObj={documents.addressProof} required={false} onFileChange={handleFileChange} onRemoveFile={handleRemoveFile} onViewFile={(doc) => setPreviewModalDoc(doc)} />
               </>
             )}
           </div>
