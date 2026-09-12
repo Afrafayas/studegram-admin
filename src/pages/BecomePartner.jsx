@@ -377,38 +377,38 @@ export default function BecomePartner({ setClients, onBack }) {
       </form>
       {/* Document Preview Modal */}
       {previewModalDoc && (
-        <div className="fixed inset-0 z-50 overflow-y-auto bg-black/70 backdrop-blur-xs p-4 flex items-center justify-center select-none animate-fade-in">
-          <div className="bg-white border border-[#E2E8F0] border-t-4 border-t-[#D99A1C] rounded-2xl p-5 md:p-6 w-full max-w-3xl shadow-2xl flex flex-col max-h-[85vh] my-auto">
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-black/75 backdrop-blur-xs p-3 sm:p-6 flex justify-center items-start sm:items-center select-none animate-fade-in">
+          <div className="relative bg-white border border-[#E2E8F0] border-t-4 border-t-[#D99A1C] rounded-2xl p-4 sm:p-6 w-full max-w-3xl shadow-2xl flex flex-col my-auto max-h-[90vh]">
             {/* Modal Header */}
             <div className="flex justify-between items-center pb-3 border-b border-slate-100 shrink-0">
               <div className="space-y-0.5">
                 <span className="text-[10px] font-extrabold text-[#D99A1C] uppercase tracking-wider block">Document Verification Preview</span>
-                <h3 className="text-sm font-black text-slate-900">{previewModalDoc.title}</h3>
-                <p className="text-[11px] text-slate-400 font-semibold">{previewModalDoc.fileName}</p>
+                <h3 className="text-xs sm:text-sm font-black text-slate-900">{previewModalDoc.title}</h3>
+                <p className="text-[10px] sm:text-[11px] text-slate-400 font-semibold">{previewModalDoc.fileName}</p>
               </div>
               <button
                 type="button"
                 onClick={() => setPreviewModalDoc(null)}
-                className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-800 font-bold flex items-center justify-center transition-all cursor-pointer shrink-0"
+                className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold flex items-center justify-center transition-all cursor-pointer shrink-0"
               >
                 ✕
               </button>
             </div>
 
             {/* Modal Body / Document Preview Area */}
-            <div className="flex-1 overflow-hidden bg-slate-50 rounded-xl border border-slate-200 p-2 md:p-3 flex items-center justify-center my-3 min-h-[220px]">
+            <div className="flex-1 overflow-auto bg-slate-50 rounded-xl border border-slate-200 p-2 sm:p-3 flex items-center justify-center my-3">
               {previewModalDoc.previewUrl ? (
                 previewModalDoc.type === 'pdf' ? (
                   <iframe
                     src={previewModalDoc.previewUrl}
                     title={previewModalDoc.title}
-                    className="w-full h-full min-h-[280px] max-h-[50vh] rounded-lg border border-slate-200 shadow-inner bg-white"
+                    className="w-full h-[260px] sm:h-[320px] rounded-lg border border-slate-200 shadow-inner bg-white"
                   />
                 ) : (
                   <img
                     src={previewModalDoc.previewUrl}
                     alt={previewModalDoc.title}
-                    className="max-h-[50vh] w-auto max-w-full object-contain rounded-lg shadow-md"
+                    className="max-h-[260px] sm:max-h-[320px] w-auto max-w-full object-contain rounded-lg shadow-md"
                   />
                 )
               ) : (
@@ -429,7 +429,7 @@ export default function BecomePartner({ setClients, onBack }) {
                   href={previewModalDoc.previewUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="px-4 py-2 bg-amber-50 hover:bg-amber-100 text-[#D99A1C] border border-amber-200 font-extrabold text-xs rounded-xl transition-all flex items-center gap-1.5"
+                  className="px-3 py-1.5 sm:px-4 sm:py-2 bg-amber-50 hover:bg-amber-100 text-[#D99A1C] border border-amber-200 font-extrabold text-[11px] sm:text-xs rounded-xl transition-all flex items-center gap-1.5"
                 >
                   <span>↗ Open in New Tab</span>
                 </a>
@@ -437,7 +437,7 @@ export default function BecomePartner({ setClients, onBack }) {
               <button
                 type="button"
                 onClick={() => setPreviewModalDoc(null)}
-                className="px-5 py-2 bg-slate-800 hover:bg-slate-900 text-white font-extrabold text-xs rounded-xl shadow-md transition-all cursor-pointer"
+                className="px-4 py-1.5 sm:px-5 sm:py-2 bg-slate-800 hover:bg-slate-900 text-white font-extrabold text-[11px] sm:text-xs rounded-xl shadow-md transition-all cursor-pointer"
               >
                 Close Preview
               </button>
