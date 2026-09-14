@@ -4,6 +4,38 @@ import API from '../api/axios';
 import { useToast } from '../context/ToastContext';
 import { useAuth } from '../context/AuthContext';
 
+// Helper to convert base64 string or data URL to Blob URL for clean PDF/Image rendering in iframe
+const getDocumentBlobUrl = (urlOrBase64, mimeType = 'application/pdf') => {
+  if (!urlOrBase64) return '';
+  if (typeof urlOrBase64 !== 'string') return '';
+  if (urlOrBase64.startsWith('blob:') || urlOrBase64.startsWith('http://') || urlOrBase64.startsWith('https://')) {
+    return urlOrBase64;
+  }
+
+  let base64 = urlOrBase64;
+  let type = mimeType;
+
+  if (urlOrBase64.startsWith('data:')) {
+    const parts = urlOrBase64.split(',');
+    const match = parts[0].match(/:(.*?);/);
+    if (match) type = match[1];
+    base64 = parts[1] || '';
+  }
+
+  try {
+    const binary = atob(base64.replace(/\s/g, ''));
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) {
+      bytes[i] = binary.charCodeAt(i);
+    }
+    const blob = new Blob([bytes], { type });
+    return URL.createObjectURL(blob);
+  } catch (err) {
+    console.error('Failed to convert base64 to Blob URL:', err);
+    return urlOrBase64;
+  }
+};
+
 export default function BecomePartner({ clients = [], setClients, applications = [], onPartnerOnboarded, onBack }) {
   const toast = useToast();
   const { addAuditLog } = useAuth();
@@ -13,38 +45,6 @@ export default function BecomePartner({ clients = [], setClients, applications =
 
   // Document Preview Modal State
   const [previewModalDoc, setPreviewModalDoc] = useState(null);
-
-  // Helper to convert base64 string or data URL to Blob URL for clean PDF/Image rendering in iframe
-  const getDocumentBlobUrl = (urlOrBase64, mimeType = 'application/pdf') => {
-    if (!urlOrBase64) return '';
-    if (typeof urlOrBase64 !== 'string') return '';
-    if (urlOrBase64.startsWith('blob:') || urlOrBase64.startsWith('http://') || urlOrBase64.startsWith('https://')) {
-      return urlOrBase64;
-    }
-
-    let base64 = urlOrBase64;
-    let type = mimeType;
-
-    if (urlOrBase64.startsWith('data:')) {
-      const parts = urlOrBase64.split(',');
-      const match = parts[0].match(/:(.*?);/);
-      if (match) type = match[1];
-      base64 = parts[1] || '';
-    }
-
-    try {
-      const binary = atob(base64.replace(/\s/g, ''));
-      const bytes = new Uint8Array(binary.length);
-      for (let i = 0; i < binary.length; i++) {
-        bytes[i] = binary.charCodeAt(i);
-      }
-      const blob = new Blob([bytes], { type });
-      return URL.createObjectURL(blob);
-    } catch (err) {
-      console.error('Failed to convert base64 to Blob URL:', err);
-      return urlOrBase64;
-    }
-  };
 
   // Edit Partner Modal State
   const [editingPartner, setEditingPartner] = useState(null);
@@ -1574,9 +1574,10 @@ function DocumentUploadSlot({ label, description, docKey, fileObj, required, onF
             <button 
               type="button" 
               onClick={() => {
-                if (onViewFile) {
-                  const isImg = fileObj.type === 'image' || fileObj.name.match(/\.(png|jpg|jpeg|gif|svg|webp)$/i);
-                  const safeUrl = getDocumentBlobUrl(fileObj.previewUrl, isImg ? 'image/png' : 'application/pdf');
+                if (onViewFile && fileObj) {
+                  const isImg = fileObj.type === 'image' || (fileObj.name && fileObj.name.match(/\.(png|jpg|jpeg|gif|svg|webp)$/i));
+                  const urlToUse = fileObj.previewUrl || (fileObj.fileObj ? URL.createObjectURL(fileObj.fileObj) : '');
+                  const safeUrl = getDocumentBlobUrl(urlToUse, isImg ? 'image/png' : 'application/pdf');
                   onViewFile({ title: label, fileName: fileObj.name, previewUrl: safeUrl, type: isImg ? 'image' : 'pdf' });
                 }
               }} 
