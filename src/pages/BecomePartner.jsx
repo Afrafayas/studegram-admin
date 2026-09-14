@@ -1045,10 +1045,6 @@ export default function BecomePartner({ clients = [], setClients, applications =
 
               <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 text-left space-y-2 text-xs">
                 <div className="flex justify-between items-center text-slate-600">
-                  <span className="font-semibold text-slate-400">Partner Code / Reference:</span>
-                  <span className="font-mono font-bold text-[#2563EB]">{submittedPartnerCode}</span>
-                </div>
-                <div className="flex justify-between items-center text-slate-600">
                   <span className="font-semibold text-slate-400">Account Structure:</span>
                   <span className="font-extrabold text-slate-800">{partnerType} Agent</span>
                 </div>
