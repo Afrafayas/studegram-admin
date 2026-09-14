@@ -65,7 +65,7 @@ export default function AdminPortal({ onLogout }) {
           email: agent.email,
           phone: agent.phone || '',
           companyName: agent.companyName || agent.name,
-          partnerType: agent.partnerType || 'Company',
+          partnerType: (agent.partnerType && agent.partnerType.toString().toLowerCase() === 'individual') ? 'Individual' : 'Company',
           taxId: agent.taxId || '',
           documents: Array.isArray(agent.documents) ? agent.documents : (agent.documents ? [agent.documents] : []),
           activeApps: 0,

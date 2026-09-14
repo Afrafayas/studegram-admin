@@ -90,6 +90,7 @@ export default function Partners({ clients, setClients }) {
       id: Date.now(),
       name: newPartnerName,
       type: 'Agent',
+      partnerType: partnerType || 'Company',
       email: newPartnerEmail,
       phone: newPartnerPhone,
       partnerCode: `PRT-${nextCodeNum}`,
@@ -223,7 +224,9 @@ export default function Partners({ clients, setClients }) {
                           </div>
                           <div>
                             <p className="text-slate-950 font-black">{partner.name}</p>
-                            <p className="text-[10px] text-slate-400 font-semibold">Registered Partner</p>
+                            <p className="text-[10px] text-slate-400 font-semibold">
+                              {(partner.partnerType && partner.partnerType.toString().toLowerCase() === 'individual') ? '👤 Individual Agent' : '🏢 Company Agent'}
+                            </p>
                           </div>
                         </td>
                         <td className="px-6 py-4">

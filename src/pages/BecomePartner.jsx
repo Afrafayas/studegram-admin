@@ -417,6 +417,7 @@ export default function BecomePartner({ clients = [], setClients, applications =
 
   const resetOnboardingForm = () => {
     setIsSubmittedSuccess(false);
+    setPartnerType('Company');
     setFormData({
       name: '',
       email: '',
@@ -639,14 +640,16 @@ export default function BecomePartner({ clients = [], setClients, applications =
                                 </div>
                                 <div>
                                   <p className="text-slate-950 font-black text-xs tracking-tight">{partner.name}</p>
-                                  <p className="text-[10px] text-slate-500 font-semibold">{partner.companyName || partner.name}</p>
+                                  <p className="text-[10px] text-slate-500 font-semibold">
+                                    {(partner.partnerType && partner.partnerType.toString().toLowerCase() === 'individual') ? 'Individual Counselor / Agent' : (partner.companyName || partner.name)}
+                                  </p>
                                   <div className="flex items-center gap-1.5 mt-0.5">
                                     <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold tracking-tight whitespace-nowrap mt-1 ${
-                                      partner.partnerType === 'Individual'
+                                      (partner.partnerType && partner.partnerType.toString().toLowerCase() === 'individual')
                                         ? 'bg-purple-50 text-purple-700 border border-purple-200/80'
                                         : 'bg-blue-50 text-blue-700 border border-blue-200/80'
                                     }`}>
-                                      <span>{partner.partnerType === 'Individual' ? '👤 Individual Agent' : '🏢 Company Agent'}</span>
+                                      <span>{(partner.partnerType && partner.partnerType.toString().toLowerCase() === 'individual') ? '👤 Individual Agent' : '🏢 Company Agent'}</span>
                                     </span>
                                   </div>
                                 </div>
@@ -780,11 +783,11 @@ export default function BecomePartner({ clients = [], setClients, applications =
                                             </h3>
                                           </div>
                                           <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wider ${
-                                            partner.partnerType === 'Individual'
+                                            (partner.partnerType && partner.partnerType.toString().toLowerCase() === 'individual')
                                               ? 'bg-purple-50 text-purple-700 border border-purple-200'
                                               : 'bg-blue-50 text-blue-700 border border-blue-200'
                                           }`}>
-                                            <span>{partner.partnerType === 'Individual' ? '👤 Individual Agent' : '🏢 Company Agency'}</span>
+                                            <span>{(partner.partnerType && partner.partnerType.toString().toLowerCase() === 'individual') ? '👤 Individual Agent' : '🏢 Company Agency'}</span>
                                           </span>
                                         </div>
 
