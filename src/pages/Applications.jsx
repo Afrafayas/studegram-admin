@@ -103,6 +103,79 @@ export default function Applications({ applications, referralAgents, intakes = [
     }
   };
 
+  // Application Pick / Assign / Forward Handlers
+  const [ownershipTab, setOwnershipTab] = useState('All'); // 'All' | 'My Picked' | 'Unpicked'
+  const [assignModalApp, setAssignModalApp] = useState(null);
+  const [selectedStaffId, setSelectedStaffId] = useState('');
+  const [staffOptions, setStaffOptions] = useState([]);
+
+  useEffect(() => {
+    const fetchStaff = async () => {
+      try {
+        const res = await API.get('/users/staff');
+        if (res.data?.success) {
+          setStaffOptions(res.data.data);
+        }
+      } catch (err) {
+        console.warn('Failed to fetch staff list:', err.message);
+      }
+    };
+    fetchStaff();
+  }, []);
+
+  const handlePickApplication = async (app) => {
+    try {
+      const appId = app.id || app._id;
+      const res = await API.put(`/applications/${appId}/pick`);
+      if (res.data?.success) {
+        toast.success(`Application ${app.camsId || ''} picked successfully! You are now handling this file.`);
+        if (onRefresh) onRefresh();
+      } else {
+        throw new Error(res.data?.message || 'Pick failed');
+      }
+    } catch (err) {
+      toast.error(err.response?.data?.message || err.message || 'Failed to pick application');
+    }
+  };
+
+  const handleAssignSubmit = async (e) => {
+    e.preventDefault();
+    if (!assignModalApp || !selectedStaffId) {
+      toast.error('Please select a staff member to assign.');
+      return;
+    }
+    try {
+      const appId = assignModalApp.id || assignModalApp._id;
+      const res = await API.put(`/applications/${appId}/assign`, { pickedBy: selectedStaffId });
+      if (res.data?.success) {
+        toast.success(`Application assigned successfully.`);
+        setAssignModalApp(null);
+        if (onRefresh) onRefresh();
+      } else {
+        throw new Error(res.data?.message || 'Assignment failed');
+      }
+    } catch (err) {
+      toast.error(err.response?.data?.message || err.message || 'Failed to assign staff');
+    }
+  };
+
+  const handleForwardToOperations = async (app) => {
+    try {
+      const appId = app.id || app._id;
+      const res = await API.put(`/applications/${appId}/forward-operations`, {
+        remarks: 'CRE review completed. Forwarded to Operations Head.'
+      });
+      if (res.data?.success) {
+        toast.success(`Application forwarded to Operations Head successfully.`);
+        if (onRefresh) onRefresh();
+      } else {
+        throw new Error(res.data?.message || 'Forward failed');
+      }
+    } catch (err) {
+      toast.error(err.response?.data?.message || err.message || 'Failed to forward to Operations Head');
+    }
+  };
+
   // Search and filter applications
   const filteredApps = applications.filter(app => {
     const camsId = app.camsId || '';
@@ -121,8 +194,20 @@ export default function Applications({ applications, referralAgents, intakes = [
     const partnerMatch = partnerFilter === 'All' || partner === partnerFilter;
     const intakeMatch = intakeFilter === 'All' || (app.intake && app.intake.toLowerCase().includes(intakeFilter.toLowerCase()));
 
-    return searchMatch && statusMatch && partnerMatch && intakeMatch;
+    // Ownership Tab Filter
+    let ownershipMatch = true;
+    const myId = currentUser?._id || currentUser?.id;
+    if (ownershipTab === 'My Picked') {
+      ownershipMatch = app.pickedBy && (app.pickedBy._id === myId || app.pickedBy.id === myId || app.pickedBy.email === currentUser?.email);
+    } else if (ownershipTab === 'Unpicked') {
+      ownershipMatch = !app.pickedBy;
+    }
+
+    return searchMatch && statusMatch && partnerMatch && intakeMatch && ownershipMatch;
   });
+
+  const unpickedCount = applications.filter(a => !a.pickedBy).length;
+  const unrepliedCount = applications.filter(a => a.hasUnrepliedMessage).length;
 
   // Pagination Math
   const totalItems = filteredApps.length;
@@ -148,6 +233,63 @@ export default function Applications({ applications, referralAgents, intakes = [
           </svg>
           <span>Create Application</span>
         </button>
+      </div>
+
+      {/* SuperAdmin / Admin Overview Cards */}
+      {(currentUser?.role === 'SuperAdmin' || currentUser?.role === 'Director') && (
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div className="bg-white border border-slate-200 border-t-4 border-t-amber-500 p-4 rounded-2xl shadow-xs">
+            <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest block">Waiting / Unpicked Applications</span>
+            <div className="flex items-baseline gap-2 mt-2">
+              <span className="text-2xl font-black text-slate-900">{unpickedCount}</span>
+              <span className="text-[10px] text-amber-600 font-bold uppercase">Pending Pick / Assign</span>
+            </div>
+          </div>
+          <div className="bg-white border border-slate-200 border-t-4 border-t-[#1e3a8a] p-4 rounded-2xl shadow-xs">
+            <span className="text-[10px] font-extrabold text-[#1e3a8a] uppercase tracking-widest block">Unreplied Agent Messages</span>
+            <div className="flex items-baseline gap-2 mt-2">
+              <span className="text-2xl font-black text-[#1e3a8a]">{unrepliedCount}</span>
+              <span className="text-[10px] text-blue-600 font-bold uppercase">Pending Reply</span>
+            </div>
+          </div>
+          <div className="bg-white border border-slate-200 border-t-4 border-t-emerald-500 p-4 rounded-2xl shadow-xs">
+            <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest block">Total Registered Applications</span>
+            <div className="flex items-baseline gap-2 mt-2">
+              <span className="text-2xl font-black text-slate-900">{applications.length}</span>
+              <span className="text-[10px] text-emerald-600 font-bold uppercase">Active Registry</span>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Ownership & Scoping Tabs */}
+      <div className="bg-white border border-slate-200 p-3 rounded-2xl shadow-xs flex flex-col sm:flex-row gap-3 items-center justify-between">
+        <div className="flex gap-2 w-full sm:w-auto">
+          <button
+            onClick={() => setOwnershipTab('All')}
+            className={`px-4 py-2 text-xs font-black rounded-xl transition-all ${
+              ownershipTab === 'All' ? 'bg-[#0A0A0F] text-white shadow-sm' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+            }`}
+          >
+            All Applications ({applications.length})
+          </button>
+          <button
+            onClick={() => setOwnershipTab('My Picked')}
+            className={`px-4 py-2 text-xs font-black rounded-xl transition-all ${
+              ownershipTab === 'My Picked' ? 'bg-[#D99A1C] text-white shadow-sm' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+            }`}
+          >
+            My Picked Applications
+          </button>
+          <button
+            onClick={() => setOwnershipTab('Unpicked')}
+            className={`px-4 py-2 text-xs font-black rounded-xl transition-all ${
+              ownershipTab === 'Unpicked' ? 'bg-amber-600 text-white shadow-sm' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+            }`}
+          >
+            Waiting / Unpicked List ({unpickedCount})
+          </button>
+        </div>
       </div>
 
       {/* Advanced Filters */}
@@ -228,7 +370,7 @@ export default function Applications({ applications, referralAgents, intakes = [
                   <th className="px-6 py-3.5 text-slate-400 text-[10px] font-extrabold uppercase tracking-wider pl-6">ID / CAMS ID</th>
                   <th className="px-6 py-3.5 text-slate-400 text-[10px] font-extrabold uppercase tracking-wider">Student Profile</th>
                   <th className="px-6 py-3.5 text-slate-400 text-[10px] font-extrabold uppercase tracking-wider">University & Course</th>
-                  <th className="px-6 py-3.5 text-slate-400 text-[10px] font-extrabold uppercase tracking-wider">Referred Partner</th>
+                  <th className="px-6 py-3.5 text-slate-400 text-[10px] font-extrabold uppercase tracking-wider">Handling Staff</th>
                   <th className="px-6 py-3.5 text-slate-400 text-[10px] font-extrabold uppercase tracking-wider">Status Stage</th>
                   <th className="px-6 py-3.5 text-slate-400 text-[10px] font-extrabold uppercase tracking-wider">Date Filed</th>
                   <th className="px-6 py-3.5 text-slate-400 text-[10px] font-extrabold uppercase tracking-wider text-right pr-6">Action</th>
@@ -238,57 +380,116 @@ export default function Applications({ applications, referralAgents, intakes = [
                 {paginatedApps.map((app) => {
                   const displayStatus = app.secondaryStatus || app.status || 'Submitted';
                   const isClosed = displayStatus.includes('Closed');
+                  const pickedStaffName = app.pickedBy?.name || app.pickedBy?.email || null;
+
                   return (
-                    <tr key={app.camsId || app.id} className="hover:bg-slate-50/50 transition-colors">
+                    <tr 
+                      key={app.camsId || app.id || app._id} 
+                      className={`hover:bg-slate-50/50 transition-colors ${
+                        app.hasUnrepliedMessage ? 'bg-[#1e3a8a]/5 font-bold border-l-4 border-l-[#1e3a8a]' : ''
+                      }`}
+                    >
                       <td className="px-6 py-4 font-extrabold text-[#D99A1C] pl-6 truncate max-w-[120px]">
-                        {app.camsId.startsWith('CAMS') ? app.camsId : `CAMS${app.camsId.substring(app.camsId.length - 6).toUpperCase()}`}
+                        <div>
+                          <span>{app.camsId && app.camsId.startsWith('CAMS') ? app.camsId : `CAMS${(app.camsId || '').substring((app.camsId || '').length - 6).toUpperCase()}`}</span>
+                          {app.hasUnrepliedMessage && (
+                            <span className="block mt-1 bg-[#1e3a8a] text-white text-[8px] font-black px-1.5 py-0.5 rounded-full uppercase tracking-wider animate-pulse max-w-fit">
+                              💬 Unreplied Msg
+                            </span>
+                          )}
+                        </div>
                       </td>
                       <td className="px-6 py-4">
                         <p className="text-slate-950 font-black">{app.studentName}</p>
                         <p className="text-[10px] text-slate-400 font-semibold">{app.passportNo || 'Pending Passport'}</p>
+                        {app.submittedByStaff && (
+                          <p className="text-[9px] text-slate-400 font-medium">By: {app.submittedByStaff.name}</p>
+                        )}
                       </td>
                       <td className="px-6 py-4">
                         <p className="text-slate-950 font-black">{app.universityName}</p>
                         <p className="text-[10px] text-indigo-500 font-bold">{app.courseName} ({app.intake})</p>
                       </td>
-                      <td className="px-6 py-4 text-slate-500 font-black">
-                        {app.assignedBdm || 'Direct'}
+                      <td className="px-6 py-4">
+                        {pickedStaffName ? (
+                          <span className="px-2.5 py-1 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-xl text-[10px] font-black">
+                            👤 {pickedStaffName}
+                          </span>
+                        ) : (
+                          <span className="px-2.5 py-1 bg-amber-50 text-amber-700 border border-amber-200 rounded-xl text-[10px] font-black italic">
+                            ⚠️ Waiting / Unpicked
+                          </span>
+                        )}
                       </td>
                       <td className="px-6 py-4">
-                        <span className={`px-2.5 py-0.5 border rounded-full text-[9px] font-extrabold ${
-                          isClosed || displayStatus === 'Enrolled / Closed' || displayStatus === 'Visa Approved' || displayStatus === 'Paid Students'
-                            ? 'bg-emerald-50 text-emerald-700 border-emerald-200 font-black' 
-                            : displayStatus.includes('Offer') || displayStatus.includes('CAS')
-                              ? 'bg-blue-50 text-blue-700 border-blue-200'
-                              : displayStatus.includes('Rejected')
-                                ? 'bg-rose-50 text-rose-700 border-rose-200'
-                                : 'bg-amber-50 text-amber-700 border-amber-200'
-                        }`}>
-                          {displayStatus}
-                        </span>
+                        <div className="space-y-1">
+                          <span className={`px-2.5 py-0.5 border rounded-full text-[9px] font-extrabold ${
+                            isClosed || displayStatus === 'Enrolled / Closed' || displayStatus === 'Visa Approved' || displayStatus === 'Paid Students'
+                              ? 'bg-emerald-50 text-emerald-700 border-emerald-200 font-black' 
+                              : displayStatus.includes('Offer') || displayStatus.includes('CAS')
+                                ? 'bg-blue-50 text-blue-700 border-blue-200'
+                                : displayStatus.includes('Rejected')
+                                  ? 'bg-rose-50 text-rose-700 border-rose-200'
+                                  : 'bg-amber-50 text-amber-700 border-amber-200'
+                          }`}>
+                            {displayStatus}
+                          </span>
+                          {app.commissionClaimed && (
+                            <span className="block text-[9px] font-black text-emerald-600">
+                              💰 Comm: {app.commissionStatus || 'Claimed'}
+                            </span>
+                          )}
+                        </div>
                       </td>
                       <td className="px-6 py-4 text-slate-400 font-medium">
                         {app.dateAdded}
                       </td>
                       <td className="px-6 py-4 text-right pr-6" onClick={(e) => e.stopPropagation()}>
-                        <div className="flex items-center justify-end gap-2">
+                        <div className="flex items-center justify-end gap-1.5 flex-wrap">
+                          {!app.pickedBy && (
+                            <button
+                              onClick={() => handlePickApplication(app)}
+                              className="bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-[9px] px-2.5 py-1.5 rounded-xl transition-all shadow-3xs inline-flex items-center gap-1 cursor-pointer uppercase tracking-wider"
+                              title="Pick Application to handle follow-up"
+                            >
+                              <span>✋ Pick App</span>
+                            </button>
+                          )}
+
+                          {(currentUser?.role === 'SuperAdmin' || currentUser?.role === 'Director') && (
+                            <button
+                              onClick={() => {
+                                setAssignModalApp(app);
+                                setSelectedStaffId('');
+                              }}
+                              className="bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold text-[9px] px-2.5 py-1.5 rounded-xl transition-all shadow-3xs inline-flex items-center gap-1 cursor-pointer uppercase tracking-wider"
+                              title="Assign Staff Member"
+                            >
+                              <span>👉 Assign Staff</span>
+                            </button>
+                          )}
+
+                          {(currentUser?.role === 'CRE' || currentUser?.role === 'SuperAdmin') && displayStatus === 'Submitted' && (
+                            <button
+                              onClick={() => handleForwardToOperations(app)}
+                              className="bg-purple-600 hover:bg-purple-700 text-white font-extrabold text-[9px] px-2.5 py-1.5 rounded-xl transition-all shadow-3xs inline-flex items-center gap-1 cursor-pointer uppercase tracking-wider"
+                              title="Forward CRE verified file to Operations Head"
+                            >
+                              <span>➡️ Forward Ops</span>
+                            </button>
+                          )}
+
                           <button
                             onClick={() => openStatusModal(app)}
-                            className="bg-amber-500 hover:bg-amber-600 text-white font-extrabold text-[10px] px-3 py-1.5 rounded-xl transition-all shadow-3xs inline-flex items-center gap-1 cursor-pointer"
+                            className="bg-amber-500 hover:bg-amber-600 text-white font-extrabold text-[9px] px-2.5 py-1.5 rounded-xl transition-all shadow-3xs inline-flex items-center gap-1 cursor-pointer"
                           >
-                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                            </svg>
-                            <span>Update Status</span>
+                            <span>Update</span>
                           </button>
                           <button
                             onClick={() => setSelectedChatApp(app)}
-                            className="bg-[#2563EB] hover:bg-[#1D4ED8] text-white font-extrabold text-[10px] px-3 py-1.5 rounded-xl transition-all shadow-3xs inline-flex items-center gap-1 cursor-pointer"
+                            className="bg-[#2563EB] hover:bg-[#1D4ED8] text-white font-extrabold text-[9px] px-2.5 py-1.5 rounded-xl transition-all shadow-3xs inline-flex items-center gap-1 cursor-pointer"
                           >
-                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-                            </svg>
-                            <span>Chat / Logs</span>
+                            <span>Chat</span>
                           </button>
                         </div>
                       </td>
@@ -425,6 +626,61 @@ export default function Applications({ applications, referralAgents, intakes = [
                   className="px-5 py-2 text-xs font-extrabold text-white bg-[#D99A1C] hover:bg-[#F5B025] rounded-xl shadow-md transition-all disabled:opacity-50"
                 >
                   {isUpdating ? 'Updating...' : 'Save & Publish Update'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Assign Staff Modal */}
+      {assignModalApp && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-100 space-y-5 animate-in fade-in zoom-in-95">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div>
+                <h3 className="text-sm font-black text-slate-900 uppercase tracking-wider">Assign Staff Member</h3>
+                <p className="text-[11px] text-slate-500 font-semibold">Student: <strong className="text-slate-900">{assignModalApp.studentName}</strong> ({assignModalApp.camsId})</p>
+              </div>
+              <button 
+                onClick={() => setAssignModalApp(null)}
+                className="text-slate-400 hover:text-slate-700 p-1 rounded-lg"
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleAssignSubmit} className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">Select Handling Staff Member</label>
+                <select
+                  required
+                  value={selectedStaffId}
+                  onChange={(e) => setSelectedStaffId(e.target.value)}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs text-slate-900 font-extrabold focus:outline-none focus:border-[#D99A1C] focus:ring-1 focus:ring-[#D99A1C] cursor-pointer"
+                >
+                  <option value="">-- Choose Staff Member --</option>
+                  {staffOptions.map(staff => (
+                    <option key={staff._id} value={staff._id}>
+                      {staff.name} ({staff.role}) - {staff.email}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="flex items-center justify-end gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setAssignModalApp(null)}
+                  className="px-4 py-2 text-xs font-bold text-slate-600 hover:text-slate-900 bg-slate-100 rounded-xl"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2 text-xs font-extrabold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl shadow-md transition-all"
+                >
+                  Confirm Staff Assignment
                 </button>
               </div>
             </form>

@@ -29,20 +29,64 @@ export default function Partners({ clients, setClients }) {
     addressProof: null
   });
 
+  // Rejection modal state
+  const [rejectPartnerModal, setRejectPartnerModal] = useState(null);
+  const [rejectionReason, setRejectionReason] = useState('');
+
+  const handleApprovePartner = async (partnerId) => {
+    try {
+      const response = await API.put(`/partners/${partnerId}/approve`);
+      if (response.data?.success) {
+        setClients(prev => prev.map(c => c.id === partnerId || c._id === partnerId ? { ...c, status: 'Active' } : c));
+        toast.success('Partner approved successfully!');
+      } else {
+        throw new Error(response.data?.message || 'Approval failed');
+      }
+    } catch (err) {
+      toast.error(err.response?.data?.message || err.message || 'Approval failed');
+    }
+  };
+
+  const handleRejectPartnerSubmit = async (e) => {
+    e.preventDefault();
+    if (!rejectPartnerModal || !rejectionReason.trim()) {
+      toast.error('Rejection reason is mandatory.');
+      return;
+    }
+    try {
+      const response = await API.put(`/partners/${rejectPartnerModal.id || rejectPartnerModal._id}/reject`, {
+        rejectionReason
+      });
+      if (response.data?.success) {
+        setClients(prev => prev.map(c => c.id === rejectPartnerModal.id || c._id === rejectPartnerModal._id ? { ...c, status: 'Rejected', rejectionReason } : c));
+        toast.success('Partner registration rejected with reason.');
+        setRejectPartnerModal(null);
+        setRejectionReason('');
+      } else {
+        throw new Error(response.data?.message || 'Rejection failed');
+      }
+    } catch (err) {
+      toast.error(err.response?.data?.message || err.message || 'Rejection failed');
+    }
+  };
+
   const handleUpdateStatus = async (partnerId, newStatus) => {
+    if (newStatus === 'Active') {
+      await handleApprovePartner(partnerId);
+      return;
+    }
     const token = localStorage.getItem('admin_token');
     try {
       if (token && token !== 'mock-admin-token-12345') {
         const response = await API.put(`/partners/${partnerId}`, { status: newStatus });
         if (response.data?.success) {
-          setClients(prev => prev.map(c => c.id === partnerId ? { ...c, status: newStatus } : c));
+          setClients(prev => prev.map(c => (c.id === partnerId || c._id === partnerId) ? { ...c, status: newStatus } : c));
           toast.success(`Partner status updated to ${newStatus}.`);
         } else {
           throw new Error(response.data?.message || 'Failed to update partner status');
         }
       } else {
-        // Fallback
-        setClients(prev => prev.map(c => c.id === partnerId ? { ...c, status: newStatus } : c));
+        setClients(prev => prev.map(c => (c.id === partnerId || c._id === partnerId) ? { ...c, status: newStatus } : c));
         toast.success(`Mock partner status updated to ${newStatus}.`);
       }
     } catch (err) {
@@ -248,16 +292,27 @@ export default function Partners({ clients, setClients }) {
                             {partner.status}
                           </span>
                           {partner.status === 'Pending' && (
-                            <button
-                              onClick={() => handleUpdateStatus(partner.id, 'Active')}
-                              className="bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-[9px] px-2 py-1 rounded-md transition-all shadow-3xs cursor-pointer uppercase tracking-wider"
-                            >
-                              Approve
-                            </button>
+                            <>
+                              <button
+                                onClick={() => handleUpdateStatus(partner.id || partner._id, 'Active')}
+                                className="bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-[9px] px-2 py-1 rounded-md transition-all shadow-3xs cursor-pointer uppercase tracking-wider"
+                              >
+                                Approve
+                              </button>
+                              <button
+                                onClick={() => {
+                                  setRejectPartnerModal(partner);
+                                  setRejectionReason('');
+                                }}
+                                className="bg-rose-600 hover:bg-rose-700 text-white font-extrabold text-[9px] px-2 py-1 rounded-md transition-all shadow-3xs cursor-pointer uppercase tracking-wider"
+                              >
+                                Reject
+                              </button>
+                            </>
                           )}
                           {partner.status === 'Active' && (
                             <button
-                              onClick={() => handleUpdateStatus(partner.id, 'Inactive')}
+                              onClick={() => handleUpdateStatus(partner.id || partner._id, 'Inactive')}
                               className="bg-rose-500 hover:bg-rose-600 text-white font-extrabold text-[9px] px-2 py-1 rounded-md transition-all shadow-3xs cursor-pointer uppercase tracking-wider"
                             >
                               Deactivate
@@ -265,7 +320,7 @@ export default function Partners({ clients, setClients }) {
                           )}
                           {partner.status === 'Inactive' && (
                             <button
-                              onClick={() => handleUpdateStatus(partner.id, 'Active')}
+                              onClick={() => handleUpdateStatus(partner.id || partner._id, 'Active')}
                               className="bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-[9px] px-2 py-1 rounded-md transition-all shadow-3xs cursor-pointer uppercase tracking-wider"
                             >
                               Activate
@@ -460,6 +515,58 @@ export default function Partners({ clients, setClients }) {
                   className="px-4 py-2 bg-[#D99A1C] hover:bg-[#F5B025] text-white font-extrabold text-xs rounded-xl transition-all shadow-md"
                 >
                   Confirm Onboarding
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Rejection Reason Modal */}
+      {rejectPartnerModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs select-none p-4">
+          <div className="bg-white border border-rose-200 border-t-4 border-t-rose-600 rounded-2xl p-6 w-full max-w-md shadow-2xl space-y-4 animate-in zoom-in-95 duration-150">
+            <div className="flex justify-between items-center pb-2 border-b border-slate-100">
+              <div>
+                <h3 className="text-sm font-black text-rose-900 uppercase tracking-wider">Reject Partner Registration</h3>
+                <p className="text-[11px] text-slate-500 font-semibold">Partner: <strong className="text-slate-800">{rejectPartnerModal.name}</strong></p>
+              </div>
+              <button 
+                onClick={() => setRejectPartnerModal(null)} 
+                className="text-slate-400 hover:text-slate-600 font-bold text-sm"
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleRejectPartnerSubmit} className="space-y-4">
+              <div className="space-y-1.5">
+                <label className="block text-[10px] font-extrabold text-slate-600 uppercase tracking-wider">
+                  Mandatory Rejection Reason <span className="text-rose-500">*</span>
+                </label>
+                <textarea
+                  required
+                  rows="4"
+                  value={rejectionReason}
+                  onChange={(e) => setRejectionReason(e.target.value)}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs font-semibold focus:outline-none focus:bg-white focus:border-rose-500 focus:ring-1 focus:ring-rose-500 transition-all text-slate-900"
+                  placeholder="e.g. Legal document uploaded is expired or illegible. Please re-upload valid government registration certificate."
+                ></textarea>
+              </div>
+
+              <div className="flex justify-end gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setRejectPartnerModal(null)}
+                  className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-extrabold text-xs rounded-xl transition-all"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2 bg-rose-600 hover:bg-rose-700 text-white font-extrabold text-xs rounded-xl transition-all shadow-md"
+                >
+                  Confirm Rejection & Send Email Notification
                 </button>
               </div>
             </form>

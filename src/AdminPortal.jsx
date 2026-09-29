@@ -102,6 +102,7 @@ export default function AdminPortal({ onLogout }) {
       if (appRes.data?.success && Array.isArray(appRes.data.data)) {
         const mapped = appRes.data.data.map((app, idx) => ({
           id: app._id,
+          _id: app._id,
           camsId: `CAMS-${10001 + idx}`,
           studentName: app.student?.name || 'N/A',
           passportNo: app.student?.passportNo || 'N/A',
@@ -119,7 +120,13 @@ export default function AdminPortal({ onLogout }) {
           studentEmail: app.student?.email || null,
           phone: app.student?.phone || null,
           documents: app.documents || [],
-          notes: app.notes || ''
+          notes: app.notes || '',
+          pickedBy: app.pickedBy || null,
+          submittedByStaff: app.submittedByStaff || null,
+          commissionClaimed: app.commissionClaimed || false,
+          commissionStatus: app.commissionStatus || 'Unclaimed',
+          hasUnrepliedMessage: app.hasUnrepliedMessage || false,
+          lastRepliedBy: app.lastRepliedBy || null
         }));
         setApplications(mapped);
       }
