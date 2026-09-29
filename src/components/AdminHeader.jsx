@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
+import API from '../api/axios';
 
 export default function AdminHeader({ 
   activeTab, 
@@ -12,6 +13,39 @@ export default function AdminHeader({
 }) {
   const { currentUser } = useAuth();
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
+
+  // Real-time Notification System
+  const [notifications, setNotifications] = useState([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [showNotifications, setShowNotifications] = useState(false);
+
+  const fetchNotifications = async () => {
+    try {
+      const res = await API.get('/notifications');
+      if (res.data?.success) {
+        setNotifications(res.data.data);
+        setUnreadCount(res.data.data.filter(n => !n.isRead).length);
+      }
+    } catch (err) {
+      console.warn('Failed to fetch admin notifications:', err.message);
+    }
+  };
+
+  useEffect(() => {
+    fetchNotifications();
+    const interval = setInterval(fetchNotifications, 20000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const handleMarkAllRead = async () => {
+    try {
+      await API.put('/notifications/read-all');
+      setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
+      setUnreadCount(0);
+    } catch (err) {
+      console.error('Failed to mark notifications read:', err);
+    }
+  };
 
   const getBreadcrumbs = () => {
     const crumbs = ['Studegram Admin'];
@@ -58,7 +92,7 @@ export default function AdminHeader({
 
   return (
     <header className="flex flex-col select-none z-20 sticky top-0 bg-[#0A0A0F] text-white border-b border-slate-900">
-      {/* 2. Top Navigation Bar */}
+      {/* Top Navigation Bar */}
       <div className="h-[64px] min-h-[64px] px-6 flex items-center justify-between">
         {/* Left Side: Hamburger & Breadcrumbs */}
         <div className="flex items-center gap-4">
@@ -104,7 +138,7 @@ export default function AdminHeader({
           </div>
         </div>
 
-        {/* Right Side: Profile Dropdown & Sync Badge */}
+        {/* Right Side: Profile Dropdown, Notifications & Sync Badge */}
         <div className="flex items-center gap-3 relative">
           {onRefreshData && (
             <button
@@ -117,9 +151,77 @@ export default function AdminHeader({
               <span className="hidden md:inline">{isSyncing ? "Syncing..." : "Sync DB"}</span>
             </button>
           )}
+
+          {/* Real-time Notification Bell Drawer */}
+          <div className="relative">
+            <button
+              onClick={() => {
+                setShowNotifications(!showNotifications);
+                if (unreadCount > 0) handleMarkAllRead();
+              }}
+              className="p-2 text-slate-400 hover:text-white hover:bg-slate-900 rounded-xl transition-all relative focus:outline-none"
+              title="Notifications"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+              </svg>
+              {unreadCount > 0 && (
+                <span className="absolute top-1 right-1 w-4 h-4 bg-rose-500 text-white rounded-full text-[9px] font-black flex items-center justify-center animate-bounce">
+                  {unreadCount}
+                </span>
+              )}
+            </button>
+
+            {/* Notifications Dropdown Drawer */}
+            {showNotifications && (
+              <>
+                <div 
+                  onClick={() => setShowNotifications(false)}
+                  className="fixed inset-0 z-10"
+                />
+                <div className="absolute right-0 top-11 w-80 sm:w-96 bg-[#0A0A0F] border border-slate-800 rounded-2xl shadow-2xl py-3 z-20 animate-in fade-in slide-in-from-top-2 duration-150">
+                  <div className="px-4 pb-2.5 border-b border-slate-900 flex justify-between items-center">
+                    <div>
+                      <h4 className="text-xs font-black text-white uppercase tracking-wider">System Notifications</h4>
+                      <p className="text-[10px] text-slate-400">Live operational & application logs</p>
+                    </div>
+                    {unreadCount > 0 && (
+                      <button
+                        onClick={handleMarkAllRead}
+                        className="text-[9px] font-extrabold text-[#D99A1C] hover:underline"
+                      >
+                        Mark all as read
+                      </button>
+                    )}
+                  </div>
+
+                  <div className="max-h-80 overflow-y-auto divide-y divide-slate-900/60">
+                    {notifications.length > 0 ? (
+                      notifications.map(n => (
+                        <div key={n._id} className={`p-3 hover:bg-slate-900/50 transition-colors ${!n.isRead ? 'bg-indigo-950/20' : ''}`}>
+                          <div className="flex justify-between items-start gap-2">
+                            <h5 className="text-xs font-bold text-white">{n.title}</h5>
+                            <span className="text-[9px] text-slate-500 font-semibold shrink-0">
+                              {new Date(n.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                            </span>
+                          </div>
+                          <p className="text-[11px] text-slate-300 font-medium mt-1 leading-snug">{n.message}</p>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="p-6 text-center text-slate-500 text-xs font-medium">
+                        No notifications found.
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+
           <div className="text-right hidden sm:block">
             <p className="text-xs font-bold text-white">{currentUser?.name || 'Super Admin'}</p>
-            <p className="text-[10px] text-slate-400 font-medium">{currentUser?.role || 'Administrator'} ({currentUser?.country || 'Global'})</p>
+            <p className="text-[10px] text-[#D99A1C] font-extrabold uppercase">{currentUser?.role || 'SuperAdmin'} ({currentUser?.country || 'Global'})</p>
           </div>
 
           <button
@@ -179,3 +281,4 @@ export default function AdminHeader({
     </header>
   );
 }
+

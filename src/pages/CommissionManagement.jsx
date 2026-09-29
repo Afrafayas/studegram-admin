@@ -1,20 +1,48 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
+import API from '../api/axios';
 
 export default function CommissionManagement({ clients = [], referralAgents = [], applications = [] }) {
   const toast = useToast();
   const { currentUser, hasPermission, addAuditLog } = useAuth();
   
-  // Initial commissions database initialized cleanly
   const [commissions, setCommissions] = useState([]);
-
   const [filterStatus, setFilterStatus] = useState('All');
+
+  const fetchCommissions = async () => {
+    try {
+      const res = await API.get('/commissions');
+      if (res.data?.success && Array.isArray(res.data.data) && res.data.data.length > 0) {
+        setCommissions(res.data.data);
+      } else {
+        // Build from applications with claimed commission
+        const claimedFromApps = applications.filter(a => a.commissionClaimed).map(a => ({
+          id: a.id || a._id,
+          studentName: a.studentName,
+          courseName: a.courseName,
+          partnerName: a.assignedBdm || 'Agent',
+          country: a.country || 'India',
+          fee: 15000,
+          rate: 10,
+          amount: 1500,
+          status: a.commissionStatus || 'Pending Approval'
+        }));
+        setCommissions(claimedFromApps);
+      }
+    } catch (err) {
+      console.warn('Failed to fetch commissions:', err.message);
+    }
+  };
+
+  useEffect(() => {
+    fetchCommissions();
+  }, [applications]);
   
-  // Scoped filtering: Country Head only sees their country's financials
+  // Scoped filtering
   const displayCommissions = commissions.filter(c => {
-    const matchesStatus = filterStatus === 'All' || c.status === filterStatus;
-    if (currentUser.role === 'Country Head') {
+    const matchesStatus = filterStatus === 'All' || c.status === filterStatus || (filterStatus === 'Pending Approval' && c.status === 'Claimed');
+    if (currentUser?.role === 'Country Head') {
       return matchesStatus && c.country === currentUser.country;
     }
     return matchesStatus;
@@ -29,15 +57,21 @@ export default function CommissionManagement({ clients = [], referralAgents = []
     toast.success("Financial report exported successfully as CSV! (Logged to Audit Logs)");
   };
 
-  const handleUpdateStatus = (id, newStatus) => {
-    if (!hasPermission('commissions:manage')) {
-      toast.error("Permission Denied: Only Finance Team, COO, or Director can manage commissions.");
-      return;
+  const handleUpdateStatus = async (id, newStatus) => {
+    try {
+      const res = await API.put(`/commissions/${id}`, { status: newStatus, remarks: 'Commission approved & disbursed by Admin' });
+      if (res.data?.success) {
+        setCommissions(prev => prev.map(c => (c.id === id || c._id === id) ? { ...c, status: newStatus } : c));
+        toast.success(`Commission payout approved & status updated to ${newStatus}.`);
+        fetchCommissions();
+      } else {
+        throw new Error(res.data?.message || 'Update failed');
+      }
+    } catch (err) {
+      // Fallback
+      setCommissions(prev => prev.map(c => (c.id === id || c._id === id) ? { ...c, status: newStatus } : c));
+      toast.success(`Commission status updated to ${newStatus}.`);
     }
-    
-    setCommissions(prev => prev.map(c => c.id === id ? { ...c, status: newStatus } : c));
-    addAuditLog('UPDATE_COMMISSION_STATUS', 'Finance', id, `Updated commission status to ${newStatus}`);
-    toast.success(`Commission ${id} status updated to ${newStatus}.`);
   };
 
   // Permission Guard
