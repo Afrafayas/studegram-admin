@@ -168,6 +168,23 @@ export function AuthProvider({ children }) {
     setAuditLogs(prev => [newLog, ...prev]);
   };
 
+  const [dbRoles, setDbRoles] = useState([]);
+
+  const fetchRoles = async () => {
+    try {
+      const res = await API.get('/roles');
+      if (res.data?.success && Array.isArray(res.data.data)) {
+        setDbRoles(res.data.data);
+      }
+    } catch (err) {
+      console.warn('Failed to fetch DB roles:', err.message);
+    }
+  };
+
+  useEffect(() => {
+    fetchRoles();
+  }, []);
+
   const login = async (email, password) => {
     try {
       const response = await API.post('/auth/login', { email, password });
@@ -176,56 +193,22 @@ export function AuthProvider({ children }) {
         const token = resData.token;
         const dbUser = resData.data;
 
-        // Map backend roles to frontend preset user roles
-        let mappedRole = 'Executive';
+        const roleName = dbUser.role || 'Executive';
         let mappedLevel = 6;
-        let mappedCountry = 'India';
-        let mappedTeam = 'North India';
-
-        if (dbUser.role === 'SuperAdmin') {
-          mappedRole = 'Director';
-          mappedLevel = 1;
-          mappedCountry = 'All';
-          mappedTeam = 'All';
-        } else if (dbUser.role === 'Admin') {
-          mappedRole = 'COO';
-          mappedLevel = 2;
-          mappedCountry = 'All';
-          mappedTeam = 'All';
-        } else if (dbUser.role === 'Manager') {
-          if (dbUser.email.includes('finance')) {
-            mappedRole = 'Finance';
-            mappedLevel = 3;
-            mappedCountry = 'All';
-            mappedTeam = 'All';
-          } else {
-            mappedRole = 'Country Head';
-            mappedLevel = 4;
-            mappedCountry = 'India';
-            mappedTeam = 'All';
-          }
-        } else if (dbUser.role === 'Executive') {
-          if (dbUser.email.includes('bdm')) {
-            mappedRole = 'BDM';
-            mappedLevel = 5;
-            mappedCountry = 'India';
-            mappedTeam = 'North India';
-          } else {
-            mappedRole = 'Executive';
-            mappedLevel = 6;
-            mappedCountry = 'India';
-            mappedTeam = 'North India';
-          }
-        }
+        if (['SuperAdmin', 'Director'].includes(roleName)) mappedLevel = 1;
+        else if (['Admin', 'COO'].includes(roleName)) mappedLevel = 2;
+        else if (['Finance', 'OperationsHead'].includes(roleName)) mappedLevel = 3;
+        else if (['Country Head', 'CRE'].includes(roleName)) mappedLevel = 4;
+        else if (roleName === 'BDM') mappedLevel = 5;
 
         const userObj = {
           id: dbUser.id || dbUser._id,
           name: dbUser.name,
           email: dbUser.email,
-          role: mappedRole,
+          role: roleName,
           level: mappedLevel,
-          country: mappedCountry,
-          team: mappedTeam,
+          country: dbUser.country || 'India',
+          team: 'All',
           phone: dbUser.phone || '',
           avatar: dbUser.name ? dbUser.name.split(' ').map(n=>n[0]).join('') : 'U'
         };
@@ -242,7 +225,7 @@ export function AuthProvider({ children }) {
           action: 'LOGIN_SUCCESS',
           targetType: 'Session',
           targetId: 'SYS-AUTH',
-          details: `Successful login as ${userObj.role} via API (Scope: ${userObj.country}/${userObj.team})`
+          details: `Successful login as ${userObj.role} via API`
         };
         setAuditLogs(prev => [newLog, ...prev]);
         return { success: true };
@@ -265,9 +248,21 @@ export function AuthProvider({ children }) {
     localStorage.removeItem('admin_token');
   };
 
-  // Permission validation
+  // Permission validation with dynamic DB checklist lookup
   const hasPermission = (permissionCode) => {
     if (!currentUser) return false;
+
+    // Direct superadmin / director bypass
+    if (['SuperAdmin', 'Director'].includes(currentUser.role)) return true;
+
+    // Check dynamic DB role permissions
+    const dbRoleMatch = dbRoles.find(r => r.name === currentUser.role || r.displayName === currentUser.role);
+    if (dbRoleMatch && Array.isArray(dbRoleMatch.permissions)) {
+      if (dbRoleMatch.permissions.includes('*')) return true;
+      if (dbRoleMatch.permissions.includes(permissionCode)) return true;
+    }
+
+    // Fallback preset checks
     const permissions = ROLE_PERMISSIONS[currentUser.role] || [];
     if (permissions.includes('*')) return true;
     return permissions.includes(permissionCode);

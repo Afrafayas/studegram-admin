@@ -515,7 +515,7 @@ export default function AdminPortal({ onLogout }) {
       return <CommissionManagement clients={scopedClients} referralAgents={referralAgents} applications={scopedApplications} />;
     }
 
-    if (activeTab === 'role-hierarchy') {
+    if (activeTab === 'roles' || activeTab === 'role-hierarchy' || activeTab === 'roles-permissions') {
       return <RoleHierarchy />;
     }
     
