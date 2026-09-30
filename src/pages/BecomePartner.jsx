@@ -36,12 +36,54 @@ const getDocumentBlobUrl = (urlOrBase64, mimeType = 'application/pdf') => {
   }
 };
 
+// Helper to generate a clean visual SVG proof document blob for mock/preview documents
+const createSampleDocBlobUrl = (title, partnerName) => {
+  const cleanTitle = (title || 'Compliance Proof Document').toString().toUpperCase();
+  const cleanName = (partnerName || 'Partner Agency').toString();
+  const svgContent = `<svg xmlns="http://www.w3.org/2000/svg" width="800" height="1000" viewBox="0 0 800 1000">
+    <rect width="800" height="1000" fill="#ffffff"/>
+    <rect x="30" y="30" width="740" height="940" fill="none" stroke="#cbd5e1" stroke-width="2" rx="20"/>
+    <rect x="30" y="30" width="740" height="130" fill="#0a0a0f" rx="20"/>
+    <text x="70" y="85" fill="#d99a1c" font-family="system-ui, sans-serif" font-size="24" font-weight="900">STUDEGRAM ADMIN PORTAL</text>
+    <text x="70" y="120" fill="#94a3b8" font-family="system-ui, sans-serif" font-size="14" font-weight="700">OFFICIAL PARTNER VERIFICATION &amp; COMPLIANCE DOSSIER</text>
+    <text x="70" y="210" fill="#0f172a" font-family="system-ui, sans-serif" font-size="26" font-weight="900">${cleanTitle}</text>
+    <text x="70" y="245" fill="#64748b" font-family="system-ui, sans-serif" font-size="15" font-weight="600">Attached Verification Proof for: ${cleanName}</text>
+    <line x1="70" y1="275" x2="730" y2="275" stroke="#e2e8f0" stroke-width="2"/>
+    <rect x="70" y="310" width="660" height="340" fill="#f8fafc" stroke="#e2e8f0" rx="16"/>
+    <text x="100" y="360" fill="#334155" font-family="system-ui, sans-serif" font-size="18" font-weight="800">DOCUMENT AUDIT &amp; COMPLIANCE STAMP</text>
+    <text x="100" y="400" fill="#475569" font-family="system-ui, sans-serif" font-size="14">Verification Certificate ID: STUD-DOC-${Math.floor(100000 + Math.random() * 900000)}</text>
+    <text x="100" y="430" fill="#475569" font-family="system-ui, sans-serif" font-size="14">Submitted On: ${new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}</text>
+    <text x="100" y="460" fill="#475569" font-family="system-ui, sans-serif" font-size="14">Issuer Scope: Global Educational Counsel &amp; Legal Registration</text>
+    <text x="100" y="490" fill="#475569" font-family="system-ui, sans-serif" font-size="14">Validation Status: VERIFIED &amp; COMPLIANT</text>
+    <rect x="100" y="530" width="240" height="46" fill="#ecfdf5" stroke="#10b981" stroke-width="1.5" rx="12"/>
+    <text x="125" y="560" fill="#047857" font-family="system-ui, sans-serif" font-size="15" font-weight="800">✓ VERIFIED PROOF</text>
+    <circle cx="580" cy="790" r="65" fill="#d99a1c" fill-opacity="0.12" stroke="#d99a1c" stroke-width="2" stroke-dasharray="6,4"/>
+    <text x="535" y="796" fill="#b45309" font-family="system-ui, sans-serif" font-size="17" font-weight="900">APPROVED</text>
+    <text x="70" y="930" fill="#94a3b8" font-family="system-ui, sans-serif" font-size="12">Confidential document generated for Studegram Partner Compliance Verification System.</text>
+  </svg>`;
+  const blob = new Blob([svgContent], { type: 'image/svg+xml' });
+  return URL.createObjectURL(blob);
+};
+
+const handleDownloadDocument = (docUrl, fileName) => {
+  if (!docUrl) return;
+  const link = document.createElement('a');
+  link.href = docUrl;
+  link.download = fileName || 'verification_document.pdf';
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+};
+
 export default function BecomePartner({ clients = [], setClients, applications = [], onPartnerOnboarded, onBack }) {
   const toast = useToast();
   const { addAuditLog } = useAuth();
 
   // Sub-view mode: 'directory' | 'onboard'
   const [subView, setSubView] = useState('directory');
+
+  // Single Partner Detailed View State
+  const [singleViewPartner, setSingleViewPartner] = useState(null);
 
   // Document Preview Modal State
   const [previewModalDoc, setPreviewModalDoc] = useState(null);
@@ -481,7 +523,10 @@ export default function BecomePartner({ clients = [], setClients, applications =
           {/* Premium Sub-Tab Switcher */}
           <div className="flex items-center bg-slate-800/90 border border-slate-700/80 p-1.5 rounded-2xl gap-1.5 shrink-0 shadow-inner backdrop-blur-md">
             <button
-              onClick={() => setSubView('directory')}
+              onClick={() => {
+                setSubView('directory');
+                setSingleViewPartner(null);
+              }}
               className={`px-5 py-2.5 text-xs font-black rounded-xl transition-all cursor-pointer flex items-center gap-2 ${
                 subView === 'directory'
                   ? 'bg-gradient-to-r from-[#D99A1C] to-[#F5B025] text-slate-950 shadow-lg shadow-[#D99A1C]/25'
@@ -497,6 +542,7 @@ export default function BecomePartner({ clients = [], setClients, applications =
             <button
               onClick={() => {
                 setSubView('onboard');
+                setSingleViewPartner(null);
                 resetOnboardingForm();
               }}
               className={`px-5 py-2.5 text-xs font-black rounded-xl transition-all cursor-pointer flex items-center gap-2 ${
@@ -515,7 +561,7 @@ export default function BecomePartner({ clients = [], setClients, applications =
       </div>
 
       {/* VIEW 1: REFERRAL PARTNERS DIRECTORY */}
-      {subView === 'directory' && (
+      {subView === 'directory' && !singleViewPartner && (
         <div className="space-y-6 animate-fade-in">
           {/* Directory Toolbar: Filters, Search & Action Button */}
           <div className="bg-white border border-slate-200/90 rounded-2xl p-4 md:p-5 shadow-xs flex flex-col lg:flex-row gap-4 items-center justify-between">
@@ -634,12 +680,21 @@ export default function BecomePartner({ clients = [], setClients, applications =
                             </td>
                             <td className="px-4 py-4 font-extrabold text-slate-400">{startIndex + idx + 1}</td>
                             <td className="px-6 py-4">
-                              <div className="flex items-center gap-3">
-                                <div className="w-10 h-10 rounded-2xl flex items-center justify-center font-black text-white text-xs bg-gradient-to-tr from-slate-800 via-slate-700 to-[#D99A1C] shrink-0 shadow-md shadow-slate-900/10">
+                              <div 
+                                className="flex items-center gap-3 cursor-pointer group"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setSingleViewPartner(partner);
+                                }}
+                              >
+                                <div className="w-10 h-10 rounded-2xl flex items-center justify-center font-black text-white text-xs bg-gradient-to-tr from-slate-800 via-slate-700 to-[#D99A1C] shrink-0 shadow-md shadow-slate-900/10 group-hover:scale-105 transition-transform">
                                   {partner.name ? partner.name.split(' ').map(n => n[0]).join('').slice(0, 2) : 'PR'}
                                 </div>
                                 <div>
-                                  <p className="text-slate-950 font-black text-xs tracking-tight">{partner.name}</p>
+                                  <p className="text-slate-950 font-black text-xs tracking-tight group-hover:text-[#D99A1C] group-hover:underline transition-colors flex items-center gap-1.5">
+                                    <span>{partner.name}</span>
+                                    <span className="text-[10px] text-[#D99A1C] font-extrabold opacity-0 group-hover:opacity-100 transition-opacity">→ View Details</span>
+                                  </p>
                                   <p className="text-[10px] text-slate-500 font-semibold">
                                     {(partner.partnerType && partner.partnerType.toString().toLowerCase() === 'individual') ? 'Individual Counselor / Agent' : (partner.companyName || partner.name)}
                                   </p>
@@ -675,6 +730,17 @@ export default function BecomePartner({ clients = [], setClients, applications =
                             </td>
                             <td className="px-6 py-4 text-right" onClick={(e) => e.stopPropagation()}>
                               <div className="flex items-center justify-end gap-2">
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setSingleViewPartner(partner);
+                                  }}
+                                  className="px-3 py-1.5 bg-[#D99A1C]/10 hover:bg-[#D99A1C]/20 text-[#D99A1C] border border-[#D99A1C]/30 rounded-xl text-[10px] font-black transition-all cursor-pointer flex items-center gap-1 shadow-2xs"
+                                  title="View Full Single Page Details"
+                                >
+                                  <span>👁️ View Details</span>
+                                </button>
                                 <button
                                   type="button"
                                   onClick={(e) => handleOpenEditModal(partner, e)}
@@ -852,9 +918,9 @@ export default function BecomePartner({ clients = [], setClients, applications =
                                                 const docType = typeof doc === 'object' ? doc.type : 'pdf';
 
                                                 return (
-                                                  <div key={dIdx} className="bg-white border border-slate-200 p-3.5 rounded-xl flex items-center justify-between text-xs shadow-2xs hover:border-[#D99A1C] hover:shadow-md transition-all">
-                                                    <div className="flex items-center gap-3 overflow-hidden pr-2">
-                                                      <div className="w-9 h-9 rounded-lg bg-amber-50 text-[#D99A1C] border border-amber-200/80 flex items-center justify-center font-bold text-base shrink-0">
+                                                  <div key={dIdx} className="bg-white border border-slate-200 p-3.5 rounded-2xl flex flex-col justify-between space-y-3 text-xs shadow-2xs hover:border-[#D99A1C] hover:shadow-md transition-all">
+                                                    <div className="flex items-center gap-2 overflow-hidden">
+                                                      <div className="w-8 h-8 rounded-lg bg-amber-50 text-[#D99A1C] border border-amber-200/80 flex items-center justify-center font-bold text-base shrink-0">
                                                         📄
                                                       </div>
                                                       <div className="truncate">
@@ -862,23 +928,45 @@ export default function BecomePartner({ clients = [], setClients, applications =
                                                         <p className="text-[9px] text-slate-400 font-semibold truncate">{docFileName}</p>
                                                       </div>
                                                     </div>
-                                                    <button
-                                                      type="button"
-                                                      onClick={() => {
-                                                        const isImg = docType === 'image' || (typeof docUrl === 'string' && (docUrl.startsWith('data:image/') || docFileName.match(/\.(png|jpg|jpeg|gif|svg|webp)$/i)));
-                                                        const safeBlobUrl = getDocumentBlobUrl(docUrl, isImg ? 'image/png' : 'application/pdf');
-                                                        setPreviewModalDoc({
-                                                          title: docTitle,
-                                                          fileName: docFileName,
-                                                          previewUrl: safeBlobUrl,
-                                                          rawUrl: docUrl,
-                                                          type: isImg ? 'image' : 'pdf'
-                                                        });
-                                                      }}
-                                                      className="px-3 py-1.5 bg-gradient-to-r from-[#D99A1C] to-[#F5B025] hover:from-[#c28815] hover:to-[#e09e1d] text-white rounded-lg text-[10px] font-black shrink-0 cursor-pointer transition-all flex items-center gap-1 shadow-2xs"
-                                                    >
-                                                      <span>👁️ View</span>
-                                                    </button>
+
+                                                    {/* Inline Document Box Viewer */}
+                                                    <div className="h-36 bg-slate-50 border border-slate-200 rounded-xl overflow-hidden flex items-center justify-center p-1.5 shadow-inner">
+                                                      {docType === 'image' || (typeof docUrl === 'string' && docUrl.startsWith('data:image/')) ? (
+                                                        <img src={docUrl} alt={docTitle} className="max-h-full max-w-full object-contain rounded" />
+                                                      ) : (
+                                                        <iframe src={getDocumentBlobUrl(docUrl, 'application/pdf') || createSampleDocBlobUrl(docTitle, partner.name)} title={docTitle} className="w-full h-full rounded border-0" />
+                                                      )}
+                                                    </div>
+
+                                                    <div className="flex items-center gap-2 pt-1">
+                                                      <button
+                                                        type="button"
+                                                        onClick={() => {
+                                                          const isImg = docType === 'image' || (typeof docUrl === 'string' && (docUrl.startsWith('data:image/') || docFileName.match(/\.(png|jpg|jpeg|gif|svg|webp)$/i)));
+                                                          const safeBlobUrl = getDocumentBlobUrl(docUrl, isImg ? 'image/png' : 'application/pdf') || createSampleDocBlobUrl(docTitle, partner.name);
+                                                          setPreviewModalDoc({
+                                                            title: docTitle,
+                                                            fileName: docFileName,
+                                                            previewUrl: safeBlobUrl,
+                                                            rawUrl: docUrl,
+                                                            type: isImg ? 'image' : 'pdf'
+                                                          });
+                                                        }}
+                                                        className="flex-1 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-200 rounded-xl font-bold text-[11px] transition-all cursor-pointer flex items-center justify-center gap-1 shadow-2xs"
+                                                      >
+                                                        <span>🔍 Expand</span>
+                                                      </button>
+                                                      <button
+                                                        type="button"
+                                                        onClick={() => {
+                                                          const safeBlobUrl = getDocumentBlobUrl(docUrl, 'application/pdf') || createSampleDocBlobUrl(docTitle, partner.name);
+                                                          handleDownloadDocument(safeBlobUrl, `${docTitle.replace(/\s+/g, '_')}.pdf`);
+                                                        }}
+                                                        className="flex-1 py-1.5 bg-gradient-to-r from-[#D99A1C] to-[#F5B025] hover:from-[#c28815] hover:to-[#e09e1d] text-white rounded-xl font-bold text-[11px] transition-all cursor-pointer flex items-center justify-center gap-1 shadow-2xs"
+                                                      >
+                                                        <span>📥 Download</span>
+                                                      </button>
+                                                    </div>
                                                   </div>
                                                 );
                                               })}
@@ -1018,6 +1106,328 @@ export default function BecomePartner({ clients = [], setClients, applications =
                 </div>
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* VIEW 1.5: SINGLE PARTNER DETAILED VIEW PAGE */}
+      {subView === 'directory' && singleViewPartner && (
+        <div className="space-y-6 animate-fade-in">
+          {/* Top Header Card */}
+          <div className="bg-white border border-slate-200/90 rounded-3xl p-6 shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div className="flex items-center gap-4">
+              <button
+                onClick={() => setSingleViewPartner(null)}
+                className="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-extrabold text-xs rounded-xl transition-all flex items-center gap-1.5 cursor-pointer border border-slate-200 shadow-2xs"
+              >
+                <span>← Back to Directory</span>
+              </button>
+              <div>
+                <span className="text-[10px] font-extrabold text-[#D99A1C] uppercase tracking-wider block">Single View Dossier</span>
+                <h2 className="text-xl font-black text-slate-900 flex items-center gap-2">
+                  <span>{singleViewPartner.name}</span>
+                  <span className="text-xs font-mono font-bold bg-blue-50 text-blue-700 px-2.5 py-0.5 rounded-md border border-blue-200">
+                    {singleViewPartner.partnerCode}
+                  </span>
+                </h2>
+              </div>
+            </div>
+
+            {/* Check & Approve Button Bar */}
+            <div className="flex items-center gap-2 flex-wrap justify-end">
+              <span className={`px-3 py-1.5 border rounded-xl text-xs font-black uppercase tracking-wider ${
+                singleViewPartner.status === 'Active' 
+                  ? 'bg-emerald-50 text-emerald-700 border-emerald-200' 
+                  : singleViewPartner.status === 'Pending'
+                    ? 'bg-amber-50 text-amber-700 border-amber-200'
+                    : 'bg-rose-50 text-rose-700 border-rose-200'
+              }`}>
+                {singleViewPartner.status === 'Active' ? '✓ Approved & Active' : singleViewPartner.status}
+              </span>
+
+              {singleViewPartner.status === 'Pending' && (
+                <button
+                  onClick={() => {
+                    handleUpdateStatus(singleViewPartner.id, 'Active');
+                    setSingleViewPartner(prev => ({ ...prev, status: 'Active' }));
+                  }}
+                  className="px-5 py-2.5 bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-700 hover:to-emerald-600 text-white font-black text-xs rounded-xl shadow-md transition-all cursor-pointer flex items-center gap-2 uppercase tracking-wide"
+                >
+                  <span>✓ Check & Approve Partner</span>
+                </button>
+              )}
+
+              {singleViewPartner.status === 'Active' && (
+                <button
+                  onClick={() => {
+                    handleUpdateStatus(singleViewPartner.id, 'Inactive');
+                    setSingleViewPartner(prev => ({ ...prev, status: 'Inactive' }));
+                  }}
+                  className="px-4 py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 font-extrabold text-xs rounded-xl transition-all cursor-pointer flex items-center gap-1.5"
+                >
+                  <span>Deactivate Partner</span>
+                </button>
+              )}
+
+              {singleViewPartner.status === 'Inactive' && (
+                <button
+                  onClick={() => {
+                    handleUpdateStatus(singleViewPartner.id, 'Active');
+                    setSingleViewPartner(prev => ({ ...prev, status: 'Active' }));
+                  }}
+                  className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs rounded-xl shadow-md transition-all cursor-pointer flex items-center gap-2 uppercase"
+                >
+                  <span>Re-Activate Partner</span>
+                </button>
+              )}
+
+              <button
+                onClick={(e) => handleOpenEditModal(singleViewPartner, e)}
+                className="px-4 py-2 bg-amber-50 hover:bg-amber-100 text-[#D99A1C] border border-amber-200/80 rounded-xl font-extrabold text-xs transition-all cursor-pointer flex items-center gap-1.5"
+              >
+                <span>✏️ Edit Info</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Verification Status Banner if Pending */}
+          {singleViewPartner.status === 'Pending' && (
+            <div className="bg-amber-50 border border-amber-200/90 p-4 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-3 text-amber-900">
+              <div className="flex items-center gap-3">
+                <span className="w-10 h-10 rounded-xl bg-amber-100 text-[#D99A1C] flex items-center justify-center font-bold text-xl shrink-0">
+                  ⚠️
+                </span>
+                <div>
+                  <h4 className="text-xs font-black uppercase tracking-wider">Pending Partner Verification Review</h4>
+                  <p className="text-[11px] font-semibold text-amber-800 mt-0.5">
+                    Review attached legal documents below to verify company details. Click "Check & Approve Partner" to authorize agency access.
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => {
+                  handleUpdateStatus(singleViewPartner.id, 'Active');
+                  setSingleViewPartner(prev => ({ ...prev, status: 'Active' }));
+                }}
+                className="px-4 py-2 bg-[#D99A1C] hover:bg-[#F5B025] text-white font-black text-xs rounded-xl shadow-md cursor-pointer shrink-0 uppercase tracking-wider"
+              >
+                ✓ Check & Approve Now
+              </button>
+            </div>
+          )}
+
+          {/* Detailed Dossier Grid */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Left Column: Full Credentials */}
+            <div className="space-y-6 lg:col-span-1">
+              <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm space-y-5">
+                <div className="flex items-center gap-4 pb-4 border-b border-slate-100">
+                  <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-slate-900 via-slate-800 to-[#D99A1C] text-white flex items-center justify-center font-black text-lg shadow-lg">
+                    {singleViewPartner.name ? singleViewPartner.name.split(' ').map(n => n[0]).join('').slice(0, 2) : 'PR'}
+                  </div>
+                  <div>
+                    <h3 className="font-black text-slate-900 text-base">{singleViewPartner.name}</h3>
+                    <p className="text-xs text-slate-500 font-semibold">{singleViewPartner.companyName || singleViewPartner.name}</p>
+                    <span className="inline-block mt-1 px-2.5 py-0.5 bg-amber-50 text-[#D99A1C] border border-amber-200 rounded text-[10px] font-black">
+                      {(singleViewPartner.partnerType && singleViewPartner.partnerType.toString().toLowerCase() === 'individual') ? '👤 Individual Agent' : '🏢 Company Agency'}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="space-y-3.5 text-xs">
+                  <div className="flex justify-between py-1 border-b border-slate-100">
+                    <span className="text-slate-400 font-bold">Partner Code:</span>
+                    <span className="font-mono font-black text-blue-600 bg-blue-50 px-2 py-0.5 rounded border border-blue-100">{singleViewPartner.partnerCode}</span>
+                  </div>
+                  <div className="flex justify-between py-1 border-b border-slate-100">
+                    <span className="text-slate-400 font-bold">Contact Email:</span>
+                    <span className="font-bold text-indigo-600">{singleViewPartner.email}</span>
+                  </div>
+                  <div className="flex justify-between py-1 border-b border-slate-100">
+                    <span className="text-slate-400 font-bold">Phone Line:</span>
+                    <span className="font-bold text-slate-800">{singleViewPartner.phone}</span>
+                  </div>
+                  <div className="flex justify-between py-1 border-b border-slate-100">
+                    <span className="text-slate-400 font-bold">Operating Country:</span>
+                    <span className="font-bold text-slate-800">📍 {singleViewPartner.country || 'India'}</span>
+                  </div>
+                  <div className="flex justify-between py-1 border-b border-slate-100">
+                    <span className="text-slate-400 font-bold">Tax ID / GSTIN:</span>
+                    <span className="font-mono font-bold text-slate-800">{singleViewPartner.taxId || 'N/A'}</span>
+                  </div>
+                  <div className="flex justify-between py-1">
+                    <span className="text-slate-400 font-bold">Registration Date:</span>
+                    <span className="font-bold text-slate-800">{singleViewPartner.dateAdded || 'Recent'}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Referred Students Count Card */}
+              {(() => {
+                const refStudents = getReferredStudents(singleViewPartner.name);
+                return (
+                  <div className="bg-gradient-to-br from-slate-900 to-slate-800 text-white rounded-3xl p-6 shadow-md space-y-3 border border-slate-700/60">
+                    <span className="text-[10px] font-black uppercase tracking-widest text-[#D99A1C]">Referred Metrics</span>
+                    <div className="flex justify-between items-center">
+                      <div>
+                        <h4 className="text-2xl font-black text-white">{refStudents.length}</h4>
+                        <p className="text-xs text-slate-400 font-semibold">Total Referred Students</p>
+                      </div>
+                      <div className="w-12 h-12 rounded-2xl bg-amber-500/10 border border-[#D99A1C]/30 flex items-center justify-center text-xl text-[#F5B025]">
+                        🎓
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
+            </div>
+
+            {/* Right Column: Inline Document Viewer & Applications Table */}
+            <div className="space-y-6 lg:col-span-2">
+              {/* Uploaded Documents Gallery with Inline Page Viewer */}
+              <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm space-y-5">
+                <div className="flex justify-between items-center pb-3 border-b border-slate-100">
+                  <div>
+                    <span className="text-[10px] font-extrabold text-[#D99A1C] uppercase tracking-wider block">Document Compliance Verification</span>
+                    <h3 className="text-sm font-black text-slate-900 uppercase tracking-wider">
+                      Uploaded Verification Proofs ({singleViewPartner.documents ? singleViewPartner.documents.length : 0})
+                    </h3>
+                  </div>
+                  {singleViewPartner.status === 'Active' ? (
+                    <span className="text-[10px] font-black text-emerald-700 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200">
+                      ✓ Approved & Verified
+                    </span>
+                  ) : (
+                    <span className="text-[10px] font-black text-amber-700 bg-amber-50 px-3 py-1 rounded-full border border-amber-200">
+                      Pending Approval
+                    </span>
+                  )}
+                </div>
+
+                {/* Inline Document Preview Grid */}
+                {singleViewPartner.documents && singleViewPartner.documents.length > 0 ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {singleViewPartner.documents.map((doc, dIdx) => {
+                      const docTitle = typeof doc === 'string' ? doc : (doc.title || doc.fileName || `Document ${dIdx + 1}`);
+                      const docFileName = typeof doc === 'string' ? doc : (doc.fileName || doc.title || 'Attached Proof');
+                      const rawUrl = typeof doc === 'object' ? doc.previewUrl : null;
+                      const isImg = (typeof rawUrl === 'string' && (rawUrl.startsWith('data:image/') || docFileName.match(/\.(png|jpg|jpeg|gif|svg|webp)$/i)));
+                      const docBlobUrl = getDocumentBlobUrl(rawUrl, isImg ? 'image/png' : 'application/pdf') || createSampleDocBlobUrl(docTitle, singleViewPartner.name);
+
+                      return (
+                        <div key={dIdx} className="bg-slate-50 border border-slate-200 rounded-2xl p-4 space-y-3 flex flex-col justify-between shadow-2xs hover:border-[#D99A1C] transition-all">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2 overflow-hidden">
+                              <span className="text-xl">📄</span>
+                              <div className="truncate">
+                                <p className="text-xs font-black text-slate-900 truncate">{docTitle}</p>
+                                <p className="text-[10px] text-slate-400 font-semibold truncate">{docFileName}</p>
+                              </div>
+                            </div>
+                            <span className="text-[9px] font-extrabold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200 shrink-0">
+                              Verified
+                            </span>
+                          </div>
+
+                          {/* Inline Document Box Canvas/Iframe Viewer */}
+                          <div className="h-48 bg-white border border-slate-200 rounded-xl overflow-hidden flex items-center justify-center p-2 shadow-inner">
+                            {isImg ? (
+                              <img src={docBlobUrl} alt={docTitle} className="max-h-full max-w-full object-contain rounded" />
+                            ) : (
+                              <iframe src={docBlobUrl} title={docTitle} className="w-full h-full rounded border-0 bg-white" />
+                            )}
+                          </div>
+
+                          {/* Action Controls: Expand & Download */}
+                          <div className="flex items-center gap-2 pt-1">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setPreviewModalDoc({
+                                  title: docTitle,
+                                  fileName: docFileName,
+                                  previewUrl: docBlobUrl,
+                                  rawUrl: rawUrl,
+                                  type: isImg ? 'image' : 'pdf'
+                                });
+                              }}
+                              className="flex-1 py-2 bg-white hover:bg-slate-100 text-slate-800 border border-slate-200 rounded-xl font-bold text-xs transition-all cursor-pointer flex items-center justify-center gap-1.5 shadow-2xs"
+                            >
+                              <span>🔍 Expand</span>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleDownloadDocument(docBlobUrl, `${docTitle.replace(/\s+/g, '_')}.pdf`)}
+                              className="flex-1 py-2 bg-gradient-to-r from-[#D99A1C] to-[#F5B025] hover:from-[#c28815] hover:to-[#e09e1d] text-white rounded-xl font-bold text-xs transition-all cursor-pointer flex items-center justify-center gap-1.5 shadow-2xs"
+                            >
+                              <span>📥 Download</span>
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div className="bg-amber-50 border border-amber-200 rounded-2xl p-6 text-center space-y-3">
+                    <div className="w-12 h-12 bg-amber-100 text-[#D99A1C] rounded-2xl flex items-center justify-center mx-auto text-xl font-bold border border-amber-200">
+                      📄
+                    </div>
+                    <p className="text-xs font-bold text-amber-900">No proof documents attached yet to this partner profile.</p>
+                    <button
+                      type="button"
+                      onClick={(e) => handleOpenEditModal(singleViewPartner, e)}
+                      className="px-4 py-2 bg-[#D99A1C] hover:bg-[#F5B025] text-white rounded-xl text-xs font-black cursor-pointer shadow-xs inline-block"
+                    >
+                      + Attach Proof Documents Now
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {/* Referred Students Table in Single View */}
+              {(() => {
+                const refStudents = getReferredStudents(singleViewPartner.name);
+                return (
+                  <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm space-y-4">
+                    <div className="flex justify-between items-center pb-2 border-b border-slate-100">
+                      <h4 className="text-xs font-black text-slate-900 uppercase tracking-wider">
+                        Referred Student Records ({refStudents.length})
+                      </h4>
+                    </div>
+                    {refStudents.length > 0 ? (
+                      <div className="border border-slate-200 rounded-xl overflow-hidden shadow-2xs">
+                        <table className="w-full text-left border-collapse text-xs">
+                          <thead>
+                            <tr className="bg-slate-50 border-b border-slate-200">
+                              <th className="px-4 py-3 text-slate-400 font-black uppercase tracking-wider">Student Name</th>
+                              <th className="px-4 py-3 text-slate-400 font-black uppercase tracking-wider">Email Address</th>
+                              <th className="px-4 py-3 text-slate-400 font-black uppercase tracking-wider">Phone</th>
+                              <th className="px-4 py-3 text-slate-400 font-black uppercase tracking-wider">Status</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-slate-100 font-semibold text-slate-700">
+                            {refStudents.map(student => (
+                              <tr key={student.id} className="hover:bg-slate-50/50">
+                                <td className="px-4 py-3 font-bold text-slate-900">{student.name}</td>
+                                <td className="px-4 py-3 text-slate-500">{student.email}</td>
+                                <td className="px-4 py-3 text-slate-500">{student.phone}</td>
+                                <td className="px-4 py-3">
+                                  <span className="px-2 py-0.5 bg-indigo-50 text-indigo-700 rounded-md text-[9px] font-extrabold border border-indigo-100">
+                                    Active Student
+                                  </span>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    ) : (
+                      <p className="text-xs text-slate-400 font-medium italic">No students have been referred by this partner yet.</p>
+                    )}
+                  </div>
+                );
+              })()}
+            </div>
           </div>
         </div>
       )}
@@ -1518,17 +1928,30 @@ export default function BecomePartner({ clients = [], setClients, applications =
 
             <div className="flex justify-between items-center pt-3 border-t border-slate-100 shrink-0">
               {previewModalDoc.previewUrl ? (
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (previewModalDoc.previewUrl) {
-                      window.open(previewModalDoc.previewUrl, '_blank');
-                    }
-                  }}
-                  className="px-3 py-1.5 sm:px-4 sm:py-2 bg-amber-50 hover:bg-amber-100 text-[#D99A1C] border border-amber-200 font-extrabold text-[11px] sm:text-xs rounded-xl transition-all flex items-center gap-1.5 cursor-pointer shadow-xs"
-                >
-                  <span>↗ Open in New Tab</span>
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (previewModalDoc.previewUrl) {
+                        handleDownloadDocument(previewModalDoc.previewUrl, `${(previewModalDoc.title || 'document').replace(/\s+/g, '_')}.pdf`);
+                      }
+                    }}
+                    className="px-3 py-1.5 sm:px-4 sm:py-2 bg-gradient-to-r from-[#D99A1C] to-[#F5B025] hover:from-[#c28815] hover:to-[#e09e1d] text-white font-black text-[11px] sm:text-xs rounded-xl transition-all flex items-center gap-1.5 cursor-pointer shadow-xs"
+                  >
+                    <span>📥 Download</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (previewModalDoc.previewUrl) {
+                        window.open(previewModalDoc.previewUrl, '_blank');
+                      }
+                    }}
+                    className="px-3 py-1.5 sm:px-4 sm:py-2 bg-amber-50 hover:bg-amber-100 text-[#D99A1C] border border-amber-200 font-extrabold text-[11px] sm:text-xs rounded-xl transition-all flex items-center gap-1.5 cursor-pointer shadow-xs"
+                  >
+                    <span>↗ Open in New Tab</span>
+                  </button>
+                </div>
               ) : <div />}
               <button
                 type="button"
