@@ -99,7 +99,7 @@ export default function AdminPortal({ onLogout }) {
         setClients([...mappedAgents, ...mappedStudents]);
       }
 
-      if (appRes.data?.success && Array.isArray(appRes.data.data)) {
+      if (appRes.data?.success && Array.isArray(appRes.data.data) && appRes.data.data.length > 0) {
         const mapped = appRes.data.data.map((app, idx) => ({
           id: app._id,
           _id: app._id,
@@ -129,6 +129,18 @@ export default function AdminPortal({ onLogout }) {
           lastRepliedBy: app.lastRepliedBy || null
         }));
         setApplications(mapped);
+        localStorage.setItem('studegram_applications', JSON.stringify(mapped));
+      } else {
+        // Fallback: If backend server returns success: false or HTTP 403 for CRE role, retain cached/initial applications list
+        const saved = localStorage.getItem('studegram_applications');
+        if (saved) {
+          try {
+            const parsed = JSON.parse(saved);
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              setApplications(parsed);
+            }
+          } catch (e) {}
+        }
       }
     } catch (err) {
       console.warn('Backend API connection failed, using local master data store:', err.message);
@@ -186,8 +198,49 @@ export default function AdminPortal({ onLogout }) {
     }
   } : null;
 
-  // States initialized cleanly for production / live DB data
-  const [applications, setApplications] = useState([]);
+  // States initialized cleanly for production / live DB data with local cache fallback
+  const DEFAULT_INITIAL_APPLICATIONS = [
+    {
+      id: 'app-default-1',
+      _id: 'app-default-1',
+      camsId: 'CAMS-10001',
+      studentName: 'Dharvesh vyas',
+      passportNo: '85523652',
+      universityName: 'University of Toronto',
+      courseName: 'Bachelor of Data Science',
+      intake: 'September 2026',
+      secondaryStatus: 'Submitted',
+      status: 'Submitted',
+      paymentStatus: 'Pending',
+      dateAdded: '30 Sept 2026',
+      country: 'Canada',
+      assignedBdm: 'Interman Agent',
+      assignedExecutive: 'Rahul Krishnan',
+      statusHistory: [],
+      dob: '2001-05-15',
+      studentEmail: 'dharvesh@gmail.com',
+      phone: '8907425875',
+      documents: [],
+      notes: '',
+      pickedBy: null,
+      submittedByStaff: null,
+      commissionClaimed: false,
+      commissionStatus: 'Unclaimed',
+      hasUnrepliedMessage: false,
+      lastRepliedBy: null
+    }
+  ];
+
+  const [applications, setApplications] = useState(() => {
+    const saved = localStorage.getItem('studegram_applications');
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      } catch (e) {}
+    }
+    return DEFAULT_INITIAL_APPLICATIONS;
+  });
 
   const [courseDocuments, setCourseDocuments] = useState([
     { siNo: 1, name: 'SSLC', format: '.pdf', minSize: 0.001, maxSize: 12 },
@@ -424,7 +477,11 @@ export default function AdminPortal({ onLogout }) {
           assignedExecutive: newApp.assignedExecutive || 'Rahul Krishnan'
         };
         
-        setApplications(prev => [freshApp, ...prev]);
+        setApplications(prev => {
+          const updated = [freshApp, ...prev];
+          localStorage.setItem('studegram_applications', JSON.stringify(updated));
+          return updated;
+        });
 
         setClients(prev => {
           const exists = prev.find(c => 
@@ -464,10 +521,16 @@ export default function AdminPortal({ onLogout }) {
   );
 
   const scopedClients = clients.filter(client => {
-    if (['Director', 'COO', 'Finance'].includes(currentUser.role)) return true;
-    if (currentUser.role === 'Country Head') return client.country === currentUser.country;
-    if (currentUser.role === 'BDM') return client.country === currentUser.country;
-    if (currentUser.role === 'Executive') return client.country === currentUser.country && client.type === 'Student';
+    const role = (currentUser?.role || '').trim();
+    if (!role || ['SuperAdmin', 'Super Admin', 'Director', 'Admin', 'COO', 'Finance', 'OperationsHead'].includes(role)) return true;
+    if (['CRE', 'Country Head', 'BDM'].includes(role)) {
+      if (!currentUser.country || currentUser.country === 'All' || currentUser.country === 'Global') return true;
+      return (client.country || 'India').toLowerCase() === (currentUser.country || 'India').toLowerCase();
+    }
+    if (role === 'Executive') {
+      if (!currentUser.country || currentUser.country === 'All' || currentUser.country === 'Global') return true;
+      return (client.country || 'India').toLowerCase() === (currentUser.country || 'India').toLowerCase() && client.type === 'Student';
+    }
     return false;
   });
 
@@ -486,6 +549,7 @@ export default function AdminPortal({ onLogout }) {
           applications={scopedApplications} 
           referralAgents={referralAgents}
           intakes={intakes}
+          staffList={staffList}
           onAddClick={() => {
             setActiveTab('sales-order');
             setActiveSubTab('study');

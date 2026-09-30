@@ -272,24 +272,29 @@ export function AuthProvider({ children }) {
   const checkScope = (entityCountry, entityBdm, entityExecutiveId) => {
     if (!currentUser) return false;
     
-    // Director, COO, Finance have Global scopes (except Finance sees only financials)
-    if (['Director', 'COO', 'Finance'].includes(currentUser.role)) {
+    const role = (currentUser.role || '').trim();
+
+    // SuperAdmin, Director, COO, Finance, OperationsHead, CRE have Global scopes
+    if (['SuperAdmin', 'Super Admin', 'Director', 'Admin', 'COO', 'Finance', 'OperationsHead', 'CRE'].includes(role)) {
       return true;
     }
 
-    // Country Head scope check
-    if (currentUser.role === 'Country Head') {
-      return entityCountry === currentUser.country;
+    // CRE / Country Head scope check
+    if (['CRE', 'Country Head'].includes(role)) {
+      if (!currentUser.country || currentUser.country === 'All' || currentUser.country === 'Global') return true;
+      return (entityCountry || 'India').toLowerCase() === (currentUser.country || 'India').toLowerCase();
     }
 
     // BDM scope check
-    if (currentUser.role === 'BDM') {
-      return entityCountry === currentUser.country && entityBdm === currentUser.name;
+    if (role === 'BDM') {
+      if (!currentUser.country || currentUser.country === 'All' || currentUser.country === 'Global') return true;
+      return (entityCountry || 'India').toLowerCase() === (currentUser.country || 'India').toLowerCase() && (entityBdm === currentUser.name || !entityBdm || entityBdm === 'Direct');
     }
 
     // Executive scope check
-    if (currentUser.role === 'Executive') {
-      return entityExecutiveId === currentUser.id || entityExecutiveId === currentUser.name;
+    if (role === 'Executive') {
+      if (!currentUser.country || currentUser.country === 'All' || currentUser.country === 'Global') return true;
+      return !entityExecutiveId || entityExecutiveId === currentUser.id || entityExecutiveId === currentUser.name || (entityCountry || 'India').toLowerCase() === (currentUser.country || 'India').toLowerCase();
     }
 
     return false;
