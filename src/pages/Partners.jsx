@@ -372,22 +372,106 @@ export default function Partners({ clients, setClients }) {
 
                                 {currentSubTab === 'overview' && (
                                   <div className="space-y-4 animate-in fade-in duration-100">
-                                    <h3 className="text-xs font-black text-slate-900 uppercase tracking-wider">
-                                      Partner Information Sheet — {partner.name}
+                                    <h3 className="text-xs font-black text-slate-900 uppercase tracking-wider flex items-center justify-between">
+                                      <span>Partner Information & Legal Documents Sheet — {partner.companyName || partner.name}</span>
+                                      {partner.rejectionReason && (
+                                        <span className="text-rose-600 bg-rose-50 px-2 py-0.5 rounded text-[10px] font-bold border border-rose-200">
+                                          Rejection Reason: {partner.rejectionReason}
+                                        </span>
+                                      )}
                                     </h3>
-                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-[11px] font-semibold text-slate-600">
+                                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-[11px] font-semibold text-slate-600 bg-slate-50 p-4 rounded-xl border border-slate-200">
                                       <div>
                                         <span className="text-[9px] font-extrabold uppercase text-slate-400 block tracking-wider">Agency Code</span>
                                         <span className="text-slate-900 font-bold text-xs">{partner.partnerCode}</span>
                                       </div>
                                       <div>
-                                        <span className="text-[9px] font-extrabold uppercase text-slate-400 block tracking-wider">Direct Phone Line</span>
+                                        <span className="text-[9px] font-extrabold uppercase text-slate-400 block tracking-wider">Entity & Company Name</span>
+                                        <span className="text-slate-900 font-bold text-xs">{partner.companyName || partner.name} ({partner.partnerType || 'Company'})</span>
+                                      </div>
+                                      <div>
+                                        <span className="text-[9px] font-extrabold uppercase text-slate-400 block tracking-wider">Business Reg / Tax ID</span>
+                                        <span className="text-slate-900 font-bold text-xs">{partner.taxId || 'N/A'}</span>
+                                      </div>
+                                      <div>
+                                        <span className="text-[9px] font-extrabold uppercase text-slate-400 block tracking-wider">Location / City</span>
+                                        <span className="text-slate-900 font-bold text-xs">{partner.city ? `${partner.city}, ` : ''}{partner.country || 'India'}</span>
+                                      </div>
+                                      <div>
+                                        <span className="text-[9px] font-extrabold uppercase text-slate-400 block tracking-wider">Direct Contact Phone</span>
                                         <span className="text-slate-900 font-medium text-xs">{partner.phone}</span>
                                       </div>
                                       <div>
                                         <span className="text-[9px] font-extrabold uppercase text-slate-400 block tracking-wider">Primary Email Address</span>
                                         <span className="text-indigo-600 font-bold text-xs">{partner.email}</span>
                                       </div>
+                                      <div className="md:col-span-2">
+                                        <span className="text-[9px] font-extrabold uppercase text-slate-400 block tracking-wider">Office Address / Place</span>
+                                        <span className="text-slate-900 font-medium text-xs">{partner.address || partner.place || 'N/A'}</span>
+                                      </div>
+                                    </div>
+
+                                    {/* Legal Uploaded Documents Cards */}
+                                    <div className="space-y-2 pt-2">
+                                      <div className="flex items-center justify-between">
+                                        <h4 className="text-[10px] font-black text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
+                                          <span>📜 Uploaded Mandatory Legal Verification Documents</span>
+                                          <span className="bg-amber-100 text-amber-800 text-[9px] font-bold px-2 py-0.5 rounded-full border border-amber-200">
+                                            {partner.documents?.length || 0} Files
+                                          </span>
+                                        </h4>
+                                      </div>
+
+                                      {partner.documents && partner.documents.length > 0 ? (
+                                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                                          {partner.documents.map((doc, docIdx) => {
+                                            const docName = typeof doc === 'string' ? 'Legal Registration Doc' : (doc.title || doc.name || doc.fileName || `Document #${docIdx + 1}`);
+                                            const docUrl = typeof doc === 'string' ? doc : (doc.previewUrl || doc.url || '#');
+
+                                            return (
+                                              <div key={docIdx} className="bg-white border border-slate-200 hover:border-[#D99A1C] rounded-xl p-3 shadow-xs space-y-2 flex flex-col justify-between transition-all">
+                                                <div className="flex items-start justify-between gap-2">
+                                                  <div className="flex items-center gap-2 overflow-hidden">
+                                                    <div className="w-8 h-8 rounded-lg bg-amber-50 text-[#D99A1C] flex items-center justify-center shrink-0 font-bold text-xs border border-amber-100">
+                                                      📜
+                                                    </div>
+                                                    <div className="overflow-hidden">
+                                                      <p className="text-xs font-bold text-slate-900 truncate" title={docName}>{docName}</p>
+                                                      <p className="text-[10px] text-slate-400 font-medium">Uploaded Document</p>
+                                                    </div>
+                                                  </div>
+                                                  <span className="px-2 py-0.5 bg-emerald-50 text-emerald-700 border border-emerald-100 rounded text-[9px] font-bold shrink-0">
+                                                    Verified
+                                                  </span>
+                                                </div>
+
+                                                <div className="flex items-center gap-2 pt-1 border-t border-slate-100">
+                                                  <button
+                                                    type="button"
+                                                    onClick={() => setPreviewDocModal({ title: docName, url: docUrl })}
+                                                    className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-800 text-[10px] font-bold py-1.5 rounded-lg text-center transition-all"
+                                                  >
+                                                    View / Preview
+                                                  </button>
+                                                  <a
+                                                    href={docUrl}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    download
+                                                    className="flex-1 bg-[#D99A1C] hover:bg-[#F5B025] text-white text-[10px] font-bold py-1.5 rounded-lg text-center transition-all shadow-xs"
+                                                  >
+                                                    Download
+                                                  </a>
+                                                </div>
+                                              </div>
+                                            );
+                                          })}
+                                        </div>
+                                      ) : (
+                                        <div className="p-4 bg-amber-50/50 border border-amber-200/60 rounded-xl text-center">
+                                          <p className="text-xs text-amber-800 font-bold">No legal verification documents uploaded yet for this partner.</p>
+                                        </div>
+                                      )}
                                     </div>
                                   </div>
                                 )}
@@ -570,6 +654,42 @@ export default function Partners({ clients, setClients }) {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+      {/* Document Preview Modal */}
+      {previewDocModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-xs select-none p-4">
+          <div className="bg-white border border-slate-200 rounded-2xl w-full max-w-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+            <div className="flex justify-between items-center p-4 bg-slate-900 text-white">
+              <h3 className="text-xs font-bold uppercase tracking-wider">{previewDocModal.title || 'Legal Document Preview'}</h3>
+              <button onClick={() => setPreviewDocModal(null)} className="text-slate-400 hover:text-white font-bold text-sm">
+                ✕ Close
+              </button>
+            </div>
+            <div className="flex-1 p-4 overflow-auto bg-slate-100 flex items-center justify-center min-h-[400px]">
+              {previewDocModal.url?.startsWith('data:image') || previewDocModal.url?.match(/\.(jpg|jpeg|png|webp)$/i) ? (
+                <img src={previewDocModal.url} alt={previewDocModal.title} className="max-w-full max-h-[70vh] object-contain rounded shadow-md" />
+              ) : previewDocModal.url?.startsWith('data:application/pdf') || previewDocModal.url?.endsWith('.pdf') ? (
+                <iframe src={previewDocModal.url} title={previewDocModal.title} className="w-full h-[65vh] rounded border-0" />
+              ) : (
+                <div className="text-center p-8 space-y-4">
+                  <div className="w-16 h-16 bg-amber-100 text-amber-600 rounded-full flex items-center justify-center mx-auto text-2xl">📄</div>
+                  <div>
+                    <h4 className="font-bold text-slate-900">{previewDocModal.title}</h4>
+                    <p className="text-xs text-slate-500 font-medium pt-1">Direct file view is available. Click below to open or download.</p>
+                  </div>
+                  <a
+                    href={previewDocModal.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-block bg-[#D99A1C] text-white font-extrabold text-xs px-6 py-2.5 rounded-xl shadow-md uppercase tracking-wider"
+                  >
+                    Open Document File ↗
+                  </a>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       )}

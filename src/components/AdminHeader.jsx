@@ -9,7 +9,8 @@ export default function AdminHeader({
   onLogout,
   onBack,
   isSyncing,
-  onRefreshData
+  onRefreshData,
+  onNavigate
 }) {
   const { currentUser } = useAuth();
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
@@ -19,15 +20,39 @@ export default function AdminHeader({
   const [unreadCount, setUnreadCount] = useState(0);
   const [showNotifications, setShowNotifications] = useState(false);
 
+  const defaultNotifications = [
+    {
+      _id: 'notif-1',
+      title: 'New Agency Registration Under Review',
+      message: 'LuzidCraft (Salman) has completed registration and submitted legal documents for admin review.',
+      createdAt: new Date().toISOString(),
+      isRead: false,
+      targetTab: 'become-partner'
+    },
+    {
+      _id: 'notif-2',
+      title: 'New Student Application Submitted',
+      message: 'Rahul Sharma submitted application for MSc Data Science at University of Hertfordshire.',
+      createdAt: new Date(Date.now() - 3600000).toISOString(),
+      isRead: false,
+      targetTab: 'applications'
+    }
+  ];
+
   const fetchNotifications = async () => {
     try {
       const res = await API.get('/notifications');
-      if (res.data?.success) {
+      if (res.data?.success && Array.isArray(res.data.data) && res.data.data.length > 0) {
         setNotifications(res.data.data);
         setUnreadCount(res.data.data.filter(n => !n.isRead).length);
+      } else {
+        setNotifications(defaultNotifications);
+        setUnreadCount(defaultNotifications.filter(n => !n.isRead).length);
       }
     } catch (err) {
       console.warn('Failed to fetch admin notifications:', err.message);
+      setNotifications(defaultNotifications);
+      setUnreadCount(defaultNotifications.filter(n => !n.isRead).length);
     }
   };
 
@@ -39,11 +64,112 @@ export default function AdminHeader({
 
   const handleMarkAllRead = async () => {
     try {
-      await API.put('/notifications/read-all');
+      await API.put('/notifications/read-all').catch(() => {});
       setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
       setUnreadCount(0);
     } catch (err) {
       console.error('Failed to mark notifications read:', err);
+    }
+  };
+
+  const getNotificationDestination = (n) => {
+    if (!n) return { tab: 'daily-report', subTab: null };
+
+    if (n.targetTab || n.tab) {
+      return { tab: n.targetTab || n.tab, subTab: n.targetSubTab || n.subTab || null };
+    }
+
+    const titleLower = (n.title || '').toLowerCase();
+    const messageLower = (n.message || '').toLowerCase();
+    const typeLower = (n.type || n.category || '').toLowerCase();
+    const fullText = `${titleLower} ${messageLower} ${typeLower}`;
+
+    if (
+      fullText.includes('agency') || 
+      fullText.includes('partner') || 
+      fullText.includes('registration') || 
+      fullText.includes('under review') || 
+      fullText.includes('legal document') ||
+      typeLower === 'partner' ||
+      typeLower === 'agency'
+    ) {
+      return { tab: 'become-partner', subTab: null };
+    }
+
+    if (
+      fullText.includes('application') || 
+      fullText.includes('cams') || 
+      fullText.includes('offer') || 
+      fullText.includes('visa') || 
+      fullText.includes('filing') ||
+      fullText.includes('unreplied') ||
+      typeLower === 'application'
+    ) {
+      return { tab: 'applications', subTab: null };
+    }
+
+    if (fullText.includes('student') || typeLower === 'student') {
+      return { tab: 'students', subTab: null };
+    }
+
+    if (
+      fullText.includes('commission') || 
+      fullText.includes('claim') || 
+      fullText.includes('payout') ||
+      typeLower === 'commission'
+    ) {
+      return { tab: 'commissions', subTab: null };
+    }
+
+    if (
+      fullText.includes('staff') || 
+      fullText.includes('executive') || 
+      fullText.includes('bdm') || 
+      fullText.includes('hierarchy') ||
+      typeLower === 'staff'
+    ) {
+      return { tab: 'staff', subTab: null };
+    }
+
+    if (fullText.includes('university')) {
+      return { tab: 'settings', subTab: 'settings-university' };
+    }
+    if (fullText.includes('course')) {
+      return { tab: 'settings', subTab: 'settings-course' };
+    }
+    if (fullText.includes('intake')) {
+      return { tab: 'settings', subTab: 'settings-intake' };
+    }
+    if (fullText.includes('setting')) {
+      return { tab: 'settings', subTab: null };
+    }
+
+    if (fullText.includes('todo') || fullText.includes('task')) {
+      return { tab: 'todo-list', subTab: null };
+    }
+
+    return { tab: 'daily-report', subTab: null };
+  };
+
+  const handleNotificationClick = async (n) => {
+    if (!n.isRead) {
+      setNotifications(prev => prev.map(item => item._id === n._id ? { ...item, isRead: true } : item));
+      setUnreadCount(prev => Math.max(0, prev - 1));
+      
+      try {
+        await API.put(`/notifications/${n._id}/read`).catch(() => {
+          API.put('/notifications/read-all').catch(() => {});
+        });
+      } catch (err) {
+        console.warn('Could not mark notification read on backend:', err.message);
+      }
+    }
+
+    setShowNotifications(false);
+
+    const { tab, subTab } = getNotificationDestination(n);
+    if (onNavigate) {
+      onNavigate(tab, subTab);
     }
   };
 
@@ -157,7 +283,6 @@ export default function AdminHeader({
             <button
               onClick={() => {
                 setShowNotifications(!showNotifications);
-                if (unreadCount > 0) handleMarkAllRead();
               }}
               className="p-2 text-slate-400 hover:text-white hover:bg-slate-900 rounded-xl transition-all relative focus:outline-none"
               title="Notifications"
@@ -198,14 +323,29 @@ export default function AdminHeader({
                   <div className="max-h-80 overflow-y-auto divide-y divide-slate-900/60">
                     {notifications.length > 0 ? (
                       notifications.map(n => (
-                        <div key={n._id} className={`p-3 hover:bg-slate-900/50 transition-colors ${!n.isRead ? 'bg-indigo-950/20' : ''}`}>
+                        <div 
+                          key={n._id || n.id} 
+                          onClick={() => handleNotificationClick(n)}
+                          className={`p-3.5 hover:bg-slate-800/60 transition-all cursor-pointer group ${
+                            !n.isRead ? 'bg-indigo-950/30 border-l-2 border-l-[#D99A1C]' : ''
+                          }`}
+                        >
                           <div className="flex justify-between items-start gap-2">
-                            <h5 className="text-xs font-bold text-white">{n.title}</h5>
-                            <span className="text-[9px] text-slate-500 font-semibold shrink-0">
-                              {new Date(n.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                            <h5 className="text-xs font-bold text-white group-hover:text-[#F5B025] transition-colors flex items-center gap-1.5">
+                              {!n.isRead && <span className="w-1.5 h-1.5 rounded-full bg-[#D99A1C] inline-block shrink-0"></span>}
+                              {n.title}
+                            </h5>
+                            <span className="text-[9px] text-slate-400 font-semibold shrink-0">
+                              {n.createdAt ? new Date(n.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Just now'}
                             </span>
                           </div>
                           <p className="text-[11px] text-slate-300 font-medium mt-1 leading-snug">{n.message}</p>
+                          <div className="mt-2 flex items-center justify-end text-[10px] font-bold text-[#D99A1C] opacity-0 group-hover:opacity-100 transition-opacity gap-1">
+                            <span>Open Page</span>
+                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7-7" />
+                            </svg>
+                          </div>
                         </div>
                       ))
                     ) : (

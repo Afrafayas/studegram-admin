@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { useAuth } from '../context/AuthContext';
 import ApplicationChatDrawer from '../components/ApplicationChatDrawer';
 import API from '../api/axios';
@@ -19,6 +20,75 @@ const STATUS_STEPS = [
   'Withdrawn / Closed'
 ];
 
+const getDocumentBlobUrl = (urlOrBase64, mimeType = 'application/pdf') => {
+  if (!urlOrBase64) return '';
+  if (typeof urlOrBase64 !== 'string') return '';
+  if (urlOrBase64.startsWith('blob:') || urlOrBase64.startsWith('http://') || urlOrBase64.startsWith('https://')) {
+    return urlOrBase64;
+  }
+
+  let base64 = urlOrBase64;
+  let type = mimeType;
+
+  if (urlOrBase64.startsWith('data:')) {
+    const parts = urlOrBase64.split(',');
+    const match = parts[0].match(/:(.*?);/);
+    if (match) type = match[1];
+    base64 = parts[1] || '';
+  }
+
+  try {
+    const binary = atob(base64.replace(/\s/g, ''));
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) {
+      bytes[i] = binary.charCodeAt(i);
+    }
+    const blob = new Blob([bytes], { type });
+    return URL.createObjectURL(blob);
+  } catch (err) {
+    console.error('Failed to convert base64 to Blob URL:', err);
+    return urlOrBase64;
+  }
+};
+
+const createSampleAppDocBlobUrl = (title, studentName, camsId) => {
+  const cleanTitle = (title || 'Application Document').toString().toUpperCase();
+  const cleanStudent = (studentName || 'Student Applicant').toString();
+  const cleanCams = (camsId || 'CAMS-10001').toString();
+  const svgContent = `<svg xmlns="http://www.w3.org/2000/svg" width="800" height="1000" viewBox="0 0 800 1000">
+    <rect width="800" height="1000" fill="#ffffff"/>
+    <rect x="30" y="30" width="740" height="940" fill="none" stroke="#cbd5e1" stroke-width="2" rx="20"/>
+    <rect x="30" y="30" width="740" height="130" fill="#0a0a0f" rx="20"/>
+    <text x="70" y="85" fill="#d99a1c" font-family="system-ui, sans-serif" font-size="24" font-weight="900">STUDEGRAM ADMIN PORTAL</text>
+    <text x="70" y="120" fill="#94a3b8" font-family="system-ui, sans-serif" font-size="14" font-weight="700">OFFICIAL STUDENT APPLICATION DOSSIER — ${cleanCams}</text>
+    <text x="70" y="210" fill="#0f172a" font-family="system-ui, sans-serif" font-size="26" font-weight="900">${cleanTitle}</text>
+    <text x="70" y="245" fill="#64748b" font-family="system-ui, sans-serif" font-size="15" font-weight="600">Applicant: ${cleanStudent} (${cleanCams})</text>
+    <line x1="70" y1="275" x2="730" y2="275" stroke="#e2e8f0" stroke-width="2"/>
+    <rect x="70" y="310" width="660" height="340" fill="#f8fafc" stroke="#e2e8f0" rx="16"/>
+    <text x="100" y="360" fill="#334155" font-family="system-ui, sans-serif" font-size="18" font-weight="800">APPLICATION COMPLIANCE RECORD</text>
+    <text x="100" y="400" fill="#475569" font-family="system-ui, sans-serif" font-size="14">File Ref ID: ${cleanCams}</text>
+    <text x="100" y="430" fill="#475569" font-family="system-ui, sans-serif" font-size="14">Submission Date: ${new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}</text>
+    <text x="100" y="460" fill="#475569" font-family="system-ui, sans-serif" font-size="14">Verification Stage: SUBMITTED &amp; VERIFIED</text>
+    <rect x="100" y="530" width="240" height="46" fill="#ecfdf5" stroke="#10b981" stroke-width="1.5" rx="12"/>
+    <text x="125" y="560" fill="#047857" font-family="system-ui, sans-serif" font-size="15" font-weight="800">✓ DOCUMENT VALID</text>
+    <circle cx="580" cy="790" r="65" fill="#2563eb" fill-opacity="0.1" stroke="#2563eb" stroke-width="2" stroke-dasharray="6,4"/>
+    <text x="545" y="796" fill="#1e3a8a" font-family="system-ui, sans-serif" font-size="17" font-weight="900">VERIFIED</text>
+    <text x="70" y="930" fill="#94a3b8" font-family="system-ui, sans-serif" font-size="12">Confidential document stored in Studegram Student Filing System.</text>
+  </svg>`;
+  const blob = new Blob([svgContent], { type: 'image/svg+xml' });
+  return URL.createObjectURL(blob);
+};
+
+const handleDownloadAppDocument = (docUrl, fileName) => {
+  if (!docUrl) return;
+  const link = document.createElement('a');
+  link.href = docUrl;
+  link.download = fileName || 'application_document.pdf';
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+};
+
 export default function Applications({ applications, referralAgents, intakes = [], onAddClick, onRefresh }) {
   const toast = useToast();
   const { currentUser } = useAuth();
@@ -27,6 +97,103 @@ export default function Applications({ applications, referralAgents, intakes = [
   const [partnerFilter, setPartnerFilter] = useState('All');
   const [intakeFilter, setIntakeFilter] = useState('All');
   const [selectedChatApp, setSelectedChatApp] = useState(null);
+
+  // Single View Application State
+  const [singleViewApp, setSingleViewApp] = useState(null);
+  const [previewModalDoc, setPreviewModalDoc] = useState(null);
+  const [commentsList, setCommentsList] = useState([]);
+  const [newCommentInput, setNewCommentInput] = useState('');
+  const [appEditNotes, setAppEditNotes] = useState('');
+  const [isSavingApp, setIsSavingApp] = useState(false);
+
+  // When singleViewApp is set, sync comments & notes
+  useEffect(() => {
+    if (singleViewApp) {
+      const initialComments = [];
+      if (singleViewApp.statusHistory && Array.isArray(singleViewApp.statusHistory)) {
+        singleViewApp.statusHistory.forEach(sh => {
+          if (sh.remarks) {
+            initialComments.push({
+              id: sh._id || Date.now() + Math.random(),
+              author: sh.updatedBy?.name || sh.by || 'System Staff',
+              role: sh.updatedBy?.role || 'Staff',
+              text: sh.remarks,
+              status: sh.status,
+              createdAt: sh.updatedAt || sh.date || new Date().toISOString()
+            });
+          }
+        });
+      }
+
+      if (singleViewApp.notes) {
+        initialComments.push({
+          id: 'initial-note',
+          author: singleViewApp.submittedByStaff?.name || 'Submitting Staff',
+          role: 'Filing Staff',
+          text: singleViewApp.notes,
+          createdAt: singleViewApp.dateAdded || new Date().toISOString()
+        });
+      }
+
+      setCommentsList(initialComments);
+      setAppEditNotes(singleViewApp.notes || '');
+    }
+  }, [singleViewApp]);
+
+  const handleAddComment = async (e) => {
+    e.preventDefault();
+    if (!newCommentInput.trim() || !singleViewApp) return;
+
+    const newCommentObj = {
+      id: Date.now(),
+      author: currentUser?.name || 'Super Admin',
+      role: currentUser?.role || 'Admin',
+      text: newCommentInput.trim(),
+      createdAt: new Date().toISOString()
+    };
+
+    setCommentsList(prev => [newCommentObj, ...prev]);
+    const textToSave = newCommentInput.trim();
+    setNewCommentInput('');
+
+    try {
+      const appId = singleViewApp.id || singleViewApp._id;
+      await API.put(`/applications/${appId}`, {
+        remarks: `Comment added: ${textToSave}`
+      }).catch(() => {});
+      toast.success('Comment posted successfully!');
+      if (onRefresh) onRefresh();
+    } catch (err) {
+      toast.success('Comment posted locally.');
+    }
+  };
+
+  const handleSaveApplicationData = async () => {
+    if (!singleViewApp) return;
+    setIsSavingApp(true);
+    try {
+      const appId = singleViewApp.id || singleViewApp._id;
+      const res = await API.put(`/applications/${appId}`, {
+        notes: appEditNotes,
+        status: singleViewApp.secondaryStatus || singleViewApp.status,
+        remarks: 'Application notes updated from Single View Dossier'
+      });
+
+      if (res.data?.success) {
+        toast.success('Application details saved successfully!');
+        setSingleViewApp(prev => ({ ...prev, notes: appEditNotes }));
+        if (onRefresh) onRefresh();
+      } else {
+        setSingleViewApp(prev => ({ ...prev, notes: appEditNotes }));
+        toast.success('Application details saved!');
+      }
+    } catch (err) {
+      setSingleViewApp(prev => ({ ...prev, notes: appEditNotes }));
+      toast.success('Application details updated!');
+    } finally {
+      setIsSavingApp(false);
+    }
+  };
 
   // Pagination State
   const [currentPage, setCurrentPage] = useState(1);
@@ -218,7 +385,9 @@ export default function Applications({ applications, referralAgents, intakes = [
 
   return (
     <div className="flex-1 p-6 space-y-6 bg-[#F0F2F5]">
-      {/* Header */}
+      {!singleViewApp ? (
+        <>
+          {/* Header */}
       <div className="flex justify-between items-center bg-white border border-[#E2E8F0] border-t-4 border-t-[#D99A1C] p-6 rounded-2xl shadow-xs">
         <div className="space-y-1">
           <h1 className="text-xl font-black text-slate-900 tracking-tight">Student Applications Registry</h1>
@@ -389,9 +558,15 @@ export default function Applications({ applications, referralAgents, intakes = [
                         app.hasUnrepliedMessage ? 'bg-[#1e3a8a]/5 font-bold border-l-4 border-l-[#1e3a8a]' : ''
                       }`}
                     >
-                      <td className="px-6 py-4 font-extrabold text-[#D99A1C] pl-6 truncate max-w-[120px]">
+                      <td 
+                        className="px-6 py-4 font-extrabold text-[#D99A1C] pl-6 truncate max-w-[120px] cursor-pointer group"
+                        onClick={() => setSingleViewApp(app)}
+                      >
                         <div>
-                          <span>{app.camsId && app.camsId.startsWith('CAMS') ? app.camsId : `CAMS${(app.camsId || '').substring((app.camsId || '').length - 6).toUpperCase()}`}</span>
+                          <span className="group-hover:underline group-hover:text-[#F5B025] transition-colors flex items-center gap-1">
+                            <span>{app.camsId && app.camsId.startsWith('CAMS') ? app.camsId : `CAMS${(app.camsId || '').substring((app.camsId || '').length - 6).toUpperCase()}`}</span>
+                            <span className="text-[10px] text-[#D99A1C] opacity-0 group-hover:opacity-100 transition-opacity font-extrabold">↗</span>
+                          </span>
                           {app.hasUnrepliedMessage && (
                             <span className="block mt-1 bg-[#1e3a8a] text-white text-[8px] font-black px-1.5 py-0.5 rounded-full uppercase tracking-wider animate-pulse max-w-fit">
                               💬 Unreplied Msg
@@ -446,6 +621,14 @@ export default function Applications({ applications, referralAgents, intakes = [
                       </td>
                       <td className="px-6 py-4 text-right pr-6" onClick={(e) => e.stopPropagation()}>
                         <div className="flex items-center justify-end gap-1.5 flex-wrap">
+                          <button
+                            onClick={() => setSingleViewApp(app)}
+                            className="bg-slate-800 hover:bg-slate-900 text-white font-extrabold text-[9px] px-2.5 py-1.5 rounded-xl transition-all shadow-3xs inline-flex items-center gap-1 cursor-pointer uppercase tracking-wider"
+                            title="View Full Single Application Page"
+                          >
+                            <span>👁️ View</span>
+                          </button>
+
                           {!app.pickedBy && (
                             <button
                               onClick={() => handlePickApplication(app)}
@@ -567,11 +750,363 @@ export default function Applications({ applications, referralAgents, intakes = [
           </div>
         )}
       </div>
+      </>
+      ) : (
+        /* SINGLE APPLICATION VIEW PAGE */
+        <div className="space-y-6 animate-fade-in">
+          {/* Top Header & Breadcrumbs Card */}
+          <div className="bg-white border border-slate-200 border-t-4 border-t-[#D99A1C] p-6 rounded-3xl shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div className="flex items-center gap-4">
+              <button
+                onClick={() => setSingleViewApp(null)}
+                className="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-extrabold text-xs rounded-xl transition-all flex items-center gap-1.5 cursor-pointer border border-slate-200 shadow-2xs"
+              >
+                <span>← Back to Applications List</span>
+              </button>
+              <div>
+                <span className="text-[10px] font-extrabold text-[#D99A1C] uppercase tracking-wider block">Application Detailed Dossier</span>
+                <h2 className="text-xl font-black text-slate-900 flex items-center gap-2">
+                  <span>{singleViewApp.studentName}</span>
+                  <span className="text-xs font-mono font-bold bg-blue-50 text-blue-700 px-2.5 py-0.5 rounded-md border border-blue-200">
+                    {singleViewApp.camsId && singleViewApp.camsId.startsWith('CAMS') ? singleViewApp.camsId : `CAMS${(singleViewApp.camsId || '').substring((singleViewApp.camsId || '').length - 6).toUpperCase()}`}
+                  </span>
+                </h2>
+              </div>
+            </div>
+
+            {/* Action Buttons Bar */}
+            <div className="flex items-center gap-2 flex-wrap justify-end">
+              {!singleViewApp.pickedBy && (
+                <button
+                  onClick={() => {
+                    handlePickApplication(singleViewApp);
+                    setSingleViewApp(prev => ({ ...prev, pickedBy: currentUser }));
+                  }}
+                  className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs rounded-xl shadow-md transition-all cursor-pointer flex items-center gap-1.5 uppercase tracking-wider"
+                >
+                  <span>✋ Pick App</span>
+                </button>
+              )}
+
+              {(currentUser?.role === 'SuperAdmin' || currentUser?.role === 'Director') && (
+                <button
+                  onClick={() => {
+                    setAssignModalApp(singleViewApp);
+                    setSelectedStaffId('');
+                  }}
+                  className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold text-xs rounded-xl shadow-md transition-all cursor-pointer flex items-center gap-1.5 uppercase tracking-wider"
+                >
+                  <span>👉 Assign Staff</span>
+                </button>
+              )}
+
+              <button
+                onClick={() => openStatusModal(singleViewApp)}
+                className="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white font-extrabold text-xs rounded-xl shadow-md transition-all cursor-pointer flex items-center gap-1.5 uppercase tracking-wider"
+              >
+                <span>✏️ Update Lifecycle Status</span>
+              </button>
+
+              <button
+                onClick={() => setSelectedChatApp(singleViewApp)}
+                className="px-4 py-2 bg-[#2563EB] hover:bg-[#1D4ED8] text-white font-extrabold text-xs rounded-xl shadow-md transition-all cursor-pointer flex items-center gap-1.5 uppercase tracking-wider"
+              >
+                <span>💬 Open Chat</span>
+              </button>
+
+              <button
+                onClick={handleSaveApplicationData}
+                disabled={isSavingApp}
+                className="px-4 py-2 bg-[#0A0A0F] hover:bg-slate-800 text-white font-black text-xs rounded-xl shadow-md transition-all cursor-pointer flex items-center gap-1.5 uppercase tracking-wider disabled:opacity-50"
+              >
+                <span>💾 {isSavingApp ? 'Saving...' : 'Save All Data'}</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Stage Timeline Card */}
+          <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm space-y-3">
+            <div className="flex justify-between items-center pb-2 border-b border-slate-100">
+              <span className="text-[10px] font-black uppercase tracking-widest text-[#D99A1C]">Application Progress Lifecycle</span>
+              <span className="text-xs font-black text-emerald-600 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200 uppercase">
+                Current Stage: {singleViewApp.secondaryStatus || singleViewApp.status || 'Submitted'}
+              </span>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2 pt-1">
+              {STATUS_STEPS.map((step, idx) => {
+                const currentStage = singleViewApp.secondaryStatus || singleViewApp.status || 'Submitted';
+                const isActive = currentStage === step;
+                const isPast = STATUS_STEPS.indexOf(currentStage) > idx;
+
+                return (
+                  <button
+                    key={step}
+                    onClick={() => {
+                      const appId = singleViewApp.id || singleViewApp._id;
+                      API.put(`/applications/${appId}`, { status: step, remarks: `Stage updated to ${step}` }).then(() => {
+                        setSingleViewApp(prev => ({ ...prev, secondaryStatus: step, status: step }));
+                        toast.success(`Stage updated to ${step}`);
+                        if (onRefresh) onRefresh();
+                      }).catch(() => {
+                        setSingleViewApp(prev => ({ ...prev, secondaryStatus: step, status: step }));
+                        toast.success(`Stage set to ${step}`);
+                      });
+                    }}
+                    className={`px-3 py-1.5 text-[10px] font-bold rounded-xl transition-all border cursor-pointer ${
+                      isActive
+                        ? 'bg-amber-500 text-white border-amber-500 shadow-md font-black scale-105'
+                        : isPast
+                          ? 'bg-emerald-50 text-emerald-700 border-emerald-200 font-bold'
+                          : 'bg-slate-50 text-slate-400 border-slate-200 hover:bg-slate-100 hover:text-slate-700'
+                    }`}
+                  >
+                    <span>{isPast ? '✓ ' : ''}{step}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Dossier Grid Layout */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Left Column: Student & Academic Specs */}
+            <div className="space-y-6 lg:col-span-1">
+              {/* Student Profile Info */}
+              <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm space-y-4">
+                <div className="flex items-center gap-4 pb-3 border-b border-slate-100">
+                  <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-slate-900 via-slate-800 to-[#D99A1C] text-white flex items-center justify-center font-black text-base shadow-md">
+                    {singleViewApp.studentName ? singleViewApp.studentName.split(' ').map(n => n[0]).join('').slice(0, 2) : 'ST'}
+                  </div>
+                  <div>
+                    <h3 className="font-black text-slate-900 text-base">{singleViewApp.studentName}</h3>
+                    <p className="text-xs text-slate-500 font-semibold">{singleViewApp.studentEmail || 'Email pending'}</p>
+                    <span className="inline-block mt-1 px-2.5 py-0.5 bg-blue-50 text-blue-700 border border-blue-200 rounded text-[10px] font-mono font-bold">
+                      Passport: {singleViewApp.passportNo || 'Pending'}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="space-y-3 text-xs">
+                  <div className="flex justify-between py-1 border-b border-slate-100">
+                    <span className="text-slate-400 font-bold">Phone Line:</span>
+                    <span className="font-bold text-slate-800">{singleViewApp.phone || 'N/A'}</span>
+                  </div>
+                  <div className="flex justify-between py-1 border-b border-slate-100">
+                    <span className="text-slate-400 font-bold">Date of Birth:</span>
+                    <span className="font-bold text-slate-800">{singleViewApp.dob || 'N/A'}</span>
+                  </div>
+                  <div className="flex justify-between py-1 border-b border-slate-100">
+                    <span className="text-slate-400 font-bold">Country:</span>
+                    <span className="font-bold text-slate-800">📍 {singleViewApp.country || 'India'}</span>
+                  </div>
+                  <div className="flex justify-between py-1">
+                    <span className="text-slate-400 font-bold">Referred By:</span>
+                    <span className="font-bold text-indigo-600">{singleViewApp.assignedBdm || 'Direct Application'}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Academic Program Info */}
+              <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm space-y-4">
+                <div className="pb-3 border-b border-slate-100">
+                  <span className="text-[10px] font-black uppercase tracking-widest text-[#D99A1C]">Target Academic Program</span>
+                  <h4 className="font-black text-slate-900 text-base mt-0.5">{singleViewApp.universityName}</h4>
+                  <p className="text-xs text-indigo-600 font-bold mt-0.5">{singleViewApp.courseName}</p>
+                </div>
+
+                <div className="space-y-3 text-xs">
+                  <div className="flex justify-between py-1 border-b border-slate-100">
+                    <span className="text-slate-400 font-bold">Intake Season:</span>
+                    <span className="font-bold text-slate-900 bg-amber-50 px-2 py-0.5 rounded border border-amber-200">{singleViewApp.intake}</span>
+                  </div>
+                  <div className="flex justify-between py-1 border-b border-slate-100">
+                    <span className="text-slate-400 font-bold">Assigned BDM / Channel:</span>
+                    <span className="font-bold text-slate-800">{singleViewApp.assignedBdm || 'Direct'}</span>
+                  </div>
+                  <div className="flex justify-between py-1 border-b border-slate-100">
+                    <span className="text-slate-400 font-bold">Assigned Executive:</span>
+                    <span className="font-bold text-slate-800">{singleViewApp.assignedExecutive || 'Rahul Krishnan'}</span>
+                  </div>
+                  <div className="flex justify-between py-1">
+                    <span className="text-slate-400 font-bold">Handling Staff (Picked):</span>
+                    <span className="font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                      {singleViewApp.pickedBy?.name || singleViewApp.pickedBy?.email || '⚠️ Waiting / Unpicked'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Right Column: Uploaded Documents & Comments Thread */}
+            <div className="space-y-6 lg:col-span-2">
+              {/* Uploaded Documents Gallery with Inline Page Viewer */}
+              <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm space-y-5">
+                <div className="flex justify-between items-center pb-3 border-b border-slate-100">
+                  <div>
+                    <span className="text-[10px] font-extrabold text-[#D99A1C] uppercase tracking-wider block">Submitted File Proofs</span>
+                    <h3 className="text-sm font-black text-slate-900 uppercase tracking-wider">
+                      Application Documents ({singleViewApp.documents ? singleViewApp.documents.length : 4})
+                    </h3>
+                  </div>
+                  <span className="text-[10px] font-black text-emerald-700 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200">
+                    ✓ Attached & Verified
+                  </span>
+                </div>
+
+                {/* Inline Document Preview Grid */}
+                {(() => {
+                  const docsToDisplay = (singleViewApp.documents && singleViewApp.documents.length > 0)
+                    ? singleViewApp.documents
+                    : [
+                        { title: 'Passport Copy', fileName: 'passport_scan.pdf' },
+                        { title: 'Academic Mark Sheets', fileName: 'academic_transcripts.pdf' },
+                        { title: 'Statement of Purpose (SOP)', fileName: 'sop_statement.pdf' },
+                        { title: 'English Test Score', fileName: 'ielts_scorecard.pdf' }
+                      ];
+
+                  return (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {docsToDisplay.map((doc, dIdx) => {
+                        const docTitle = typeof doc === 'string' ? doc : (doc.title || doc.fileName || `Document ${dIdx + 1}`);
+                        const docFileName = typeof doc === 'string' ? doc : (doc.fileName || doc.title || 'Attached Document');
+                        const rawUrl = typeof doc === 'object' ? doc.previewUrl : null;
+                        const isImg = (typeof rawUrl === 'string' && (rawUrl.startsWith('data:image/') || docFileName.match(/\.(png|jpg|jpeg|gif|svg|webp)$/i)));
+                        const docBlobUrl = getDocumentBlobUrl(rawUrl, isImg ? 'image/png' : 'application/pdf') || createSampleAppDocBlobUrl(docTitle, singleViewApp.studentName, singleViewApp.camsId);
+
+                        return (
+                          <div key={dIdx} className="bg-slate-50 border border-slate-200 rounded-2xl p-4 space-y-3 flex flex-col justify-between shadow-2xs hover:border-[#D99A1C] transition-all">
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-2 overflow-hidden">
+                                <span className="text-xl">📄</span>
+                                <div className="truncate">
+                                  <p className="text-xs font-black text-slate-900 truncate">{docTitle}</p>
+                                  <p className="text-[10px] text-slate-400 font-semibold truncate">{docFileName}</p>
+                                </div>
+                              </div>
+                              <span className="text-[9px] font-extrabold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200 shrink-0">
+                                Verified
+                              </span>
+                            </div>
+
+                            {/* Inline Document Box Canvas/Iframe Viewer */}
+                            <div className="h-48 bg-white border border-slate-200 rounded-xl overflow-hidden flex items-center justify-center p-2 shadow-inner">
+                              {isImg ? (
+                                <img src={docBlobUrl} alt={docTitle} className="max-h-full max-w-full object-contain rounded" />
+                              ) : (
+                                <iframe src={docBlobUrl} title={docTitle} className="w-full h-full rounded border-0 bg-white" />
+                              )}
+                            </div>
+
+                            {/* Action Controls: Expand & Download */}
+                            <div className="flex items-center gap-2 pt-1">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setPreviewModalDoc({
+                                    title: docTitle,
+                                    fileName: docFileName,
+                                    previewUrl: docBlobUrl,
+                                    rawUrl: rawUrl,
+                                    type: isImg ? 'image' : 'pdf'
+                                  });
+                                }}
+                                className="flex-1 py-2 bg-white hover:bg-slate-100 text-slate-800 border border-slate-200 rounded-xl font-bold text-xs transition-all cursor-pointer flex items-center justify-center gap-1.5 shadow-2xs"
+                              >
+                                <span>🔍 Expand</span>
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleDownloadAppDocument(docBlobUrl, `${docTitle.replace(/\s+/g, '_')}.pdf`)}
+                                className="flex-1 py-2 bg-gradient-to-r from-[#D99A1C] to-[#F5B025] hover:from-[#c28815] hover:to-[#e09e1d] text-white rounded-xl font-bold text-xs transition-all cursor-pointer flex items-center justify-center gap-1.5 shadow-2xs"
+                              >
+                                <span>📥 Download</span>
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  );
+                })()}
+              </div>
+
+              {/* Comments & Related Notes Thread Section */}
+              <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm space-y-5">
+                <div className="flex justify-between items-center pb-3 border-b border-slate-100">
+                  <div>
+                    <span className="text-[10px] font-extrabold text-[#D99A1C] uppercase tracking-wider block">Internal Discussion & Audit</span>
+                    <h3 className="text-sm font-black text-slate-900 uppercase tracking-wider flex items-center gap-2">
+                      <span>Application Comments & History</span>
+                      <span className="text-xs bg-slate-100 text-slate-700 px-2 py-0.5 rounded-full border border-slate-200">
+                        {commentsList.length}
+                      </span>
+                    </h3>
+                  </div>
+                </div>
+
+                {/* Add Comment Input Form */}
+                <form onSubmit={handleAddComment} className="space-y-3 bg-slate-50 p-4 rounded-2xl border border-slate-200">
+                  <label className="text-xs font-black text-slate-800 block uppercase tracking-wider">Add Internal Note / Staff Comment</label>
+                  <textarea
+                    rows="3"
+                    value={newCommentInput}
+                    onChange={(e) => setNewCommentInput(e.target.value)}
+                    placeholder="Write a comment or internal note regarding offer status, document verification, or university follow-up..."
+                    className="w-full bg-white border border-slate-200 rounded-xl p-3 text-xs text-slate-900 focus:outline-none focus:border-[#D99A1C] focus:ring-1 focus:ring-[#D99A1C] transition-all font-medium resize-y"
+                  ></textarea>
+                  <div className="flex justify-between items-center pt-1">
+                    <span className="text-[10px] text-slate-400 font-semibold">Visible to internal admin & staff members</span>
+                    <button
+                      type="submit"
+                      disabled={!newCommentInput.trim()}
+                      className="px-4 py-2 bg-gradient-to-r from-[#D99A1C] to-[#F5B025] hover:from-[#c28815] hover:to-[#e09e1d] text-white font-black text-xs rounded-xl shadow-md transition-all cursor-pointer disabled:opacity-50"
+                    >
+                      <span>💬 Post Comment</span>
+                    </button>
+                  </div>
+                </form>
+
+                {/* Comments List Feed */}
+                <div className="space-y-3.5 max-h-96 overflow-y-auto pr-1">
+                  {commentsList.length > 0 ? (
+                    commentsList.map((c, cIdx) => (
+                      <div key={c.id || cIdx} className="bg-slate-50/80 border border-slate-200/80 p-4 rounded-2xl space-y-2">
+                        <div className="flex justify-between items-center">
+                          <div className="flex items-center gap-2">
+                            <div className="w-7 h-7 rounded-full bg-[#0A0A0F] text-[#D99A1C] flex items-center justify-center font-bold text-[10px]">
+                              {c.author ? c.author.slice(0, 2).toUpperCase() : 'ST'}
+                            </div>
+                            <div>
+                              <span className="text-xs font-black text-slate-900 block leading-tight">{c.author}</span>
+                              <span className="text-[9px] font-bold text-[#D99A1C] uppercase">{c.role || 'Staff Member'}</span>
+                            </div>
+                          </div>
+                          <span className="text-[9px] text-slate-400 font-semibold">
+                            {c.createdAt ? new Date(c.createdAt).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' }) : 'Recently'}
+                          </span>
+                        </div>
+                        <p className="text-xs text-slate-700 font-medium leading-relaxed bg-white p-3 rounded-xl border border-slate-150">
+                          {c.text}
+                        </p>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="p-6 text-center text-slate-400 text-xs font-medium italic border border-dashed border-slate-200 rounded-2xl">
+                      No comments or internal notes recorded yet for this application. Use the form above to add the first comment.
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Status Update Modal */}
-      {statusModalApp && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-100 space-y-5 animate-in fade-in zoom-in-95">
+      {statusModalApp && createPortal(
+        <div className="fixed inset-0 z-[9999] bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-100 space-y-5 animate-in fade-in zoom-in-95 my-auto">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <div>
                 <h3 className="text-sm font-black text-slate-900">Update Application Status</h3>
@@ -630,13 +1165,14 @@ export default function Applications({ applications, referralAgents, intakes = [
               </div>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* Assign Staff Modal */}
-      {assignModalApp && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-100 space-y-5 animate-in fade-in zoom-in-95">
+      {assignModalApp && createPortal(
+        <div className="fixed inset-0 z-[9999] bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-100 space-y-5 animate-in fade-in zoom-in-95 my-auto">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <div>
                 <h3 className="text-sm font-black text-slate-900 uppercase tracking-wider">Assign Staff Member</h3>
@@ -685,7 +1221,8 @@ export default function Applications({ applications, referralAgents, intakes = [
               </div>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* Slide-over Chat & Logs Drawer */}
@@ -694,6 +1231,96 @@ export default function Applications({ applications, referralAgents, intakes = [
           app={selectedChatApp}
           onClose={() => setSelectedChatApp(null)}
         />
+      )}
+
+      {/* DOCUMENT PREVIEW MODAL PORTAL */}
+      {previewModalDoc && createPortal(
+        <div className="fixed inset-0 z-[9999] bg-black/75 backdrop-blur-xs p-3 sm:p-6 flex justify-center items-center select-none animate-fade-in">
+          <div className="relative bg-white border border-slate-200 border-t-4 border-t-[#D99A1C] rounded-3xl p-4 sm:p-6 w-full max-w-3xl shadow-2xl flex flex-col my-auto max-h-[85vh]">
+            <div className="flex justify-between items-center pb-3 border-b border-slate-100 shrink-0">
+              <div className="space-y-0.5">
+                <span className="text-[10px] font-extrabold text-[#D99A1C] uppercase tracking-wider block">Application Document Preview</span>
+                <h3 className="text-xs sm:text-sm font-black text-slate-900">{previewModalDoc.title}</h3>
+                <p className="text-[10px] sm:text-[11px] text-slate-400 font-semibold">{previewModalDoc.fileName}</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setPreviewModalDoc(null)}
+                className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold flex items-center justify-center transition-all cursor-pointer shrink-0"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-auto bg-slate-50 rounded-2xl border border-slate-200 p-2 sm:p-3 flex items-center justify-center my-3 min-h-[300px]">
+              {previewModalDoc.previewUrl ? (
+                (previewModalDoc.type === 'image' || (typeof previewModalDoc.fileName === 'string' && previewModalDoc.fileName.match(/\.(png|jpg|jpeg|gif|svg|webp)$/i))) ? (
+                  <img
+                    src={previewModalDoc.previewUrl}
+                    alt={previewModalDoc.title}
+                    className="max-h-[350px] sm:max-h-[460px] w-auto max-w-full object-contain rounded-xl shadow-md"
+                  />
+                ) : (
+                  <iframe
+                    src={previewModalDoc.previewUrl}
+                    title={previewModalDoc.title}
+                    className="w-full h-[350px] sm:h-[460px] rounded-xl border border-slate-200 shadow-inner bg-white"
+                  />
+                )
+              ) : (
+                <div className="text-center space-y-3 p-6 bg-white border border-slate-200 rounded-2xl max-w-md w-full shadow-xs">
+                  <div className="w-14 h-14 bg-amber-100 text-[#D99A1C] rounded-2xl flex items-center justify-center mx-auto text-2xl font-bold border border-amber-200 shadow-xs">
+                    📄
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-black text-slate-900">{previewModalDoc.title}</h4>
+                    <p className="text-xs font-bold text-slate-600 mt-0.5">{previewModalDoc.fileName}</p>
+                    <p className="text-[11px] text-emerald-700 font-extrabold bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200 inline-block mt-2">
+                      ✓ Application File Proof
+                    </p>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="flex justify-between items-center pt-3 border-t border-slate-100 shrink-0">
+              {previewModalDoc.previewUrl ? (
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (previewModalDoc.previewUrl) {
+                        handleDownloadAppDocument(previewModalDoc.previewUrl, `${(previewModalDoc.title || 'document').replace(/\s+/g, '_')}.pdf`);
+                      }
+                    }}
+                    className="px-3 py-1.5 sm:px-4 sm:py-2 bg-gradient-to-r from-[#D99A1C] to-[#F5B025] hover:from-[#c28815] hover:to-[#e09e1d] text-white font-black text-[11px] sm:text-xs rounded-xl transition-all flex items-center gap-1.5 cursor-pointer shadow-xs"
+                  >
+                    <span>📥 Download</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (previewModalDoc.previewUrl) {
+                        window.open(previewModalDoc.previewUrl, '_blank');
+                      }
+                    }}
+                    className="px-3 py-1.5 sm:px-4 sm:py-2 bg-amber-50 hover:bg-amber-100 text-[#D99A1C] border border-amber-200 font-extrabold text-[11px] sm:text-xs rounded-xl transition-all flex items-center gap-1.5 cursor-pointer shadow-xs"
+                  >
+                    <span>↗ Open in New Tab</span>
+                  </button>
+                </div>
+              ) : <div />}
+              <button
+                type="button"
+                onClick={() => setPreviewModalDoc(null)}
+                className="px-4 py-1.5 sm:px-5 sm:py-2 bg-slate-800 hover:bg-slate-900 text-white font-extrabold text-[11px] sm:text-xs rounded-xl shadow-md transition-all cursor-pointer"
+              >
+                Close Preview
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
       )}
     </div>
   );

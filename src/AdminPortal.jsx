@@ -595,6 +595,10 @@ export default function AdminPortal({ onLogout }) {
             onBack={handleBack}
             isSyncing={isDataSyncing}
             onRefreshData={fetchInitialData}
+            onNavigate={(tab, subTab) => {
+              setActiveTab(tab);
+              setActiveSubTab(subTab || null);
+            }}
           />
 
           <main key={`${activeTab}-${activeSubTab}`} className="flex-1 flex flex-col pb-16 animate-fade-in-up">
