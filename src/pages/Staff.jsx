@@ -24,6 +24,22 @@ export default function Staff({ staffList, setStaffList, applications }) {
     setCurrentPage(1);
   }, [searchTerm, statusFilter, countryFilter]);
 
+  const [dbAdminRoles, setDbAdminRoles] = useState([]);
+
+  useEffect(() => {
+    fetch('http://localhost:5000/api/roles')
+      .then(res => res.json())
+      .then(data => {
+        if (data?.success && Array.isArray(data.data)) {
+          const filtered = data.data.filter(r => r.portalType === 'Admin');
+          if (filtered.length > 0) {
+            setDbAdminRoles(filtered);
+          }
+        }
+      })
+      .catch(() => {});
+  }, []);
+
   // Onboard Staff Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [newStaffName, setNewStaffName] = useState('');
@@ -548,15 +564,18 @@ export default function Staff({ staffList, setStaffList, applications }) {
                     onChange={(e) => setNewStaffRole(e.target.value)}
                     className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs font-semibold focus:outline-none focus:bg-white focus:border-[#D99A1C]"
                   >
-                    {currentUser.role === 'Director' && <option value="COO">Operations Head / COO</option>}
-                    {(currentUser.role === 'Director' || currentUser.role === 'COO') && (
+                    {dbAdminRoles.length > 0 ? (
+                      dbAdminRoles.map(r => (
+                        <option key={r._id || r.name} value={r.name}>{r.displayName || r.name}</option>
+                      ))
+                    ) : (
                       <>
+                        <option value="SuperAdmin">SuperAdmin</option>
+                        <option value="Director">Director</option>
+                        <option value="COO">Operations Head / COO</option>
+                        <option value="CRE">CRE</option>
                         <option value="Finance">Finance Team</option>
                         <option value="Country Head">Country Head</option>
-                      </>
-                    )}
-                    {(currentUser.role === 'Director' || currentUser.role === 'COO' || currentUser.role === 'Country Head') && (
-                      <>
                         <option value="BDM">BDM</option>
                         <option value="Executive">Executive</option>
                       </>
