@@ -28,6 +28,7 @@ export default function AdminPortal({ onLogout }) {
 
   const adminToken = localStorage.getItem('admin_token');
   const [isDataSyncing, setIsDataSyncing] = useState(false);
+  const [selectedAppIdForSingleView, setSelectedAppIdForSingleView] = useState(null);
 
   const fetchInitialData = async () => {
     if (!adminToken) return;
@@ -334,7 +335,7 @@ export default function AdminPortal({ onLogout }) {
       university: { name: 'University of Hertfordshire' },
       degreeLevel: 'Master',
       duration: '1 Year',
-      tuitionFee: '£15,400 / year',
+      tuitionFee: '₹15,400 / year',
       category: 'Technology',
       description: 'Advanced postgraduate program in data analytics, machine learning, and AI application.',
       intakes: ['September/October 2026', 'January/February 2027']
@@ -346,7 +347,7 @@ export default function AdminPortal({ onLogout }) {
       university: { name: 'University of Hertfordshire' },
       degreeLevel: 'Master',
       duration: '1 Year',
-      tuitionFee: '£16,500 / year',
+      tuitionFee: '₹16,500 / year',
       category: 'Business',
       description: 'Comprehensive business leadership and global trade management degree.',
       intakes: ['September/October 2026']
@@ -358,7 +359,7 @@ export default function AdminPortal({ onLogout }) {
       university: { name: 'University of Toronto' },
       degreeLevel: 'Bachelor',
       duration: '4 Years',
-      tuitionFee: 'CAD $45,000 / year',
+      tuitionFee: '₹45,000 / year',
       category: 'Engineering',
       description: 'Undergraduate computer science program covering algorithms, system design, and software.',
       intakes: ['September/October 2026']
@@ -370,7 +371,7 @@ export default function AdminPortal({ onLogout }) {
       university: { name: 'University of Oxford' },
       degreeLevel: 'Master',
       duration: '1 Year',
-      tuitionFee: '£28,900 / year',
+      tuitionFee: '₹28,900 / year',
       category: 'Healthcare',
       description: 'Advanced medical science research degree focused on genomic and precision therapies.',
       intakes: ['September/October 2026']
@@ -550,6 +551,7 @@ export default function AdminPortal({ onLogout }) {
           referralAgents={referralAgents}
           intakes={intakes}
           staffList={staffList}
+          initialSelectedAppId={selectedAppIdForSingleView}
           onAddClick={() => {
             setActiveTab('sales-order');
             setActiveSubTab('study');
@@ -659,9 +661,12 @@ export default function AdminPortal({ onLogout }) {
             onBack={handleBack}
             isSyncing={isDataSyncing}
             onRefreshData={fetchInitialData}
-            onNavigate={(tab, subTab) => {
+            onNavigate={(tab, subTab, targetAppId) => {
               setActiveTab(tab);
               setActiveSubTab(subTab || null);
+              if (targetAppId) {
+                setSelectedAppIdForSingleView(targetAppId);
+              }
             }}
           />
 

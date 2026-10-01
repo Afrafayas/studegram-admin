@@ -74,28 +74,28 @@ export default function DailyReport({ applications, onNavigateToBecomePartner })
           <div className="bg-white border border-[#E2E8F0] border-t-4 border-t-indigo-500 rounded-2xl p-5 shadow-xs flex flex-col justify-between">
             <span className="text-[10px] font-extrabold uppercase tracking-widest text-slate-400">Total volume tracked</span>
             <div className="mt-4 flex items-baseline gap-2">
-              <span className="text-2xl font-black text-slate-900 tracking-tight">£86,500</span>
-              <span className="text-[9px] font-bold text-slate-400 uppercase">GBP</span>
+              <span className="text-2xl font-black text-slate-900 tracking-tight">₹86,500</span>
+              <span className="text-[9px] font-bold text-slate-400 uppercase">INR</span>
             </div>
           </div>
           <div className="bg-white border border-[#E2E8F0] border-t-4 border-t-emerald-500 rounded-2xl p-5 shadow-xs flex flex-col justify-between">
             <span className="text-[10px] font-extrabold uppercase tracking-widest text-slate-400">Paid Commissions</span>
             <div className="mt-4 flex items-baseline gap-2">
-              <span className="text-2xl font-black text-slate-900 tracking-tight">£2,775</span>
+              <span className="text-2xl font-black text-slate-900 tracking-tight">₹2,775</span>
               <span className="text-[9px] font-bold text-emerald-500 uppercase">Cleared</span>
             </div>
           </div>
           <div className="bg-white border border-[#E2E8F0] border-t-4 border-t-amber-500 rounded-2xl p-5 shadow-xs flex flex-col justify-between">
             <span className="text-[10px] font-extrabold uppercase tracking-widest text-slate-400">Pending Payables</span>
             <div className="mt-4 flex items-baseline gap-2">
-              <span className="text-2xl font-black text-slate-900 tracking-tight">£3,460</span>
+              <span className="text-2xl font-black text-slate-900 tracking-tight">₹3,460</span>
               <span className="text-[9px] font-bold text-amber-500 uppercase">In Pipeline</span>
             </div>
           </div>
           <div className="bg-white border border-[#E2E8F0] border-t-4 border-t-rose-500 rounded-2xl p-5 shadow-xs flex flex-col justify-between">
             <span className="text-[10px] font-extrabold uppercase tracking-widest text-slate-400">Disputed/Under Review</span>
             <div className="mt-4 flex items-baseline gap-2">
-              <span className="text-2xl font-black text-slate-900 tracking-tight">£2,640</span>
+              <span className="text-2xl font-black text-slate-900 tracking-tight">₹2,640</span>
               <span className="text-[9px] font-bold text-rose-500 uppercase">Held</span>
             </div>
           </div>

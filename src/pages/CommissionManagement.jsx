@@ -14,19 +14,32 @@ export default function CommissionManagement({ clients = [], referralAgents = []
     try {
       const res = await API.get('/commissions');
       if (res.data?.success && Array.isArray(res.data.data) && res.data.data.length > 0) {
-        setCommissions(res.data.data);
+        const mapped = res.data.data.map((c, idx) => ({
+          id: c._id || c.id || `COM-${1001 + idx}`,
+          _id: c._id || c.id,
+          studentName: c.studentName || 'Student',
+          courseName: c.courseName || 'Course Program',
+          partnerName: c.partnerName || 'Partner Agency',
+          country: c.country || 'India',
+          fee: c.fee || c.courseFee || 15000,
+          rate: c.rate || 10,
+          amount: c.amount || 500,
+          status: c.status === 'Claimed' ? 'Pending Approval' : (c.status || 'Pending Approval')
+        }));
+        setCommissions(mapped);
       } else {
         // Build from applications with claimed commission
-        const claimedFromApps = applications.filter(a => a.commissionClaimed).map(a => ({
-          id: a.id || a._id,
-          studentName: a.studentName,
-          courseName: a.courseName,
-          partnerName: a.assignedBdm || 'Agent',
+        const claimedFromApps = applications.filter(a => a.commissionClaimed || a.commissionStatus === 'Claimed').map((a, idx) => ({
+          id: a.id || a._id || `COM-${1001 + idx}`,
+          _id: a.id || a._id,
+          studentName: a.studentName || a.student?.name || 'Student',
+          courseName: a.courseName || a.course?.title || 'Course Program',
+          partnerName: a.partnerName || a.partner?.companyName || 'Partner Agency',
           country: a.country || 'India',
           fee: 15000,
           rate: 10,
-          amount: 1500,
-          status: a.commissionStatus || 'Pending Approval'
+          amount: a.commissionAmount || 500,
+          status: 'Pending Approval'
         }));
         setCommissions(claimedFromApps);
       }
@@ -102,7 +115,7 @@ export default function CommissionManagement({ clients = [], referralAgents = []
   // Calculate stats
   const totalAmount = displayCommissions.reduce((acc, c) => acc + (c.amount || 0), 0);
   const paidAmount = displayCommissions.filter(c => c.status === 'Paid').reduce((acc, c) => acc + (c.amount || 0), 0);
-  const pendingAmount = displayCommissions.filter(c => c.status === 'Pending Approval').reduce((acc, c) => acc + (c.amount || 0), 0);
+  const pendingAmount = displayCommissions.filter(c => c.status === 'Pending Approval' || c.status === 'Claimed').reduce((acc, c) => acc + (c.amount || 0), 0);
 
   return (
     <div className="flex-1 p-6 space-y-6 bg-[#F0F2F5]">
@@ -144,8 +157,8 @@ export default function CommissionManagement({ clients = [], referralAgents = []
         <div className="bg-white border border-[#E2E8F0] border-t-4 border-t-emerald-500 rounded-2xl p-5 shadow-xs flex flex-col justify-between">
           <span className="text-[10px] font-extrabold uppercase tracking-widest text-slate-400">Total Payments</span>
           <div className="mt-4 flex items-baseline gap-2">
-            <span className="text-2xl font-black text-slate-900 tracking-tight">£{totalAmount.toLocaleString()}</span>
-            <span className="text-[9px] font-bold text-slate-400 uppercase">GBP</span>
+            <span className="text-2xl font-black text-slate-900 tracking-tight">₹{(totalAmount || 0).toLocaleString()}</span>
+            <span className="text-[9px] font-bold text-slate-400 uppercase">INR</span>
           </div>
         </div>
 
@@ -153,7 +166,7 @@ export default function CommissionManagement({ clients = [], referralAgents = []
         <div className="bg-white border border-[#E2E8F0] border-t-4 border-t-blue-500 rounded-2xl p-5 shadow-xs flex flex-col justify-between">
           <span className="text-[10px] font-extrabold uppercase tracking-widest text-slate-400">Total Paid Commissions</span>
           <div className="mt-4 flex items-baseline gap-2">
-            <span className="text-2xl font-black text-slate-900 tracking-tight">£{paidAmount.toLocaleString()}</span>
+            <span className="text-2xl font-black text-slate-900 tracking-tight">₹{(paidAmount || 0).toLocaleString()}</span>
             <span className="text-[9px] font-bold text-emerald-500 uppercase">Cleared</span>
           </div>
         </div>
@@ -162,7 +175,7 @@ export default function CommissionManagement({ clients = [], referralAgents = []
         <div className="bg-white border border-[#E2E8F0] border-t-4 border-t-amber-500 rounded-2xl p-5 shadow-xs flex flex-col justify-between">
           <span className="text-[10px] font-extrabold uppercase tracking-widest text-slate-400">Total Pending Commissions</span>
           <div className="mt-4 flex items-baseline gap-2">
-            <span className="text-2xl font-black text-slate-900 tracking-tight">£{pendingAmount.toLocaleString()}</span>
+            <span className="text-2xl font-black text-slate-900 tracking-tight">₹{(pendingAmount || 0).toLocaleString()}</span>
             <span className="text-[9px] font-bold text-amber-500 uppercase">In Review</span>
           </div>
         </div>
@@ -203,29 +216,29 @@ export default function CommissionManagement({ clients = [], referralAgents = []
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 text-xs font-semibold text-slate-700">
-                {displayCommissions.map((comm) => (
-                  <tr key={comm.id} className="hover:bg-slate-50/50 transition-colors">
-                    <td className="px-6 py-4 font-mono font-bold text-slate-950">{comm.id}</td>
+                {displayCommissions.map((comm, idx) => (
+                  <tr key={comm.id || comm._id || idx} className="hover:bg-slate-50/50 transition-colors">
+                    <td className="px-6 py-4 font-mono font-bold text-slate-950">{comm.id || comm._id}</td>
                     <td className="px-6 py-4">
                       <div>
-                        <p className="text-slate-900 font-extrabold">{comm.studentName}</p>
-                        <p className="text-[10px] text-slate-400 font-medium truncate max-w-xs">{comm.courseName}</p>
+                        <p className="text-slate-[#0F172A] font-extrabold">{comm.studentName || 'Student'}</p>
+                        <p className="text-[10px] text-slate-400 font-medium truncate max-w-xs">{comm.courseName || 'Course Program'}</p>
                       </div>
                     </td>
-                    <td className="px-6 py-4 text-slate-950 font-bold">{comm.partnerName}</td>
+                    <td className="px-6 py-4 text-slate-950 font-bold">{comm.partnerName || 'Partner Agency'}</td>
                     <td className="px-6 py-4">
-                      <span className="px-2 py-0.5 bg-slate-100 text-slate-600 rounded-md text-[10px] font-bold">{comm.country}</span>
+                      <span className="px-2 py-0.5 bg-slate-100 text-slate-600 rounded-md text-[10px] font-bold">{comm.country || 'India'}</span>
                     </td>
-                    <td className="px-6 py-4 text-slate-600">£{comm.fee.toLocaleString()}</td>
-                    <td className="px-6 py-4 text-slate-400">{comm.rate}%</td>
-                    <td className="px-6 py-4 text-slate-900 font-extrabold">£{comm.amount}</td>
+                    <td className="px-6 py-4 text-slate-600">₹{(comm.fee || 0).toLocaleString()}</td>
+                    <td className="px-6 py-4 text-slate-400">{comm.rate || 10}%</td>
+                    <td className="px-6 py-4 text-slate-900 font-extrabold">₹{(comm.amount || 0).toLocaleString()}</td>
                     <td className="px-6 py-4">
                       <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase ${
                         comm.status === 'Paid' ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' :
-                        comm.status === 'Pending Approval' ? 'bg-amber-50 text-amber-600 border border-amber-100 animate-pulse' :
+                        (comm.status === 'Pending Approval' || comm.status === 'Claimed') ? 'bg-amber-50 text-amber-600 border border-amber-100 animate-pulse' :
                         'bg-rose-50 text-rose-600 border border-rose-100'
                       }`}>
-                        {comm.status}
+                        {comm.status === 'Claimed' ? 'Pending Approval' : comm.status}
                       </span>
                     </td>
                     <td className="px-6 py-4 text-right">
@@ -233,15 +246,15 @@ export default function CommissionManagement({ clients = [], referralAgents = []
                         <div className="flex justify-end gap-1.5">
                           {comm.status !== 'Paid' && (
                             <button
-                              onClick={() => handleUpdateStatus(comm.id, 'Paid')}
+                              onClick={() => handleUpdateStatus(comm.id || comm._id, 'Paid')}
                               className="bg-emerald-500 hover:bg-emerald-600 text-white font-extrabold text-[9px] uppercase px-2 py-1 rounded-md transition-all cursor-pointer shadow-sm"
                             >
                               Approve Payout
                             </button>
                           )}
-                          {comm.status === 'Pending Approval' && (
+                          {(comm.status === 'Pending Approval' || comm.status === 'Claimed') && (
                             <button
-                              onClick={() => handleUpdateStatus(comm.id, 'Under Review')}
+                              onClick={() => handleUpdateStatus(comm.id || comm._id, 'Under Review')}
                               className="bg-slate-200 hover:bg-slate-300 text-slate-700 font-extrabold text-[9px] uppercase px-2 py-1 rounded-md transition-all cursor-pointer"
                             >
                               Dispute

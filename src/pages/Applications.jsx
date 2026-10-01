@@ -105,7 +105,7 @@ const handleDownloadAppDocument = (docUrl, fileName) => {
   document.body.removeChild(link);
 };
 
-export default function Applications({ applications, referralAgents, intakes = [], staffList = [], onAddClick, onRefresh }) {
+export default function Applications({ applications, referralAgents, intakes = [], staffList = [], initialSelectedAppId = null, onAddClick, onRefresh }) {
   const toast = useToast();
   const { currentUser } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
@@ -121,6 +121,20 @@ export default function Applications({ applications, referralAgents, intakes = [
   const [newCommentInput, setNewCommentInput] = useState('');
   const [appEditNotes, setAppEditNotes] = useState('');
   const [isSavingApp, setIsSavingApp] = useState(false);
+
+  // Auto-open Single View when initialSelectedAppId is provided from notification or comment click
+  useEffect(() => {
+    if (initialSelectedAppId && applications && applications.length > 0) {
+      const found = applications.find(a => 
+        (a.id || a._id) === initialSelectedAppId || 
+        a.camsId === initialSelectedAppId ||
+        (a.camsId && typeof initialSelectedAppId === 'string' && a.camsId.toLowerCase() === initialSelectedAppId.toLowerCase())
+      );
+      if (found) {
+        setSingleViewApp(found);
+      }
+    }
+  }, [initialSelectedAppId, applications]);
 
   // When singleViewApp is set, sync comments & notes
   useEffect(() => {
