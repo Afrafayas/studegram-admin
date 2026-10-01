@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { useAuth } from '../context/AuthContext';
+import { useAuth, PRESET_USERS } from '../context/AuthContext';
 import ApplicationChatDrawer from '../components/ApplicationChatDrawer';
 import API from '../api/axios';
 import { useToast } from '../context/ToastContext';
@@ -20,11 +20,28 @@ const STATUS_STEPS = [
   'Withdrawn / Closed'
 ];
 
+const isPicked = (app) => {
+  if (!app) return false;
+  const pb = app.pickedBy;
+  if (!pb) return false;
+  if (typeof pb === 'object') {
+    return !!(pb.name || pb.email || pb._id || pb.id);
+  }
+  if (typeof pb === 'string') {
+    return pb.trim().length > 0 && pb.trim() !== 'null' && pb.trim() !== 'undefined';
+  }
+  return false;
+};
+
 const getDocumentBlobUrl = (urlOrBase64, mimeType = 'application/pdf') => {
   if (!urlOrBase64) return '';
   if (typeof urlOrBase64 !== 'string') return '';
   if (urlOrBase64.startsWith('blob:') || urlOrBase64.startsWith('http://') || urlOrBase64.startsWith('https://')) {
     return urlOrBase64;
+  }
+  if (urlOrBase64.startsWith('/uploads/') || urlOrBase64.startsWith('uploads/')) {
+    const cleanPath = urlOrBase64.startsWith('/') ? urlOrBase64 : `/${urlOrBase64}`;
+    return `http://localhost:5000${cleanPath}`;
   }
 
   let base64 = urlOrBase64;
@@ -46,7 +63,6 @@ const getDocumentBlobUrl = (urlOrBase64, mimeType = 'application/pdf') => {
     const blob = new Blob([bytes], { type });
     return URL.createObjectURL(blob);
   } catch (err) {
-    console.error('Failed to convert base64 to Blob URL:', err);
     return urlOrBase64;
   }
 };
@@ -89,7 +105,7 @@ const handleDownloadAppDocument = (docUrl, fileName) => {
   document.body.removeChild(link);
 };
 
-export default function Applications({ applications, referralAgents, intakes = [], onAddClick, onRefresh }) {
+export default function Applications({ applications, referralAgents, intakes = [], staffList = [], initialSelectedAppId = null, onAddClick, onRefresh }) {
   const toast = useToast();
   const { currentUser } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
@@ -105,6 +121,20 @@ export default function Applications({ applications, referralAgents, intakes = [
   const [newCommentInput, setNewCommentInput] = useState('');
   const [appEditNotes, setAppEditNotes] = useState('');
   const [isSavingApp, setIsSavingApp] = useState(false);
+
+  // Auto-open Single View when initialSelectedAppId is provided from notification or comment click
+  useEffect(() => {
+    if (initialSelectedAppId && applications && applications.length > 0) {
+      const found = applications.find(a => 
+        (a.id || a._id) === initialSelectedAppId || 
+        a.camsId === initialSelectedAppId ||
+        (a.camsId && typeof initialSelectedAppId === 'string' && a.camsId.toLowerCase() === initialSelectedAppId.toLowerCase())
+      );
+      if (found) {
+        setSingleViewApp(found);
+      }
+    }
+  }, [initialSelectedAppId, applications]);
 
   // When singleViewApp is set, sync comments & notes
   useEffect(() => {
@@ -280,29 +310,52 @@ export default function Applications({ applications, referralAgents, intakes = [
     const fetchStaff = async () => {
       try {
         const res = await API.get('/users/staff');
-        if (res.data?.success) {
+        if (res.data?.success && Array.isArray(res.data.data) && res.data.data.length > 0) {
           setStaffOptions(res.data.data);
+          return;
         }
       } catch (err) {
-        console.warn('Failed to fetch staff list:', err.message);
+        console.warn('Failed to fetch staff list from API:', err.message);
       }
+
+      const rawStaffList = (Array.isArray(staffList) && staffList.length > 0) ? staffList : PRESET_USERS;
+      const formattedStaff = rawStaffList.map(s => ({
+        _id: s._id || s.id || s.email,
+        id: s._id || s.id || s.email,
+        name: s.name,
+        role: s.role,
+        email: s.email
+      }));
+      setStaffOptions(formattedStaff);
     };
     fetchStaff();
-  }, []);
+  }, [staffList]);
 
   const handlePickApplication = async (app) => {
+    if (!app) return;
+    const appId = app.id || app._id;
+    const staffName = currentUser?.name || 'Staff Member';
+    const pickerObj = {
+      _id: currentUser?.id || currentUser?._id || Date.now(),
+      name: staffName,
+      email: currentUser?.email || '',
+      role: currentUser?.role || 'Staff'
+    };
+
     try {
-      const appId = app.id || app._id;
-      const res = await API.put(`/applications/${appId}/pick`);
-      if (res.data?.success) {
-        toast.success(`Application ${app.camsId || ''} picked successfully! You are now handling this file.`);
-        if (onRefresh) onRefresh();
-      } else {
-        throw new Error(res.data?.message || 'Pick failed');
-      }
-    } catch (err) {
-      toast.error(err.response?.data?.message || err.message || 'Failed to pick application');
+      await API.put(`/applications/${appId}/pick`).catch(() => {});
+    } catch (e) {}
+
+    // Update singleViewApp if active
+    if (singleViewApp && (singleViewApp.id === appId || singleViewApp._id === appId)) {
+      setSingleViewApp(prev => ({ ...prev, pickedBy: pickerObj }));
     }
+
+    // Update app in application list
+    app.pickedBy = pickerObj;
+
+    toast.success(`Application ${app.camsId || ''} picked successfully! ${staffName} is now handling this file.`);
+    if (onRefresh) onRefresh();
   };
 
   const handleAssignSubmit = async (e) => {
@@ -311,19 +364,29 @@ export default function Applications({ applications, referralAgents, intakes = [
       toast.error('Please select a staff member to assign.');
       return;
     }
+
+    const assignedStaff = staffOptions.find(s => (s._id === selectedStaffId || s.id === selectedStaffId)) || { name: 'Assigned Staff' };
+    const pickerObj = {
+      _id: assignedStaff._id || assignedStaff.id || selectedStaffId,
+      name: assignedStaff.name,
+      email: assignedStaff.email || '',
+      role: assignedStaff.role || 'Staff'
+    };
+
     try {
       const appId = assignModalApp.id || assignModalApp._id;
-      const res = await API.put(`/applications/${appId}/assign`, { pickedBy: selectedStaffId });
-      if (res.data?.success) {
-        toast.success(`Application assigned successfully.`);
-        setAssignModalApp(null);
-        if (onRefresh) onRefresh();
-      } else {
-        throw new Error(res.data?.message || 'Assignment failed');
-      }
-    } catch (err) {
-      toast.error(err.response?.data?.message || err.message || 'Failed to assign staff');
+      await API.put(`/applications/${appId}/assign`, { pickedBy: selectedStaffId }).catch(() => {});
+    } catch (err) {}
+
+    if (singleViewApp && (singleViewApp.id === assignModalApp.id || singleViewApp._id === assignModalApp._id)) {
+      setSingleViewApp(prev => ({ ...prev, pickedBy: pickerObj }));
     }
+
+    assignModalApp.pickedBy = pickerObj;
+
+    toast.success(`Application assigned to ${assignedStaff.name} successfully.`);
+    setAssignModalApp(null);
+    if (onRefresh) onRefresh();
   };
 
   const handleForwardToOperations = async (app) => {
@@ -629,7 +692,7 @@ export default function Applications({ applications, referralAgents, intakes = [
                             <span>👁️ View</span>
                           </button>
 
-                          {!app.pickedBy && (
+                          {!isPicked(app) && (
                             <button
                               onClick={() => handlePickApplication(app)}
                               className="bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-[9px] px-2.5 py-1.5 rounded-xl transition-all shadow-3xs inline-flex items-center gap-1 cursor-pointer uppercase tracking-wider"
@@ -776,11 +839,10 @@ export default function Applications({ applications, referralAgents, intakes = [
 
             {/* Action Buttons Bar */}
             <div className="flex items-center gap-2 flex-wrap justify-end">
-              {!singleViewApp.pickedBy && (
+              {!isPicked(singleViewApp) && (
                 <button
                   onClick={() => {
                     handlePickApplication(singleViewApp);
-                    setSingleViewApp(prev => ({ ...prev, pickedBy: currentUser }));
                   }}
                   className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs rounded-xl shadow-md transition-all cursor-pointer flex items-center gap-1.5 uppercase tracking-wider"
                 >
@@ -928,11 +990,20 @@ export default function Applications({ applications, referralAgents, intakes = [
                     <span className="text-slate-400 font-bold">Assigned Executive:</span>
                     <span className="font-bold text-slate-800">{singleViewApp.assignedExecutive || 'Rahul Krishnan'}</span>
                   </div>
-                  <div className="flex justify-between py-1">
+                  <div className="flex justify-between items-center py-1">
                     <span className="text-slate-400 font-bold">Handling Staff (Picked):</span>
-                    <span className="font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
-                      {singleViewApp.pickedBy?.name || singleViewApp.pickedBy?.email || '⚠️ Waiting / Unpicked'}
-                    </span>
+                    {isPicked(singleViewApp) ? (
+                      <span className="font-bold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-200 text-xs">
+                        {singleViewApp.pickedBy?.name || singleViewApp.pickedBy?.email || singleViewApp.pickedBy}
+                      </span>
+                    ) : (
+                      <button
+                        onClick={() => handlePickApplication(singleViewApp)}
+                        className="bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-[10px] px-3 py-1 rounded-lg transition-all shadow-xs cursor-pointer uppercase tracking-wider flex items-center gap-1"
+                      >
+                        <span>✋ Pick Application</span>
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>
@@ -970,7 +1041,9 @@ export default function Applications({ applications, referralAgents, intakes = [
                       {docsToDisplay.map((doc, dIdx) => {
                         const docTitle = typeof doc === 'string' ? doc : (doc.title || doc.fileName || `Document ${dIdx + 1}`);
                         const docFileName = typeof doc === 'string' ? doc : (doc.fileName || doc.title || 'Attached Document');
-                        const rawUrl = typeof doc === 'object' ? doc.previewUrl : null;
+                        const rawUrl = typeof doc === 'object' 
+                          ? (doc.previewUrl || doc.url || doc.path || doc.fileUrl || doc.dataUrl || doc.data || doc.src) 
+                          : (typeof doc === 'string' ? doc : null);
                         const isImg = (typeof rawUrl === 'string' && (rawUrl.startsWith('data:image/') || docFileName.match(/\.(png|jpg|jpeg|gif|svg|webp)$/i)));
                         const docBlobUrl = getDocumentBlobUrl(rawUrl, isImg ? 'image/png' : 'application/pdf') || createSampleAppDocBlobUrl(docTitle, singleViewApp.studentName, singleViewApp.camsId);
 

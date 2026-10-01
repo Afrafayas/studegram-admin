@@ -2,9 +2,9 @@ import React from 'react';
 
 export default function SalesOrderTourist() {
   const packages = [
-    { id: 1, name: 'London Academic Tour', duration: '10 Days', price: '£1,499', locations: 'London - Oxford - Cambridge', desc: 'Summer exploration package for university candidates to visit UK campuses and experience British culture.' },
-    { id: 2, name: 'Schengen Educational Exchange', duration: '14 Days', price: '€1,850', locations: 'Paris - Brussels - Amsterdam - Berlin', desc: 'Comprehensive academic tour through major European universities and technological research hubs.' },
-    { id: 3, name: 'Swiss Hospitality Experience', duration: '7 Days', price: 'CHF 2,100', locations: 'Zurich - Geneva - Lausanne', desc: 'Targeted insight program covering premium hospitality schools and luxury brand management institutes.' },
+    { id: 1, name: 'London Academic Tour', duration: '10 Days', price: '₹1,499', locations: 'London - Oxford - Cambridge', desc: 'Summer exploration package for university candidates to visit UK campuses and experience British culture.' },
+    { id: 2, name: 'Schengen Educational Exchange', duration: '14 Days', price: '₹1,850', locations: 'Paris - Brussels - Amsterdam - Berlin', desc: 'Comprehensive academic tour through major European universities and technological research hubs.' },
+    { id: 3, name: 'Swiss Hospitality Experience', duration: '7 Days', price: '₹2,100', locations: 'Zurich - Geneva - Lausanne', desc: 'Targeted insight program covering premium hospitality schools and luxury brand management institutes.' },
   ];
 
   return (

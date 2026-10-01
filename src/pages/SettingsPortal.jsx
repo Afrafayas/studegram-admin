@@ -1650,7 +1650,7 @@ export default function SettingsPortal({
                       value={courseFee}
                       onChange={(e) => setCourseFee(e.target.value)}
                       className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-semibold focus:outline-none focus:bg-white focus:border-[#D99A1C]"
-                      placeholder="e.g. £28,500 / yr"
+                      placeholder="e.g. ₹28,500 / yr"
                     />
                   </div>
 

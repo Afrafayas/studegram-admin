@@ -56,9 +56,31 @@ export default function AdminHeader({
     }
   };
 
+  // Real-time Application Comments System
+  const [commentsList, setCommentsList] = useState([]);
+  const [unreadCommentsCount, setUnreadCommentsCount] = useState(0);
+  const [showComments, setShowComments] = useState(false);
+
+  const fetchComments = async () => {
+    try {
+      const res = await API.get('/applications/recent-comments');
+      if (res.data?.success && Array.isArray(res.data.data)) {
+        setCommentsList(res.data.data);
+        const unreplied = res.data.data.filter(c => c.isUnreplied).length;
+        setUnreadCommentsCount(unreplied);
+      }
+    } catch (err) {
+      console.warn('Failed to fetch comments for admin header:', err.message);
+    }
+  };
+
   useEffect(() => {
     fetchNotifications();
-    const interval = setInterval(fetchNotifications, 20000);
+    fetchComments();
+    const interval = setInterval(() => {
+      fetchNotifications();
+      fetchComments();
+    }, 15000);
     return () => clearInterval(interval);
   }, []);
 
@@ -168,8 +190,11 @@ export default function AdminHeader({
     setShowNotifications(false);
 
     const { tab, subTab } = getNotificationDestination(n);
+    const extractedCams = (n.message || '').match(/CAMS-\d+/i)?.[0] || (n.title || '').match(/CAMS-\d+/i)?.[0];
+    const targetAppId = n.relatedId || n.applicationId || n.targetAppId || n.appId || extractedCams;
+
     if (onNavigate) {
-      onNavigate(tab, subTab);
+      onNavigate(tab, subTab, targetAppId);
     }
   };
 
@@ -278,20 +303,108 @@ export default function AdminHeader({
             </button>
           )}
 
+          {/* Real-time Application Comments Icon & Drawer */}
+          <div className="relative">
+            <button
+              onClick={() => {
+                setShowComments(!showComments);
+                if (showNotifications) setShowNotifications(false);
+              }}
+              className="p-2 text-slate-400 hover:text-white hover:bg-slate-900 rounded-xl transition-all relative focus:outline-none cursor-pointer"
+              title="Application Comments & Messages"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
+              </svg>
+              {unreadCommentsCount > 0 && (
+                <span className="absolute top-1 right-1 w-4 h-4 bg-blue-500 text-white rounded-full text-[9px] font-black flex items-center justify-center animate-bounce shadow">
+                  {unreadCommentsCount}
+                </span>
+              )}
+            </button>
+
+            {/* Application Comments Dropdown */}
+            {showComments && (
+              <>
+                <div 
+                  onClick={() => setShowComments(false)}
+                  className="fixed inset-0 z-10"
+                />
+                <div className="absolute right-0 top-11 w-80 sm:w-96 bg-[#0A0A0F] border border-slate-800 rounded-2xl shadow-2xl py-3 z-20 animate-in fade-in slide-in-from-top-2 duration-150">
+                  <div className="px-4 pb-2.5 border-b border-slate-900 flex justify-between items-center">
+                    <div>
+                      <h4 className="text-xs font-black text-white uppercase tracking-wider flex items-center gap-2">
+                        <span>Application Comments</span>
+                        {unreadCommentsCount > 0 && (
+                          <span className="px-2 py-0.5 rounded-full text-[9px] font-black bg-blue-600 text-white shadow">
+                            {unreadCommentsCount} Unreplied
+                          </span>
+                        )}
+                      </h4>
+                      <p className="text-[10px] text-slate-400">Agent messages & application discussions</p>
+                    </div>
+                  </div>
+
+                  <div className="max-h-80 overflow-y-auto divide-y divide-slate-900/60 p-1.5 space-y-1.5">
+                    {commentsList.length > 0 ? (
+                      commentsList.map((comm, idx) => (
+                        <div 
+                          key={comm.applicationId || idx} 
+                          onClick={() => {
+                            setShowComments(false);
+                            if (onNavigate) onNavigate('applications', null, comm.applicationId);
+                          }}
+                          className={`p-3 rounded-xl transition-all cursor-pointer group ${
+                            comm.isUnreplied
+                              ? 'bg-blue-950/80 border-l-4 border-l-blue-500 text-blue-100 font-bold shadow-md hover:bg-blue-900'
+                              : 'bg-slate-900/50 border-l-4 border-l-emerald-600 text-slate-300 hover:bg-slate-800/80'
+                          }`}
+                        >
+                          <div className="flex justify-between items-start gap-2">
+                            <h5 className="text-xs font-extrabold text-white group-hover:text-[#F5B025] transition-colors flex items-center gap-1.5">
+                              {comm.isUnreplied && <span className="w-2 h-2 rounded-full bg-blue-400 animate-pulse"></span>}
+                              <span>{comm.camsId} &middot; {comm.studentName}</span>
+                            </h5>
+                            <span className="text-[9px] text-slate-400 font-semibold shrink-0">
+                              {comm.createdAt ? new Date(comm.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Just now'}
+                            </span>
+                          </div>
+                          <p className="text-[10px] text-slate-400 font-medium truncate mt-0.5">{comm.universityName} - {comm.courseName}</p>
+                          <p className="text-[11px] font-semibold mt-1 leading-snug break-words">"{comm.text}"</p>
+                          <div className="mt-2 flex items-center justify-between text-[9px]">
+                            <span className={`px-2 py-0.5 rounded font-extrabold uppercase ${comm.isUnreplied ? 'bg-blue-600 text-white' : 'bg-slate-800 text-slate-400'}`}>
+                              {comm.isUnreplied ? '💬 Unreplied Message' : '✓ Replied / Read'}
+                            </span>
+                            <span className="text-[#D99A1C] font-extrabold group-hover:underline">Open Application →</span>
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="p-6 text-center text-slate-500 text-xs font-medium">
+                        No application comments found.
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+
           {/* Real-time Notification Bell Drawer */}
           <div className="relative">
             <button
               onClick={() => {
                 setShowNotifications(!showNotifications);
+                if (showComments) setShowComments(false);
               }}
-              className="p-2 text-slate-400 hover:text-white hover:bg-slate-900 rounded-xl transition-all relative focus:outline-none"
+              className="p-2 text-slate-400 hover:text-white hover:bg-slate-900 rounded-xl transition-all relative focus:outline-none cursor-pointer"
               title="Notifications"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
               </svg>
               {unreadCount > 0 && (
-                <span className="absolute top-1 right-1 w-4 h-4 bg-rose-500 text-white rounded-full text-[9px] font-black flex items-center justify-center animate-bounce">
+                <span className="absolute top-1 right-1 w-4 h-4 bg-rose-500 text-white rounded-full text-[9px] font-black flex items-center justify-center animate-bounce shadow">
                   {unreadCount}
                 </span>
               )}
@@ -313,26 +426,28 @@ export default function AdminHeader({
                     {unreadCount > 0 && (
                       <button
                         onClick={handleMarkAllRead}
-                        className="text-[9px] font-extrabold text-[#D99A1C] hover:underline"
+                        className="text-[9px] font-extrabold text-[#D99A1C] hover:underline cursor-pointer"
                       >
                         Mark all as read
                       </button>
                     )}
                   </div>
 
-                  <div className="max-h-80 overflow-y-auto divide-y divide-slate-900/60">
+                  <div className="max-h-80 overflow-y-auto divide-y divide-slate-900/60 p-1.5 space-y-1">
                     {notifications.length > 0 ? (
                       notifications.map(n => (
                         <div 
                           key={n._id || n.id} 
                           onClick={() => handleNotificationClick(n)}
-                          className={`p-3.5 hover:bg-slate-800/60 transition-all cursor-pointer group ${
-                            !n.isRead ? 'bg-indigo-950/30 border-l-2 border-l-[#D99A1C]' : ''
+                          className={`p-3.5 rounded-xl transition-all cursor-pointer group ${
+                            !n.isRead 
+                              ? 'bg-[#1E1B4B]/90 border-l-4 border-l-[#D99A1C] text-amber-100 font-extrabold shadow-sm hover:bg-[#2E2A72]' 
+                              : 'bg-slate-900/40 border-l-4 border-l-slate-700 text-slate-400 opacity-60 hover:bg-slate-800/50'
                           }`}
                         >
                           <div className="flex justify-between items-start gap-2">
                             <h5 className="text-xs font-bold text-white group-hover:text-[#F5B025] transition-colors flex items-center gap-1.5">
-                              {!n.isRead && <span className="w-1.5 h-1.5 rounded-full bg-[#D99A1C] inline-block shrink-0"></span>}
+                              {!n.isRead && <span className="w-2 h-2 rounded-full bg-[#D99A1C] inline-block shrink-0 animate-pulse"></span>}
                               {n.title}
                             </h5>
                             <span className="text-[9px] text-slate-400 font-semibold shrink-0">
@@ -340,11 +455,11 @@ export default function AdminHeader({
                             </span>
                           </div>
                           <p className="text-[11px] text-slate-300 font-medium mt-1 leading-snug">{n.message}</p>
-                          <div className="mt-2 flex items-center justify-end text-[10px] font-bold text-[#D99A1C] opacity-0 group-hover:opacity-100 transition-opacity gap-1">
-                            <span>Open Page</span>
-                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7-7" />
-                            </svg>
+                          <div className="mt-2 flex items-center justify-between text-[9px]">
+                            <span className={`px-2 py-0.5 rounded font-extrabold ${!n.isRead ? 'bg-[#D99A1C] text-black' : 'bg-slate-800 text-slate-500'}`}>
+                              {!n.isRead ? 'UNREAD' : 'READ'}
+                            </span>
+                            <span className="text-[#D99A1C] font-extrabold group-hover:underline">Open Page →</span>
                           </div>
                         </div>
                       ))
