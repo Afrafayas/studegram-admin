@@ -43,6 +43,7 @@ export default function Staff({ staffList, setStaffList, applications }) {
 
   // Onboard Staff Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [newStaffName, setNewStaffName] = useState('');
   const [newStaffEmail, setNewStaffEmail] = useState('');
   const [newStaffPhone, setNewStaffPhone] = useState('');
@@ -144,6 +145,7 @@ export default function Staff({ staffList, setStaffList, applications }) {
       toast.error("Please fill out all required fields.");
       return;
     }
+    setIsSubmitting(true);
 
     if (passwordMode === 'manual' && !manualPassword) {
       toast.error("Please enter an initial password or switch to Auto-generate.");
@@ -223,6 +225,7 @@ export default function Staff({ staffList, setStaffList, applications }) {
     setManualPassword('');
     setPasswordMode('auto');
     setIsModalOpen(false);
+    setIsSubmitting(false);
 
     if (passwordMode === 'auto') {
       toast.success(`Staff member ${newStaffName} onboarded. Invitation email with auto-generated password sent to ${newStaffEmail}!`);
@@ -776,9 +779,16 @@ export default function Staff({ staffList, setStaffList, applications }) {
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-[#D99A1C] hover:bg-[#F5B025] text-white font-extrabold text-xs rounded-xl transition-all shadow-md cursor-pointer"
+                  disabled={isSubmitting}
+                  className="px-4 py-2 bg-[#D99A1C] hover:bg-[#F5B025] disabled:opacity-50 text-white font-extrabold text-xs rounded-xl transition-all shadow-md cursor-pointer flex items-center gap-1.5"
                 >
-                  Confirm Onboarding
+                  {isSubmitting && (
+                    <svg className="animate-spin h-3.5 w-3.5 text-white" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                    </svg>
+                  )}
+                  {isSubmitting ? 'Onboarding...' : 'Confirm Onboarding'}
                 </button>
               </div>
             </form>

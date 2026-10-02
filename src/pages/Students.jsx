@@ -25,6 +25,7 @@ export default function Students({ clients, setClients, applications, intakes = 
   
   // Onboard Student Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [newStudentName, setNewStudentName] = useState('');
   const [newStudentEmail, setNewStudentEmail] = useState('');
   const [newStudentPhone, setNewStudentPhone] = useState('');
@@ -89,13 +90,15 @@ export default function Students({ clients, setClients, applications, intakes = 
     setExpandedId(expandedId === id ? null : id);
   };
 
-  const handleOnboardStudent = (e) => {
+  const handleOnboardStudent = async (e) => {
     e.preventDefault();
     if (!canOnboard) return;
     if (!newStudentName || !newStudentEmail || !newStudentPhone) {
       toast.error("Please fill out required fields.");
       return;
     }
+    setIsSubmitting(true);
+    await new Promise(r => setTimeout(r, 400));
 
     const newStudent = {
       id: Date.now(),
@@ -122,6 +125,7 @@ export default function Students({ clients, setClients, applications, intakes = 
     setNewStudentPassport('');
     setNewStudentDob('');
     setNewStudentReferredBy('Direct');
+    setIsSubmitting(false);
     setIsModalOpen(false);
 
     toast.success(`Student ${newStudentName} successfully onboarded.`);
@@ -555,9 +559,16 @@ export default function Students({ clients, setClients, applications, intakes = 
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-[#D99A1C] hover:bg-[#F5B025] text-white font-extrabold text-xs rounded-xl transition-all shadow-md"
+                  disabled={isSubmitting}
+                  className="px-4 py-2 bg-[#D99A1C] hover:bg-[#F5B025] disabled:opacity-50 text-white font-extrabold text-xs rounded-xl transition-all shadow-md flex items-center gap-1.5"
                 >
-                  Confirm Onboarding
+                  {isSubmitting && (
+                    <svg className="animate-spin h-3.5 w-3.5 text-white" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                    </svg>
+                  )}
+                  {isSubmitting ? 'Onboarding...' : 'Confirm Onboarding'}
                 </button>
               </div>
             </form>

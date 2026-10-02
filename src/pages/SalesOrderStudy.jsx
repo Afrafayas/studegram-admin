@@ -24,6 +24,7 @@ export default function SalesOrderStudy({
 
   const [uploadedFiles, setUploadedFiles] = useState([]);
   const [isUploading, setIsUploading] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [uploadError, setUploadError] = useState('');
   
   // Set default values based on whether items are objects or strings
@@ -49,7 +50,7 @@ export default function SalesOrderStudy({
     { code: '+61', flag: '🇦🇺', name: 'Australia' }
   ];
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (studentSelectionMode === 'new' && (!fullName || !phoneNumber || !dob)) {
       toast.error("Please fill in all required fields.");
@@ -72,6 +73,8 @@ export default function SalesOrderStudy({
     const cName = typeof selectedCourse === 'object' ? selectedCourse.title : selectedCourse;
     const iName = typeof selectedIntake === 'object' ? selectedIntake.title : selectedIntake;
 
+    setIsSubmitting(true);
+    await new Promise(r => setTimeout(r, 500));
     let newApp;
     if (studentSelectionMode === 'existing') {
       const studentObj = students.find(s => s.id === selectedStudent);
@@ -119,6 +122,7 @@ export default function SalesOrderStudy({
 
     onAddApplication(newApp);
     setSuccessMessage(true);
+    setIsSubmitting(false);
 
     setFullName('');
     setPhoneNumber('');
@@ -428,9 +432,21 @@ export default function SalesOrderStudy({
                 }}
               />
               <div className="space-y-1 text-slate-500">
-                <span className="text-xl">📄</span>
-                <p className="text-xs font-semibold text-slate-700">Click or drag files here to upload</p>
-                <p className="text-[10px] text-slate-400 font-semibold">Upload at least one document (PDF, PNG, JPG, Word)</p>
+                {isUploading ? (
+                  <div className="flex flex-col items-center justify-center py-2 space-y-1">
+                    <svg className="animate-spin h-6 w-6 text-[#D99A1C]" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                    </svg>
+                    <p className="text-xs font-bold text-[#D99A1C] animate-pulse">Uploading files, please wait...</p>
+                  </div>
+                ) : (
+                  <>
+                    <span className="text-xl">📄</span>
+                    <p className="text-xs font-semibold text-slate-700">Click or drag files here to upload</p>
+                    <p className="text-[10px] text-slate-400 font-semibold">Upload at least one document (PDF, PNG, JPG, Word)</p>
+                  </>
+                )}
               </div>
             </div>
 
@@ -484,10 +500,16 @@ export default function SalesOrderStudy({
           
           <button
             type="submit"
-            disabled={isUploading || uploadedFiles.length === 0}
-            className="px-6 py-2.5 bg-gradient-to-r from-[#D99A1C] to-[#F5B025] hover:scale-[1.01] hover:shadow-lg text-white font-extrabold text-xs rounded-xl transition-all duration-150 shadow-md uppercase tracking-wider disabled:opacity-50 disabled:pointer-events-none"
+            disabled={isSubmitting || isUploading || uploadedFiles.length === 0}
+            className="px-6 py-2.5 bg-gradient-to-r from-[#D99A1C] to-[#F5B025] hover:scale-[1.01] hover:shadow-lg text-white font-extrabold text-xs rounded-xl transition-all duration-150 shadow-md uppercase tracking-wider disabled:opacity-50 disabled:pointer-events-none flex items-center gap-2"
           >
-            Submit Application
+            {isSubmitting && (
+              <svg className="animate-spin h-3.5 w-3.5 text-white" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+              </svg>
+            )}
+            {isSubmitting ? 'Submitting Application...' : 'Submit Application'}
           </button>
         </div>
       </form>

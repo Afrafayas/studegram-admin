@@ -239,6 +239,7 @@ export default function Applications({ applications, referralAgents, intakes = [
   const [selectedStatus, setSelectedStatus] = useState('Submitted');
   const [remarks, setRemarks] = useState('');
   const [isUpdating, setIsUpdating] = useState(false);
+  const [isAssigning, setIsAssigning] = useState(false);
 
   // Extract available intakes from master list and applications
   const masterIntakeTitles = (intakes || []).map(i => typeof i === 'object' ? i.title : i).filter(Boolean);
@@ -364,6 +365,7 @@ export default function Applications({ applications, referralAgents, intakes = [
       toast.error('Please select a staff member to assign.');
       return;
     }
+    setIsAssigning(true);
 
     const assignedStaff = staffOptions.find(s => (s._id === selectedStaffId || s.id === selectedStaffId)) || { name: 'Assigned Staff' };
     const pickerObj = {
@@ -386,6 +388,7 @@ export default function Applications({ applications, referralAgents, intakes = [
 
     toast.success(`Application assigned to ${assignedStaff.name} successfully.`);
     setAssignModalApp(null);
+    setIsAssigning(false);
     if (onRefresh) onRefresh();
   };
 
@@ -1039,11 +1042,10 @@ export default function Applications({ applications, referralAgents, intakes = [
                   return (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       {docsToDisplay.map((doc, dIdx) => {
-                        const docTitle = typeof doc === 'string' ? doc : (doc.title || doc.fileName || `Document ${dIdx + 1}`);
-                        const docFileName = typeof doc === 'string' ? doc : (doc.fileName || doc.title || 'Attached Document');
-                        const rawUrl = typeof doc === 'object' 
-                          ? (doc.previewUrl || doc.url || doc.path || doc.fileUrl || doc.dataUrl || doc.data || doc.src) 
-                          : (typeof doc === 'string' ? doc : null);
+                        const rawUrl = typeof doc === 'object' ? (doc.previewUrl || doc.url || doc.path || doc.fileUrl || doc.dataUrl || doc.data || doc.src) : (typeof doc === 'string' ? doc : null);
+                        const fallbackFileName = typeof rawUrl === 'string' ? rawUrl.split('/').pop().split('?')[0] : '';
+                        const docTitle = typeof doc === 'string' ? doc : (doc.name || doc.title || doc.comment || doc.fileName || `Document ${dIdx + 1}`);
+                        const docFileName = typeof doc === 'string' ? doc : (doc.fileName || fallbackFileName || doc.name || doc.title || 'Attached Document');
                         const isImg = (typeof rawUrl === 'string' && (rawUrl.startsWith('data:image/') || docFileName.match(/\.(png|jpg|jpeg|gif|svg|webp)$/i)));
                         const docBlobUrl = getDocumentBlobUrl(rawUrl, isImg ? 'image/png' : 'application/pdf') || createSampleAppDocBlobUrl(docTitle, singleViewApp.studentName, singleViewApp.camsId);
 
@@ -1231,8 +1233,14 @@ export default function Applications({ applications, referralAgents, intakes = [
                 <button
                   type="submit"
                   disabled={isUpdating}
-                  className="px-5 py-2 text-xs font-extrabold text-white bg-[#D99A1C] hover:bg-[#F5B025] rounded-xl shadow-md transition-all disabled:opacity-50"
+                  className="px-5 py-2 text-xs font-extrabold text-white bg-[#D99A1C] hover:bg-[#F5B025] rounded-xl shadow-md transition-all disabled:opacity-50 flex items-center gap-1.5"
                 >
+                  {isUpdating && (
+                    <svg className="animate-spin h-3.5 w-3.5 text-white" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                    </svg>
+                  )}
                   {isUpdating ? 'Updating...' : 'Save & Publish Update'}
                 </button>
               </div>
@@ -1287,9 +1295,16 @@ export default function Applications({ applications, referralAgents, intakes = [
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2 text-xs font-extrabold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl shadow-md transition-all"
+                  disabled={isAssigning}
+                  className="px-5 py-2 text-xs font-extrabold text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 rounded-xl shadow-md transition-all flex items-center gap-1.5"
                 >
-                  Confirm Staff Assignment
+                  {isAssigning && (
+                    <svg className="animate-spin h-3.5 w-3.5 text-white" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                    </svg>
+                  )}
+                  {isAssigning ? 'Assigning...' : 'Confirm Staff Assignment'}
                 </button>
               </div>
             </form>

@@ -9,6 +9,8 @@ export default function Partners({ clients, setClients }) {
   const [statusFilter, setStatusFilter] = useState('All');
   const [locationFilter, setLocationFilter] = useState('All');
   const [expandedId, setExpandedId] = useState(null);
+  const [isInviting, setIsInviting] = useState(false);
+  const [isRejecting, setIsRejecting] = useState(false);
   const [partnerSubTabs, setPartnerSubTabs] = useState({});
   const [previewDocModal, setPreviewDocModal] = useState(null);
   
@@ -53,6 +55,7 @@ export default function Partners({ clients, setClients }) {
       toast.error('Rejection reason is mandatory.');
       return;
     }
+    setIsRejecting(true);
     try {
       const response = await API.put(`/partners/${rejectPartnerModal.id || rejectPartnerModal._id}/reject`, {
         rejectionReason
@@ -67,6 +70,8 @@ export default function Partners({ clients, setClients }) {
       }
     } catch (err) {
       toast.error(err.response?.data?.message || err.message || 'Rejection failed');
+    } finally {
+      setIsRejecting(false);
     }
   };
 
@@ -122,12 +127,14 @@ export default function Partners({ clients, setClients }) {
     setExpandedId(expandedId === id ? null : id);
   };
 
-  const handleInvitePartner = (e) => {
+  const handleInvitePartner = async (e) => {
     e.preventDefault();
     if (!newPartnerName || !newPartnerEmail || !newPartnerPhone) {
       toast.error("Please fill out all fields.");
       return;
     }
+    setIsInviting(true);
+    await new Promise(r => setTimeout(r, 400));
 
     const nextCodeNum = partners.length + 101;
     const newPartner = {
@@ -149,6 +156,7 @@ export default function Partners({ clients, setClients }) {
     setNewPartnerName('');
     setNewPartnerEmail('');
     setNewPartnerPhone('');
+    setIsInviting(false);
     setIsModalOpen(false);
     
     toast.success(`Partner ${newPartnerName} successfully onboarded with Code ${newPartner.partnerCode}`);
@@ -596,9 +604,16 @@ export default function Partners({ clients, setClients }) {
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-[#D99A1C] hover:bg-[#F5B025] text-white font-extrabold text-xs rounded-xl transition-all shadow-md"
+                  disabled={isInviting}
+                  className="px-4 py-2 bg-[#D99A1C] hover:bg-[#F5B025] disabled:opacity-50 text-white font-extrabold text-xs rounded-xl transition-all shadow-md flex items-center gap-1.5"
                 >
-                  Confirm Onboarding
+                  {isInviting && (
+                    <svg className="animate-spin h-3.5 w-3.5 text-white" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                    </svg>
+                  )}
+                  {isInviting ? 'Onboarding...' : 'Confirm Onboarding'}
                 </button>
               </div>
             </form>
@@ -648,9 +663,16 @@ export default function Partners({ clients, setClients }) {
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2 bg-rose-600 hover:bg-rose-700 text-white font-extrabold text-xs rounded-xl transition-all shadow-md"
+                  disabled={isRejecting}
+                  className="px-5 py-2 bg-rose-600 hover:bg-rose-700 disabled:opacity-50 text-white font-extrabold text-xs rounded-xl transition-all shadow-md flex items-center gap-1.5"
                 >
-                  Confirm Rejection & Send Email Notification
+                  {isRejecting && (
+                    <svg className="animate-spin h-3.5 w-3.5 text-white" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                    </svg>
+                  )}
+                  {isRejecting ? 'Rejecting...' : 'Confirm Rejection & Send Email Notification'}
                 </button>
               </div>
             </form>
