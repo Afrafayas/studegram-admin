@@ -188,9 +188,13 @@ export default function Applications({ applications, referralAgents, intakes = [
 
     try {
       const appId = singleViewApp.id || singleViewApp._id;
-      await API.put(`/applications/${appId}`, {
-        remarks: `Comment added: ${textToSave}`
-      }).catch(() => {});
+      await API.post(`/applications/${appId}/comments`, {
+        text: textToSave
+      }).catch(async () => {
+        await API.put(`/applications/${appId}`, {
+          remarks: `Comment added: ${textToSave}`
+        }).catch(() => {});
+      });
       toast.success('Comment posted successfully!');
       if (onRefresh) onRefresh();
     } catch (err) {

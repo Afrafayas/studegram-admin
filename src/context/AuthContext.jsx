@@ -246,6 +246,8 @@ export function AuthProvider({ children }) {
     setCurrentUser(null);
     localStorage.removeItem('studegram_user');
     localStorage.removeItem('admin_token');
+    localStorage.removeItem('studegram_admin_active_tab');
+    localStorage.removeItem('studegram_admin_active_subtab');
   };
 
   // Permission validation with dynamic DB checklist lookup

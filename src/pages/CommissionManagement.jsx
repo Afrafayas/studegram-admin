@@ -14,33 +14,46 @@ export default function CommissionManagement({ clients = [], referralAgents = []
     try {
       const res = await API.get('/commissions');
       if (res.data?.success && Array.isArray(res.data.data) && res.data.data.length > 0) {
-        const mapped = res.data.data.map((c, idx) => ({
-          id: c._id || c.id || `COM-${1001 + idx}`,
-          _id: c._id || c.id,
-          studentName: c.studentName || 'Student',
-          courseName: c.courseName || 'Course Program',
-          partnerName: c.partnerName || 'Partner Agency',
-          country: c.country || 'India',
-          fee: c.fee || c.courseFee || 15000,
-          rate: c.rate || 10,
-          amount: c.amount || 500,
-          status: c.status === 'Claimed' ? 'Pending Approval' : (c.status || 'Pending Approval')
-        }));
+        const mapped = res.data.data.map((c, idx) => {
+          const comId = (c.commissionId && String(c.commissionId).startsWith('COM-'))
+            ? c.commissionId
+            : (c.id && String(c.id).startsWith('COM-'))
+              ? c.id
+              : `COM-${1001 + idx}`;
+
+          return {
+            id: comId,
+            commissionId: comId,
+            _id: c._id || c.id,
+            studentName: c.studentName || 'Student',
+            courseName: c.courseName || 'Course Program',
+            partnerName: c.partnerName || 'Partner Agency',
+            country: c.country || 'India',
+            fee: c.fee || c.courseFee || 15000,
+            rate: c.rate || 10,
+            amount: c.amount || 500,
+            status: c.status === 'Claimed' ? 'Pending Approval' : (c.status || 'Pending Approval')
+          };
+        });
         setCommissions(mapped);
       } else {
         // Build from applications with claimed commission
-        const claimedFromApps = applications.filter(a => a.commissionClaimed || a.commissionStatus === 'Claimed').map((a, idx) => ({
-          id: a.id || a._id || `COM-${1001 + idx}`,
-          _id: a.id || a._id,
-          studentName: a.studentName || a.student?.name || 'Student',
-          courseName: a.courseName || a.course?.title || 'Course Program',
-          partnerName: a.partnerName || a.partner?.companyName || 'Partner Agency',
-          country: a.country || 'India',
-          fee: 15000,
-          rate: 10,
-          amount: a.commissionAmount || 500,
-          status: 'Pending Approval'
-        }));
+        const claimedFromApps = applications.filter(a => a.commissionClaimed || a.commissionStatus === 'Claimed').map((a, idx) => {
+          const comId = `COM-${1001 + idx}`;
+          return {
+            id: comId,
+            commissionId: comId,
+            _id: a._id || a.id,
+            studentName: a.studentName || a.student?.name || 'Student',
+            courseName: a.courseName || a.course?.title || 'Course Program',
+            partnerName: a.partnerName || a.partner?.companyName || 'Partner Agency',
+            country: a.country || 'India',
+            fee: 15000,
+            rate: 10,
+            amount: a.commissionAmount || 500,
+            status: 'Pending Approval'
+          };
+        });
         setCommissions(claimedFromApps);
       }
     } catch (err) {
@@ -66,6 +79,36 @@ export default function CommissionManagement({ clients = [], referralAgents = []
       toast.error("Permission Denied: You do not have permission to export financial reports.");
       return;
     }
+
+    try {
+      const headers = ['Commission ID', 'Student Name', 'Course Program', 'Partner Agency', 'Country', 'Tuition Fee (INR)', 'Commission Rate (%)', 'Payable Amount (INR)', 'Status'];
+      const rows = displayCommissions.map((c, idx) => {
+        const comId = c.id && !/^[0-9a-fA-F]{24}$/.test(c.id) ? c.id : (c.commissionId || `COM-${1001 + idx}`);
+        return [
+          comId,
+          `"${(c.studentName || '').replace(/"/g, '""')}"`,
+          `"${(c.courseName || '').replace(/"/g, '""')}"`,
+          `"${(c.partnerName || '').replace(/"/g, '""')}"`,
+          `"${(c.country || '').replace(/"/g, '""')}"`,
+          c.fee || 0,
+          c.rate || 10,
+          c.amount || 0,
+          c.status || 'Pending Approval'
+        ].join(',');
+      });
+
+      const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows].join('\n');
+      const encodedUri = encodeURI(csvContent);
+      const link = document.createElement('a');
+      link.setAttribute('href', encodedUri);
+      link.setAttribute('download', `commissions_report_${new Date().toISOString().split('T')[0]}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (exportErr) {
+      console.error('CSV generation error:', exportErr);
+    }
+
     addAuditLog('EXPORT_FINANCIALS', 'Finance', 'COM-ALL', `Exported commission statement for ${displayCommissions.length} records.`);
     toast.success("Financial report exported successfully as CSV! (Logged to Audit Logs)");
   };
@@ -204,7 +247,7 @@ export default function CommissionManagement({ clients = [], referralAgents = []
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="bg-slate-50 border-b border-[#E2E8F0]">
-                  <th className="px-6 py-3 text-slate-400 text-[10px] font-extrabold uppercase tracking-wider">ID</th>
+                  <th className="px-6 py-3 text-slate-400 text-[10px] font-extrabold uppercase tracking-wider">Commission ID</th>
                   <th className="px-6 py-3 text-slate-400 text-[10px] font-extrabold uppercase tracking-wider">Student File</th>
                   <th className="px-6 py-3 text-slate-400 text-[10px] font-extrabold uppercase tracking-wider">Agent / Partner</th>
                   <th className="px-6 py-3 text-slate-400 text-[10px] font-extrabold uppercase tracking-wider">Country</th>
@@ -217,8 +260,12 @@ export default function CommissionManagement({ clients = [], referralAgents = []
               </thead>
               <tbody className="divide-y divide-slate-100 text-xs font-semibold text-slate-700">
                 {displayCommissions.map((comm, idx) => (
-                  <tr key={comm.id || comm._id || idx} className="hover:bg-slate-50/50 transition-colors">
-                    <td className="px-6 py-4 font-mono font-bold text-slate-950">{comm.id || comm._id}</td>
+                  <tr key={comm._id || comm.id || idx} className="hover:bg-slate-50/50 transition-colors">
+                    <td className="px-6 py-4">
+                      <span className="font-mono font-black text-xs text-[#2563EB] bg-blue-50 px-2.5 py-1 rounded-md border border-blue-200 inline-block shadow-2xs">
+                        {comm.id && !/^[0-9a-fA-F]{24}$/.test(comm.id) ? comm.id : (comm.commissionId || `COM-${1001 + idx}`)}
+                      </span>
+                    </td>
                     <td className="px-6 py-4">
                       <div>
                         <p className="text-slate-[#0F172A] font-extrabold">{comm.studentName || 'Student'}</p>
@@ -246,7 +293,7 @@ export default function CommissionManagement({ clients = [], referralAgents = []
                         <div className="flex justify-end gap-1.5">
                           {comm.status !== 'Paid' && (
                             <button
-                              onClick={() => handleUpdateStatus(comm.id || comm._id, 'Paid')}
+                              onClick={() => handleUpdateStatus(comm._id || comm.id, 'Paid')}
                               className="bg-emerald-500 hover:bg-emerald-600 text-white font-extrabold text-[9px] uppercase px-2 py-1 rounded-md transition-all cursor-pointer shadow-sm"
                             >
                               Approve Payout
@@ -254,7 +301,7 @@ export default function CommissionManagement({ clients = [], referralAgents = []
                           )}
                           {(comm.status === 'Pending Approval' || comm.status === 'Claimed') && (
                             <button
-                              onClick={() => handleUpdateStatus(comm.id || comm._id, 'Under Review')}
+                              onClick={() => handleUpdateStatus(comm._id || comm.id, 'Under Review')}
                               className="bg-slate-200 hover:bg-slate-300 text-slate-700 font-extrabold text-[9px] uppercase px-2 py-1 rounded-md transition-all cursor-pointer"
                             >
                               Dispute

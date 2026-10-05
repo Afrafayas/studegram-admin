@@ -65,13 +65,49 @@ export default function AdminHeader({
     try {
       const res = await API.get('/applications/recent-comments');
       if (res.data?.success && Array.isArray(res.data.data)) {
-        setCommentsList(res.data.data);
-        const unreplied = res.data.data.filter(c => c.isUnreplied).length;
+        const readStorageKey = 'studegram_admin_read_comments';
+        let readIds = new Set();
+        try {
+          readIds = new Set(JSON.parse(localStorage.getItem(readStorageKey) || '[]'));
+        } catch (e) {}
+
+        const updatedList = res.data.data.map(c => {
+          const idKey = c.commentId || `${c.applicationId}_${c.createdAt}`;
+          const isMarkedRead = readIds.has(idKey);
+          return {
+            ...c,
+            isUnreplied: isMarkedRead ? false : c.isUnreplied,
+            isRead: isMarkedRead
+          };
+        });
+
+        setCommentsList(updatedList);
+        const unreplied = updatedList.filter(c => c.isUnreplied).length;
         setUnreadCommentsCount(unreplied);
       }
     } catch (err) {
       console.warn('Failed to fetch comments for admin header:', err.message);
     }
+  };
+
+  const handleCommentClick = (comm) => {
+    setShowComments(false);
+    const readStorageKey = 'studegram_admin_read_comments';
+    try {
+      const readIds = new Set(JSON.parse(localStorage.getItem(readStorageKey) || '[]'));
+      const idKey = comm.commentId || `${comm.applicationId}_${comm.createdAt}`;
+      readIds.add(idKey);
+      localStorage.setItem(readStorageKey, JSON.stringify([...readIds]));
+    } catch (e) {}
+
+    setCommentsList(prev => prev.map(c => 
+      (c.applicationId === comm.applicationId)
+        ? { ...c, isUnreplied: false, isRead: true } 
+        : c
+    ));
+    setUnreadCommentsCount(prev => Math.max(0, prev - 1));
+
+    if (onNavigate) onNavigate('applications', null, comm.applicationId);
   };
 
   useEffect(() => {
@@ -223,9 +259,9 @@ export default function AdminHeader({
     } else if (activeTab === 'staff') {
       crumbs.push('Staff');
     } else if (activeTab === 'sales-order') {
-      crumbs.push('Sales Order');
+      crumbs.push('Applications');
+      if (activeSubTab === 'study' || !activeSubTab) crumbs.push('New Application');
       if (activeSubTab === 'tourist-package') crumbs.push('Tourist Package');
-      if (activeSubTab === 'study') crumbs.push('Study (Apply)');
     } else if (activeTab === 'settings') {
       crumbs.push('Application Portal Settings');
       if (activeSubTab) {
@@ -289,17 +325,17 @@ export default function AdminHeader({
           </div>
         </div>
 
-        {/* Right Side: Profile Dropdown, Notifications & Sync Badge */}
+        {/* Right Side: Profile Dropdown, Notifications & Refresh Button */}
         <div className="flex items-center gap-3 relative">
           {onRefreshData && (
             <button
               onClick={onRefreshData}
               disabled={isSyncing}
-              title="Sync Live Server Data"
+              title="Refresh Live Data"
               className="px-2.5 py-1 bg-slate-900 border border-slate-800 hover:border-[#D99A1C] text-[10px] font-extrabold text-slate-300 hover:text-white rounded-lg transition-all cursor-pointer flex items-center gap-1.5 active:scale-95 disabled:opacity-50"
             >
               <span className={isSyncing ? "animate-spin text-[#D99A1C]" : "text-[#D99A1C]"}>🔄</span>
-              <span className="hidden md:inline">{isSyncing ? "Syncing..." : "Sync DB"}</span>
+              <span className="hidden md:inline">{isSyncing ? "Refreshing..." : "Refresh"}</span>
             </button>
           )}
 
@@ -350,10 +386,7 @@ export default function AdminHeader({
                       commentsList.map((comm, idx) => (
                         <div 
                           key={comm.applicationId || idx} 
-                          onClick={() => {
-                            setShowComments(false);
-                            if (onNavigate) onNavigate('applications', null, comm.applicationId);
-                          }}
+                          onClick={() => handleCommentClick(comm)}
                           className={`p-3 rounded-xl transition-all cursor-pointer group ${
                             comm.isUnreplied
                               ? 'bg-blue-950/80 border-l-4 border-l-blue-500 text-blue-100 font-bold shadow-md hover:bg-blue-900'
@@ -363,7 +396,7 @@ export default function AdminHeader({
                           <div className="flex justify-between items-start gap-2">
                             <h5 className="text-xs font-extrabold text-white group-hover:text-[#F5B025] transition-colors flex items-center gap-1.5">
                               {comm.isUnreplied && <span className="w-2 h-2 rounded-full bg-blue-400 animate-pulse"></span>}
-                              <span>{comm.camsId} &middot; {comm.studentName}</span>
+                              <span>{comm.camsId && !/[0-9a-fA-F]{24}/.test(comm.camsId) ? `${comm.camsId} · ` : ''}{comm.studentName}</span>
                             </h5>
                             <span className="text-[9px] text-slate-400 font-semibold shrink-0">
                               {comm.createdAt ? new Date(comm.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Just now'}
