@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import AdminSidebar from './components/AdminSidebar';
 import AdminHeader from './components/AdminHeader';
 import LogoutConfirmModal from './components/LogoutConfirmModal';
@@ -17,6 +17,8 @@ import TodoList from './pages/TodoList';
 import CommissionManagement from './pages/CommissionManagement';
 import RoleHierarchy from './pages/RoleHierarchy';
 import BecomePartner from './pages/BecomePartner';
+import StaffActivityLogs from './pages/StaffActivityLogs';
+
 
 // Auth & API
 import { useAuth } from './context/AuthContext';
@@ -603,6 +605,11 @@ export default function AdminPortal({ onLogout }) {
     if (activeTab === 'staff') {
       return <Staff staffList={staffList} setStaffList={setStaffList} applications={applications} />;
     }
+
+    if (activeTab === 'staff-activity-logs' || activeTab === 'activity-logs') {
+      return <StaffActivityLogs />;
+    }
+
 
     if (activeTab === 'commissions') {
       return <CommissionManagement clients={scopedClients} referralAgents={referralAgents} applications={scopedApplications} />;

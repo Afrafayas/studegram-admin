@@ -258,7 +258,10 @@ export default function AdminHeader({
       crumbs.push('Security & Role Hierarchy');
     } else if (activeTab === 'staff') {
       crumbs.push('Staff');
-    } else if (activeTab === 'sales-order') {
+    } else if (activeTab === 'staff-activity-logs') {
+      crumbs.push('Staff Activity Log');
+    }
+ else if (activeTab === 'sales-order') {
       crumbs.push('Applications');
       if (activeSubTab === 'study' || !activeSubTab) crumbs.push('New Application');
       if (activeSubTab === 'tourist-package') crumbs.push('Tourist Package');
