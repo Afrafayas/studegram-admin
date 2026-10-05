@@ -576,6 +576,8 @@ export default function AdminPortal({ onLogout }) {
           referralAgents={referralAgents}
           intakes={intakes}
           staffList={staffList}
+          universities={universities}
+          courses={courses}
           initialSelectedAppId={selectedAppIdForSingleView}
           onAddClick={() => {
             setActiveTab('sales-order');

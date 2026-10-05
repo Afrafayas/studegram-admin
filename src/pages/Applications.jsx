@@ -105,7 +105,7 @@ const handleDownloadAppDocument = (docUrl, fileName) => {
   document.body.removeChild(link);
 };
 
-export default function Applications({ applications, referralAgents, intakes = [], staffList = [], initialSelectedAppId = null, onAddClick, onRefresh }) {
+export default function Applications({ applications, referralAgents = [], intakes = [], staffList = [], universities = [], courses = [], initialSelectedAppId = null, onAddClick, onRefresh }) {
   const toast = useToast();
   const { currentUser } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
@@ -120,6 +120,143 @@ export default function Applications({ applications, referralAgents, intakes = [
   const [commentsList, setCommentsList] = useState([]);
   const [newCommentInput, setNewCommentInput] = useState('');
   const [appEditNotes, setAppEditNotes] = useState('');
+
+  // Edit Application Modal State
+  const [editModalApp, setEditModalApp] = useState(null);
+  const [editCountry, setEditCountry] = useState('');
+  const [editUniversity, setEditUniversity] = useState('');
+  const [editCourse, setEditCourse] = useState('');
+  const [editIntake, setEditIntake] = useState('');
+  const [editStudentName, setEditStudentName] = useState('');
+  const [editStudentEmail, setEditStudentEmail] = useState('');
+  const [editStudentPhone, setEditStudentPhone] = useState('');
+  const [editNotes, setEditNotes] = useState('');
+  const [isSavingEdit, setIsSavingEdit] = useState(false);
+
+  const availableCountries = Array.from(
+    new Set([
+      ...(universities || []).map(u => (typeof u === 'object' ? u.country : '').trim()).filter(Boolean),
+      'United Kingdom',
+      'Canada',
+      'United States',
+      'Australia',
+      'Ireland',
+      'Germany',
+      'New Zealand'
+    ])
+  ).sort();
+
+  const editFilteredUniversities = (universities || []).filter(u => {
+    if (!editCountry) return false;
+    const uCountry = (typeof u === 'object' ? u.country : '').trim().toLowerCase();
+    const sel = editCountry.trim().toLowerCase();
+    return uCountry === sel ||
+      (sel === 'united kingdom' && (uCountry === 'uk' || uCountry === 'england')) ||
+      (sel === 'united states' && (uCountry === 'usa' || uCountry === 'us'));
+  });
+
+  const editFilteredCourses = (courses || []).filter(c => {
+    if (!editUniversity) return false;
+    const cUniv = typeof c === 'object' ? (c.university?._id || c.university) : '';
+    return cUniv === editUniversity;
+  });
+
+  const openEditModal = (app) => {
+    setEditModalApp(app);
+    const currentUni = (universities || []).find(u => {
+      const uId = typeof u === 'object' ? u._id : u;
+      return uId === (app.universityId || app.university?._id || app.university) || 
+        (typeof u === 'object' && u.name === app.universityName);
+    });
+
+    const uniCountry = currentUni?.country || app.university?.country || app.country || '';
+    setEditCountry(uniCountry);
+    setEditUniversity(currentUni?._id || app.universityId || app.university?._id || app.university || '');
+    setEditCourse(app.courseId || app.course?._id || app.course || '');
+    setEditIntake(app.intake || 'September 2026');
+    setEditStudentName(app.studentName || '');
+    setEditStudentEmail(app.studentEmail || '');
+    setEditStudentPhone(app.phone || '');
+    setEditNotes(app.notes || '');
+  };
+
+  const handleSaveEditApplication = async (e) => {
+    e.preventDefault();
+    if (!editCountry) {
+      toast.error('Please select a destination country.');
+      return;
+    }
+    if (!editUniversity) {
+      toast.error('Please select a destination university.');
+      return;
+    }
+    if (!editCourse) {
+      toast.error('Please select an academic program.');
+      return;
+    }
+
+    setIsSavingEdit(true);
+    const appId = editModalApp.id || editModalApp._id;
+    const selectedUni = (universities || []).find(u => (typeof u === 'object' ? u._id : u) === editUniversity);
+    const selectedC = (courses || []).find(c => (typeof c === 'object' ? c._id : c) === editCourse);
+
+    const uName = typeof selectedUni === 'object' ? selectedUni.name : (editModalApp.universityName || 'Assigned');
+    const cName = typeof selectedC === 'object' ? selectedC.title : (editModalApp.courseName || 'Assigned');
+
+    try {
+      await API.put(`/applications/${appId}`, {
+        university: editUniversity,
+        course: editCourse,
+        intake: editIntake,
+        notes: editNotes,
+        country: editCountry
+      });
+
+      const studentId = editModalApp.studentId || editModalApp.student?._id || editModalApp.student;
+      if (studentId) {
+        await API.put(`/students/${studentId}`, {
+          name: editStudentName,
+          email: editStudentEmail,
+          phone: editStudentPhone
+        }).catch(() => {});
+      }
+
+      editModalApp.universityId = editUniversity;
+      editModalApp.universityName = uName;
+      editModalApp.courseId = editCourse;
+      editModalApp.courseName = cName;
+      editModalApp.intake = editIntake;
+      editModalApp.country = editCountry;
+      editModalApp.studentName = editStudentName;
+      editModalApp.studentEmail = editStudentEmail;
+      editModalApp.phone = editStudentPhone;
+      editModalApp.notes = editNotes;
+
+      if (singleViewApp && (singleViewApp.id === appId || singleViewApp._id === appId)) {
+        setSingleViewApp(prev => ({
+          ...prev,
+          universityId: editUniversity,
+          universityName: uName,
+          courseId: editCourse,
+          courseName: cName,
+          intake: editIntake,
+          country: editCountry,
+          studentName: editStudentName,
+          studentEmail: editStudentEmail,
+          phone: editStudentPhone,
+          notes: editNotes
+        }));
+      }
+
+      toast.success('Application updated successfully!');
+      setEditModalApp(null);
+      if (onRefresh) onRefresh();
+    } catch (err) {
+      toast.error(err.response?.data?.message || err.message || 'Failed to update application');
+    } finally {
+      setIsSavingEdit(false);
+    }
+  };
   const [isSavingApp, setIsSavingApp] = useState(false);
 
   // Auto-open Single View when initialSelectedAppId is provided from notification or comment click
@@ -309,31 +446,44 @@ export default function Applications({ applications, referralAgents, intakes = [
   const [ownershipTab, setOwnershipTab] = useState('All'); // 'All' | 'My Picked' | 'Unpicked'
   const [assignModalApp, setAssignModalApp] = useState(null);
   const [selectedStaffId, setSelectedStaffId] = useState('');
-  const [staffOptions, setStaffOptions] = useState([]);
+  const [staffOptions, setStaffOptions] = useState(() => {
+    const raw = (Array.isArray(staffList) && staffList.length > 0) ? staffList : PRESET_USERS;
+    return raw.map(s => ({
+      _id: s._id || s.id || s.email,
+      id: s._id || s.id || s.email,
+      name: s.name,
+      role: s.role,
+      email: s.email
+    }));
+  });
 
   useEffect(() => {
+    let isMounted = true;
     const fetchStaff = async () => {
       try {
         const res = await API.get('/users/staff');
-        if (res.data?.success && Array.isArray(res.data.data) && res.data.data.length > 0) {
+        if (isMounted && res.data?.success && Array.isArray(res.data.data) && res.data.data.length > 0) {
           setStaffOptions(res.data.data);
           return;
         }
       } catch (err) {
-        console.warn('Failed to fetch staff list from API:', err.message);
+        // Fallback gracefully without throwing warnings
       }
 
-      const rawStaffList = (Array.isArray(staffList) && staffList.length > 0) ? staffList : PRESET_USERS;
-      const formattedStaff = rawStaffList.map(s => ({
-        _id: s._id || s.id || s.email,
-        id: s._id || s.id || s.email,
-        name: s.name,
-        role: s.role,
-        email: s.email
-      }));
-      setStaffOptions(formattedStaff);
+      if (isMounted) {
+        const rawStaffList = (Array.isArray(staffList) && staffList.length > 0) ? staffList : PRESET_USERS;
+        const formattedStaff = rawStaffList.map(s => ({
+          _id: s._id || s.id || s.email,
+          id: s._id || s.id || s.email,
+          name: s.name,
+          role: s.role,
+          email: s.email
+        }));
+        setStaffOptions(formattedStaff);
+      }
     };
     fetchStaff();
+    return () => { isMounted = false; };
   }, [staffList]);
 
   const handlePickApplication = async (app) => {
@@ -570,9 +720,13 @@ export default function Applications({ applications, referralAgents, intakes = [
           >
             <option value="All">All Partners / Channels</option>
             <option value="Direct">Direct Applications</option>
-            {referralAgents.map(p => (
-              <option key={p.siNo || p.id} value={p.agentName || p.name}>{p.agentName || p.name}</option>
-            ))}
+            {(referralAgents || []).map((p, idx) => {
+              const pKey = p._id || p.id || p.siNo || p.partnerCode || (p.agentName || p.name ? (p.agentName || p.name) + '-' + idx : 'partner-' + idx);
+              const pName = p.agentName || p.name || ('Partner ' + (idx + 1));
+              return (
+                <option key={pKey} value={pName}>{pName}</option>
+              );
+            })}
           </select>
 
           {/* Search bar */}
@@ -733,6 +887,13 @@ export default function Applications({ applications, referralAgents, intakes = [
                           )}
 
                           <button
+                            onClick={() => openEditModal(app)}
+                            className="bg-slate-100 hover:bg-slate-200 text-slate-800 font-extrabold text-[9px] px-2.5 py-1.5 rounded-xl transition-all shadow-3xs inline-flex items-center gap-1 cursor-pointer"
+                            title="Edit Application & University"
+                          >
+                            <span>✏️ Edit</span>
+                          </button>
+                          <button
                             onClick={() => openStatusModal(app)}
                             className="bg-amber-500 hover:bg-amber-600 text-white font-extrabold text-[9px] px-2.5 py-1.5 rounded-xl transition-all shadow-3xs inline-flex items-center gap-1 cursor-pointer"
                           >
@@ -869,6 +1030,12 @@ export default function Applications({ applications, referralAgents, intakes = [
                 </button>
               )}
 
+              <button
+                onClick={() => openEditModal(singleViewApp)}
+                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 font-extrabold text-xs rounded-xl shadow-md transition-all cursor-pointer flex items-center gap-1.5 uppercase tracking-wider"
+              >
+                <span>✏️ Edit Application</span>
+              </button>
               <button
                 onClick={() => openStatusModal(singleViewApp)}
                 className="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white font-extrabold text-xs rounded-xl shadow-md transition-all cursor-pointer flex items-center gap-1.5 uppercase tracking-wider"
@@ -1180,6 +1347,199 @@ export default function Applications({ applications, referralAgents, intakes = [
             </div>
           </div>
         </div>
+      )}
+
+      {/* Edit Application Modal */}
+      {editModalApp && createPortal(
+        <div className="fixed inset-0 z-[9999] bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white rounded-3xl max-w-xl w-full p-6 shadow-2xl border border-slate-100 space-y-5 animate-in fade-in zoom-in-95 my-auto max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div>
+                <h3 className="text-sm font-black text-slate-900">Edit Application Details</h3>
+                <p className="text-[11px] text-slate-500 font-semibold">
+                  Applicant: <strong className="text-slate-900">{editModalApp.studentName}</strong> ({editModalApp.camsId || 'CAMS File'})
+                </p>
+              </div>
+              <button 
+                onClick={() => setEditModalApp(null)}
+                className="text-slate-400 hover:text-slate-700 p-1 rounded-lg cursor-pointer"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveEditApplication} className="space-y-4 text-left">
+              {/* Destination Country (FIRST) */}
+              <div className="space-y-1.5">
+                <label className="block text-[10px] font-extrabold text-slate-600 uppercase tracking-wider">
+                  Destination Country <span className="text-rose-500">*</span>
+                </label>
+                <select
+                  value={editCountry}
+                  onChange={(e) => {
+                    setEditCountry(e.target.value);
+                    setEditUniversity('');
+                    setEditCourse('');
+                  }}
+                  required
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs text-slate-900 font-semibold focus:outline-none focus:border-[#D99A1C] focus:ring-1 focus:ring-[#D99A1C] cursor-pointer"
+                >
+                  <option value="">-- Choose Country First --</option>
+                  {availableCountries.map(c => (
+                    <option key={c} value={c}>{c}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Destination University (filtered by Country) */}
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <label className="block text-[10px] font-extrabold text-slate-600 uppercase tracking-wider">
+                    Destination University <span className="text-rose-500">*</span>
+                  </label>
+                  {editCountry && (
+                    <span className="text-[10px] font-bold text-[#D99A1C]">
+                      {editFilteredUniversities.length} institution{editFilteredUniversities.length !== 1 ? 's' : ''} in {editCountry}
+                    </span>
+                  )}
+                </div>
+                <select
+                  value={editUniversity}
+                  disabled={!editCountry}
+                  onChange={(e) => {
+                    setEditUniversity(e.target.value);
+                    setEditCourse('');
+                  }}
+                  required
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs text-slate-900 font-semibold focus:outline-none focus:border-[#D99A1C] focus:ring-1 focus:ring-[#D99A1C] disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                >
+                  <option value="">
+                    {!editCountry 
+                      ? '-- Select Country First --' 
+                      : editFilteredUniversities.length === 0 
+                        ? `-- No Universities in ${editCountry} --` 
+                        : '-- Select University --'}
+                  </option>
+                  {editFilteredUniversities.map(u => {
+                    const value = typeof u === 'object' ? u._id : u;
+                    const label = typeof u === 'object' ? u.name : u;
+                    return <option key={value} value={value}>{label}</option>;
+                  })}
+                </select>
+                {editCountry && editFilteredUniversities.length === 0 && (
+                  <p className="text-[10px] text-amber-600 font-semibold mt-1">
+                    ⚠️ No partner institutions found in {editCountry}. Please select another country.
+                  </p>
+                )}
+              </div>
+
+              {/* Academic Program (filtered by University) */}
+              <div className="space-y-1.5">
+                <label className="block text-[10px] font-extrabold text-slate-600 uppercase tracking-wider">
+                  Academic Program <span className="text-rose-500">*</span>
+                </label>
+                <select
+                  value={editCourse}
+                  disabled={!editUniversity}
+                  onChange={(e) => setEditCourse(e.target.value)}
+                  required
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs text-slate-900 font-semibold focus:outline-none focus:border-[#D99A1C] focus:ring-1 focus:ring-[#D99A1C] disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                >
+                  <option value="">
+                    {!editUniversity ? '-- Please Select a University First --' : '-- Choose Course --'}
+                  </option>
+                  {editFilteredCourses.map(c => {
+                    const value = typeof c === 'object' ? c._id : c;
+                    const label = typeof c === 'object' ? c.title : c;
+                    return <option key={value} value={value}>{label}</option>;
+                  })}
+                </select>
+              </div>
+
+              {/* Intake Season */}
+              <div className="space-y-1.5">
+                <label className="block text-[10px] font-extrabold text-slate-600 uppercase tracking-wider">
+                  Intake Season *
+                </label>
+                <select
+                  value={editIntake}
+                  onChange={(e) => setEditIntake(e.target.value)}
+                  required
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs text-slate-900 font-semibold focus:outline-none focus:border-[#D99A1C] focus:ring-1 focus:ring-[#D99A1C] cursor-pointer"
+                >
+                  {(intakes && intakes.length > 0) ? (
+                    intakes.map(i => {
+                      const value = typeof i === 'object' ? i.title : i;
+                      return <option key={value} value={value}>{value}</option>;
+                    })
+                  ) : (
+                    <>
+                      <option value="September 2026">September 2026</option>
+                      <option value="January 2027">January 2027</option>
+                      <option value="May 2027">May 2027</option>
+                      <option value="September 2027">September 2027</option>
+                    </>
+                  )}
+                </select>
+              </div>
+
+              {/* Student Details */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1 border-t border-slate-100">
+                <div className="space-y-1">
+                  <label className="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">Student Name</label>
+                  <input
+                    type="text"
+                    value={editStudentName}
+                    onChange={(e) => setEditStudentName(e.target.value)}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-semibold focus:outline-none focus:bg-white focus:border-[#D99A1C]"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">Phone</label>
+                  <input
+                    type="text"
+                    value={editStudentPhone}
+                    onChange={(e) => setEditStudentPhone(e.target.value)}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-semibold focus:outline-none focus:bg-white focus:border-[#D99A1C]"
+                  />
+                </div>
+              </div>
+
+              {/* Notes */}
+              <div className="space-y-1">
+                <label className="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">Internal Application Notes</label>
+                <textarea
+                  rows="2"
+                  value={editNotes}
+                  onChange={(e) => setEditNotes(e.target.value)}
+                  placeholder="Notes regarding academic profile, conditions, or admissions..."
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs font-medium focus:outline-none focus:bg-white focus:border-[#D99A1C]"
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setEditModalApp(null)}
+                  disabled={isSavingEdit}
+                  className="px-4 py-2.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-600 hover:bg-slate-100 cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSavingEdit}
+                  className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-[#D99A1C] to-[#F5B025] hover:scale-[1.01] text-white font-extrabold text-xs shadow-md transition-all uppercase tracking-wider disabled:opacity-50 cursor-pointer"
+                >
+                  {isSavingEdit ? 'Saving...' : 'Save Changes'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>,
+        document.body
       )}
 
       {/* Status Update Modal */}

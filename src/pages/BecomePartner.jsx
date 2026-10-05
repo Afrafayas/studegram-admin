@@ -150,23 +150,32 @@ export default function BecomePartner({ clients = [], setClients, applications =
     const token = localStorage.getItem('admin_token');
     try {
       if (partnerId) {
-        const response = await API.put(`/partners/${partnerId}`, { status: newStatus });
+        let response;
+        if (newStatus === 'Active') {
+          response = await API.put(`/partners/${partnerId}/approve`);
+        } else {
+          response = await API.put(`/partners/${partnerId}`, { status: newStatus });
+        }
         if (response.data?.success) {
           if (setClients) {
-            setClients(prev => prev.map(c => c.id === partnerId ? { ...c, status: newStatus } : c));
+            setClients(prev => prev.map(c => (c.id === partnerId || c._id === partnerId) ? { ...c, status: newStatus } : c));
           }
-          toast.success(`Partner status updated to ${newStatus}.`);
+          if (newStatus === 'Active') {
+            toast.success(response.data?.message || 'Partner approved! A 6-digit login password has been sent to their email.');
+          } else {
+            toast.success(`Partner status updated to ${newStatus}.`);
+          }
         } else {
           throw new Error(response.data?.message || 'Failed to update partner status');
         }
       } else {
         if (setClients) {
-          setClients(prev => prev.map(c => c.id === partnerId ? { ...c, status: newStatus } : c));
+          setClients(prev => prev.map(c => (c.id === partnerId || c._id === partnerId) ? { ...c, status: newStatus } : c));
         }
         toast.success(`Partner status updated to ${newStatus}.`);
       }
     } catch (err) {
-      toast.error(err.message || 'Failed to update status');
+      toast.error(err.response?.data?.message || err.message || 'Failed to update status');
     }
   };
 

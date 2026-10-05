@@ -40,7 +40,7 @@ export default function Partners({ clients, setClients }) {
       const response = await API.put(`/partners/${partnerId}/approve`);
       if (response.data?.success) {
         setClients(prev => prev.map(c => c.id === partnerId || c._id === partnerId ? { ...c, status: 'Active' } : c));
-        toast.success('Partner approved successfully!');
+        toast.success(response.data?.message || 'Partner approved successfully! A 6-digit login password has been sent to their email.');
       } else {
         throw new Error(response.data?.message || 'Approval failed');
       }
