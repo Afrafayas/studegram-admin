@@ -641,7 +641,7 @@ export default function Staff({ staffList, setStaffList, applications }) {
                   value={newStaffEmail}
                   onChange={(e) => setNewStaffEmail(e.target.value)}
                   className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs font-semibold focus:outline-none focus:bg-white focus:border-[#D99A1C] focus:ring-1 focus:ring-[#D99A1C] transition-all text-slate-900"
-                  placeholder="e.g. staff@studegram.com"
+                  placeholder="e.g. staff@unigather.com"
                 />
               </div>
 

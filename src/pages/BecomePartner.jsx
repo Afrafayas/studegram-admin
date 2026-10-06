@@ -44,7 +44,7 @@ const createSampleDocBlobUrl = (title, partnerName) => {
     <rect width="800" height="1000" fill="#ffffff"/>
     <rect x="30" y="30" width="740" height="940" fill="none" stroke="#cbd5e1" stroke-width="2" rx="20"/>
     <rect x="30" y="30" width="740" height="130" fill="#0a0a0f" rx="20"/>
-    <text x="70" y="85" fill="#d99a1c" font-family="system-ui, sans-serif" font-size="24" font-weight="900">STUDEGRAM ADMIN PORTAL</text>
+    <text x="70" y="85" fill="#d99a1c" font-family="system-ui, sans-serif" font-size="24" font-weight="900">UNIGATHER ADMIN PORTAL</text>
     <text x="70" y="120" fill="#94a3b8" font-family="system-ui, sans-serif" font-size="14" font-weight="700">OFFICIAL PARTNER VERIFICATION &amp; COMPLIANCE DOSSIER</text>
     <text x="70" y="210" fill="#0f172a" font-family="system-ui, sans-serif" font-size="26" font-weight="900">${cleanTitle}</text>
     <text x="70" y="245" fill="#64748b" font-family="system-ui, sans-serif" font-size="15" font-weight="600">Attached Verification Proof for: ${cleanName}</text>
@@ -59,7 +59,7 @@ const createSampleDocBlobUrl = (title, partnerName) => {
     <text x="125" y="560" fill="#047857" font-family="system-ui, sans-serif" font-size="15" font-weight="800">✓ VERIFIED PROOF</text>
     <circle cx="580" cy="790" r="65" fill="#d99a1c" fill-opacity="0.12" stroke="#d99a1c" stroke-width="2" stroke-dasharray="6,4"/>
     <text x="535" y="796" fill="#b45309" font-family="system-ui, sans-serif" font-size="17" font-weight="900">APPROVED</text>
-    <text x="70" y="930" fill="#94a3b8" font-family="system-ui, sans-serif" font-size="12">Confidential document generated for Studegram Partner Compliance Verification System.</text>
+    <text x="70" y="930" fill="#94a3b8" font-family="system-ui, sans-serif" font-size="12">Confidential document generated for Unigather Partner Compliance Verification System.</text>
   </svg>`;
   const blob = new Blob([svgContent], { type: 'image/svg+xml' });
   return URL.createObjectURL(blob);

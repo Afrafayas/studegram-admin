@@ -45,10 +45,10 @@ export default function AdminSidebar({
           {/* Brand Header */}
           <div className="px-2 pb-4 border-b border-slate-900 flex items-center gap-3">
             <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-[#D99A1C] to-[#F5B025] flex items-center justify-center font-extrabold text-white text-base shadow-lg shadow-[#D99A1C]/20">
-              S
+              U
             </div>
             <div className="flex flex-col">
-              <span className="font-extrabold text-sm tracking-widest text-white uppercase">STUDEGRAM</span>
+              <span className="font-extrabold text-sm tracking-widest text-white uppercase">UNIGATHER</span>
               <span className="text-[9px] text-[#D99A1C] font-extrabold tracking-wider uppercase -mt-0.5">Admin Portal</span>
             </div>
           </div>

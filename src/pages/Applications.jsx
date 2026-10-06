@@ -75,7 +75,7 @@ const createSampleAppDocBlobUrl = (title, studentName, camsId) => {
     <rect width="800" height="1000" fill="#ffffff"/>
     <rect x="30" y="30" width="740" height="940" fill="none" stroke="#cbd5e1" stroke-width="2" rx="20"/>
     <rect x="30" y="30" width="740" height="130" fill="#0a0a0f" rx="20"/>
-    <text x="70" y="85" fill="#d99a1c" font-family="system-ui, sans-serif" font-size="24" font-weight="900">STUDEGRAM ADMIN PORTAL</text>
+    <text x="70" y="85" fill="#d99a1c" font-family="system-ui, sans-serif" font-size="24" font-weight="900">UNIGATHER ADMIN PORTAL</text>
     <text x="70" y="120" fill="#94a3b8" font-family="system-ui, sans-serif" font-size="14" font-weight="700">OFFICIAL STUDENT APPLICATION DOSSIER — ${cleanCams}</text>
     <text x="70" y="210" fill="#0f172a" font-family="system-ui, sans-serif" font-size="26" font-weight="900">${cleanTitle}</text>
     <text x="70" y="245" fill="#64748b" font-family="system-ui, sans-serif" font-size="15" font-weight="600">Applicant: ${cleanStudent} (${cleanCams})</text>
@@ -89,7 +89,7 @@ const createSampleAppDocBlobUrl = (title, studentName, camsId) => {
     <text x="125" y="560" fill="#047857" font-family="system-ui, sans-serif" font-size="15" font-weight="800">✓ DOCUMENT VALID</text>
     <circle cx="580" cy="790" r="65" fill="#2563eb" fill-opacity="0.1" stroke="#2563eb" stroke-width="2" stroke-dasharray="6,4"/>
     <text x="545" y="796" fill="#1e3a8a" font-family="system-ui, sans-serif" font-size="17" font-weight="900">VERIFIED</text>
-    <text x="70" y="930" fill="#94a3b8" font-family="system-ui, sans-serif" font-size="12">Confidential document stored in Studegram Student Filing System.</text>
+    <text x="70" y="930" fill="#94a3b8" font-family="system-ui, sans-serif" font-size="12">Confidential document stored in Unigather Student Filing System.</text>
   </svg>`;
   const blob = new Blob([svgContent], { type: 'image/svg+xml' });
   return URL.createObjectURL(blob);
