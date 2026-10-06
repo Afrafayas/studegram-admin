@@ -65,15 +65,15 @@ export default function Login({ onLoginSuccess }) {
         {/* Top: Logo Brand */}
         <div className="flex items-center gap-3 relative z-10">
           <div className="w-10 h-10 rounded-xl bg-white text-[#D99A1C] flex items-center justify-center font-extrabold text-xl shadow-lg">
-            S
+            U
           </div>
-          <span className="font-extrabold text-2xl tracking-wider uppercase">STUDEGRAM</span>
+          <span className="font-extrabold text-2xl tracking-wider uppercase">UNIGATHER</span>
         </div>
 
         {/* Center: Hero Statement */}
         <div className="space-y-6 max-w-md relative z-10 my-auto">
           <h2 className="text-4xl font-extrabold tracking-tight leading-tight">
-            Studegram Admin Control Center
+            Unigather Admin Control Center
           </h2>
           <p className="text-xs text-white/80 font-medium leading-relaxed">
             Monitor daily application status reports, configure file requirements, verify academic course documents, and review B2B channel agent performance in one unified operations console.
@@ -108,7 +108,7 @@ export default function Login({ onLoginSuccess }) {
         </div>
 
         <div className="text-[10px] text-white/60 font-semibold relative z-10">
-          © 2026 Studegram Inc. All rights reserved.
+          © 2026 Unigather Inc. All rights reserved.
         </div>
       </div>
 
@@ -117,7 +117,7 @@ export default function Login({ onLoginSuccess }) {
         <div className="w-full max-w-md bg-white border border-[#E2E8F0] border-t-4 border-t-[#D99A1C] rounded-2xl shadow-xl p-8 md:p-10 space-y-8">
           
           <div className="text-left space-y-1">
-            <h1 className="text-2xl font-bold tracking-tight text-[#0F172A]">Studegram Admin Portal</h1>
+            <h1 className="text-2xl font-bold tracking-tight text-[#0F172A]">Unigather Admin Portal</h1>
             <p className="text-xs text-[#64748B] font-semibold">Sign in with administrator credentials to continue</p>
           </div>
 
@@ -138,7 +138,7 @@ export default function Login({ onLoginSuccess }) {
                       ? 'border-[#EF4444] focus:ring-[#EF4444] focus:border-[#EF4444]'
                       : 'border-slate-200 focus:ring-[#D99A1C] focus:border-[#D99A1C]'
                   }`}
-                  placeholder="admin@studegram.com"
+                  placeholder="admin@unigather.com"
                   value={email}
                   onChange={(e) => {
                     setEmail(e.target.value);

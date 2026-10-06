@@ -668,7 +668,7 @@ export default function AdminPortal({ onLogout }) {
     return (
       <div className="p-8 text-center bg-white border border-[#E2E8F0] rounded-2xl max-w-sm mx-auto my-8">
         <h2 className="text-xs font-black text-slate-900 uppercase">Under Construction</h2>
-        <p className="text-[10px] text-slate-500 font-semibold mt-1">This section is being synchronized under the new Studegram data framework.</p>
+        <p className="text-[10px] text-slate-500 font-semibold mt-1">This section is being synchronized under the new Unigather data framework.</p>
       </div>
     );
   };

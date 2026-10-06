@@ -235,7 +235,7 @@ export default function AdminHeader({
   };
 
   const getBreadcrumbs = () => {
-    const crumbs = ['Studegram Admin'];
+    const crumbs = ['Unigather Admin'];
     
     if (activeTab === 'daily-report') {
       crumbs.push('Daily Report');

@@ -197,7 +197,7 @@ export default function SalesOrderStudy({
         <div className="bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold p-4 rounded-xl shadow-xs flex items-center justify-between animate-in fade-in duration-200">
           <div className="flex items-center gap-2">
             <span>✅</span>
-            <span>Application created and successfully synced with the Studegram client database.</span>
+            <span>Application created and successfully synced with the Unigather client database.</span>
           </div>
           <button 
             onClick={() => setSuccessMessage(false)}
