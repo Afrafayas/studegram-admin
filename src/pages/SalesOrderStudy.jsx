@@ -24,6 +24,7 @@ export default function SalesOrderStudy({
 
   const [uploadedFiles, setUploadedFiles] = useState([]);
   const [isUploading, setIsUploading] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [uploadError, setUploadError] = useState('');
   
   // Set default values based on whether items are objects or strings
@@ -32,11 +33,45 @@ export default function SalesOrderStudy({
     return typeof items[0] === 'object' ? items[0]._id : items[0];
   };
 
-  const [university, setUniversity] = useState(() => getInitialId(universities));
-  const [course, setCourse] = useState(() => getInitialId(courses));
+  const [university, setUniversity] = useState('');
+  const [course, setCourse] = useState('');
   const [intake, setIntake] = useState(() => getInitialId(intakes));
   const [partner, setPartner] = useState('');
   const [notes, setNotes] = useState('');
+  const [destinationCountry, setDestinationCountry] = useState('');
+
+  const availableCountries = Array.from(
+    new Set([
+      ...(universities || []).map(u => (typeof u === 'object' ? (u.country || '') : '').trim()).filter(Boolean),
+      'United Kingdom',
+      'Canada',
+      'United States',
+      'Australia',
+      'Ireland',
+      'Germany',
+      'New Zealand'
+    ])
+  ).sort();
+
+  const filteredUniversities = (universities || []).filter(u => {
+    if (!destinationCountry) return false;
+    const uCountry = (typeof u === 'object' ? (u.country || '') : '').trim().toLowerCase();
+    const sel = destinationCountry.trim().toLowerCase();
+    return uCountry === sel ||
+      (sel === 'united kingdom' && (uCountry === 'uk' || uCountry === 'england' || uCountry === 'great britain')) ||
+      (sel === 'united states' && (uCountry === 'usa' || uCountry === 'us'));
+  });
+
+  const selectedUnivObj = (universities || []).find(u => (typeof u === 'object' ? (u._id || u.id) : u) === university);
+  const selectedUnivName = typeof selectedUnivObj === 'object' ? selectedUnivObj.name : selectedUnivObj;
+
+  const filteredCourses = (courses || []).filter(c => {
+    if (!university) return false;
+    const cUnivId = typeof c === 'object' ? (c.university?._id || c.university?.id || (typeof c.university === 'string' ? c.university : '')) : '';
+    const cUnivName = typeof c === 'object' ? (c.university?.name || (typeof c.university === 'string' ? c.university : '')) : '';
+    return (cUnivId && (cUnivId === university || String(cUnivId) === String(university))) ||
+      (selectedUnivName && cUnivName && cUnivName.toLowerCase() === selectedUnivName.toLowerCase());
+  });
   
   const [isFlagDropdownOpen, setIsFlagDropdownOpen] = useState(false);
   const [successMessage, setSuccessMessage] = useState(false);
@@ -49,7 +84,7 @@ export default function SalesOrderStudy({
     { code: '+61', flag: '🇦🇺', name: 'Australia' }
   ];
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (studentSelectionMode === 'new' && (!fullName || !phoneNumber || !dob)) {
       toast.error("Please fill in all required fields.");
@@ -72,6 +107,8 @@ export default function SalesOrderStudy({
     const cName = typeof selectedCourse === 'object' ? selectedCourse.title : selectedCourse;
     const iName = typeof selectedIntake === 'object' ? selectedIntake.title : selectedIntake;
 
+    setIsSubmitting(true);
+    await new Promise(r => setTimeout(r, 500));
     let newApp;
     if (studentSelectionMode === 'existing') {
       const studentObj = students.find(s => s.id === selectedStudent);
@@ -119,6 +156,7 @@ export default function SalesOrderStudy({
 
     onAddApplication(newApp);
     setSuccessMessage(true);
+    setIsSubmitting(false);
 
     setFullName('');
     setPhoneNumber('');
@@ -311,33 +349,92 @@ export default function SalesOrderStudy({
             <h3 className="text-xs font-black text-slate-950 uppercase tracking-wider pb-1 border-b border-slate-100">Study Specific Fields</h3>
 
             <div className="space-y-1.5">
-              <label className="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">Destination University</label>
+              <label className="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">
+                Destination Country <span className="text-rose-500">*</span>
+              </label>
+              <select
+                value={destinationCountry}
+                onChange={(e) => {
+                  setDestinationCountry(e.target.value);
+                  setUniversity('');
+                  setCourse('');
+                }}
+                required
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs font-semibold focus:outline-none focus:bg-white focus:ring-1 focus:ring-[#D99A1C] focus:border-[#D99A1C] cursor-pointer"
+              >
+                <option value="">-- Choose Country First --</option>
+                {availableCountries.map(c => (
+                  <option key={c} value={c}>{c}</option>
+                ))}
+              </select>
+            </div>
+
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between">
+                <label className="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">
+                  Destination University <span className="text-rose-500">*</span>
+                </label>
+                {destinationCountry && (
+                  <span className="text-[10px] font-bold text-[#D99A1C]">
+                    {filteredUniversities.length} institution{filteredUniversities.length !== 1 ? 's' : ''} in {destinationCountry}
+                  </span>
+                )}
+              </div>
               <select
                 value={university}
-                onChange={(e) => setUniversity(e.target.value)}
-                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs font-semibold focus:outline-none focus:bg-white focus:ring-1 focus:ring-[#D99A1C] focus:border-[#D99A1C]"
+                disabled={!destinationCountry}
+                onChange={(e) => {
+                  setUniversity(e.target.value);
+                  setCourse('');
+                }}
+                required
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs font-semibold focus:outline-none focus:bg-white focus:ring-1 focus:ring-[#D99A1C] focus:border-[#D99A1C] disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
               >
-                {universities.map(u => {
+                <option value="">
+                  {!destinationCountry 
+                    ? '-- Select Country First --' 
+                    : filteredUniversities.length === 0 
+                      ? `-- No Universities in ${destinationCountry} --` 
+                      : '-- Select University --'}
+                </option>
+                {filteredUniversities.map(u => {
                   const value = typeof u === 'object' ? u._id : u;
                   const label = typeof u === 'object' ? u.name : u;
                   return <option key={value} value={value}>{label}</option>;
                 })}
               </select>
+              {destinationCountry && filteredUniversities.length === 0 && (
+                <p className="text-[10px] text-amber-600 font-semibold mt-1">
+                  ⚠️ No partner institutions found in {destinationCountry}. Please select another country.
+                </p>
+              )}
             </div>
 
             <div className="space-y-1.5">
-              <label className="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">Academic Program</label>
+              <label className="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">
+                Academic Program <span className="text-rose-500">*</span>
+              </label>
               <select
                 value={course}
+                disabled={!university}
                 onChange={(e) => setCourse(e.target.value)}
-                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs font-semibold focus:outline-none focus:bg-white focus:ring-1 focus:ring-[#D99A1C] focus:border-[#D99A1C]"
+                required
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs font-semibold focus:outline-none focus:bg-white focus:ring-1 focus:ring-[#D99A1C] focus:border-[#D99A1C] disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
               >
-                {courses.map(c => {
+                <option value="">
+                  {!university ? '-- Please Select a University First --' : '-- Choose Course --'}
+                </option>
+                {filteredCourses.map(c => {
                   const value = typeof c === 'object' ? c._id : c;
                   const label = typeof c === 'object' ? c.title : c;
                   return <option key={value} value={value}>{label}</option>;
                 })}
               </select>
+              {university && filteredCourses.length === 0 && (
+                <p className="text-[10px] text-amber-600 font-semibold mt-1">
+                  ⚠️ No courses registered under this university.
+                </p>
+              )}
             </div>
 
             <div className="space-y-1.5">
@@ -428,9 +525,21 @@ export default function SalesOrderStudy({
                 }}
               />
               <div className="space-y-1 text-slate-500">
-                <span className="text-xl">📄</span>
-                <p className="text-xs font-semibold text-slate-700">Click or drag files here to upload</p>
-                <p className="text-[10px] text-slate-400 font-semibold">Upload at least one document (PDF, PNG, JPG, Word)</p>
+                {isUploading ? (
+                  <div className="flex flex-col items-center justify-center py-2 space-y-1">
+                    <svg className="animate-spin h-6 w-6 text-[#D99A1C]" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                    </svg>
+                    <p className="text-xs font-bold text-[#D99A1C] animate-pulse">Uploading files, please wait...</p>
+                  </div>
+                ) : (
+                  <>
+                    <span className="text-xl">📄</span>
+                    <p className="text-xs font-semibold text-slate-700">Click or drag files here to upload</p>
+                    <p className="text-[10px] text-slate-400 font-semibold">Upload at least one document (PDF, PNG, JPG, Word)</p>
+                  </>
+                )}
               </div>
             </div>
 
@@ -484,10 +593,16 @@ export default function SalesOrderStudy({
           
           <button
             type="submit"
-            disabled={isUploading || uploadedFiles.length === 0}
-            className="px-6 py-2.5 bg-gradient-to-r from-[#D99A1C] to-[#F5B025] hover:scale-[1.01] hover:shadow-lg text-white font-extrabold text-xs rounded-xl transition-all duration-150 shadow-md uppercase tracking-wider disabled:opacity-50 disabled:pointer-events-none"
+            disabled={isSubmitting || isUploading || uploadedFiles.length === 0}
+            className="px-6 py-2.5 bg-gradient-to-r from-[#D99A1C] to-[#F5B025] hover:scale-[1.01] hover:shadow-lg text-white font-extrabold text-xs rounded-xl transition-all duration-150 shadow-md uppercase tracking-wider disabled:opacity-50 disabled:pointer-events-none flex items-center gap-2"
           >
-            Submit Application
+            {isSubmitting && (
+              <svg className="animate-spin h-3.5 w-3.5 text-white" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+              </svg>
+            )}
+            {isSubmitting ? 'Submitting Application...' : 'Submit Application'}
           </button>
         </div>
       </form>

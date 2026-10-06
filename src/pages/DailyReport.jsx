@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 
-export default function DailyReport({ applications, onNavigateToBecomePartner }) {
+export default function DailyReport({ applications, onNavigateToBecomePartner, onNavigateToCreateApplication, onNavigateToApplications }) {
   const { currentUser } = useAuth();
   const [hoveredBarIndex, setHoveredBarIndex] = useState(null);
   const [hoveredPoint, setHoveredPoint] = useState(null);
@@ -116,40 +116,62 @@ export default function DailyReport({ applications, onNavigateToBecomePartner })
   return (
     <div className="flex-1 p-6 space-y-6 bg-[#F8FAFC]">
       {/* Welcome Banner */}
-      <div className="flex justify-between items-center bg-white border border-[#E2E8F0] p-6 rounded-2xl shadow-xs">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white border border-[#E2E8F0] p-6 rounded-2xl shadow-xs">
         <div className="space-y-1">
           <h1 className="text-xl font-black text-slate-900 tracking-tight">Welcome back, {currentUser?.name}!</h1>
           <p className="text-xs text-slate-500 font-semibold">
             Logged in as <span className="text-[#D99A1C] font-extrabold">{currentUser?.role}</span> (Scope: {currentUser?.country}/{currentUser?.team})
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          <span className="h-2 w-2 bg-[#10B981] rounded-full animate-ping"></span>
-          <span className="text-[10px] text-[#10B981] font-extrabold uppercase tracking-wider">Live System Sync</span>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => onNavigateToCreateApplication && onNavigateToCreateApplication()}
+            className="bg-gradient-to-r from-[#D99A1C] to-[#F5B025] hover:scale-[1.02] active:scale-95 text-white font-extrabold text-xs px-4 py-2.5 rounded-xl transition-all shadow-md inline-flex items-center gap-2 cursor-pointer"
+            title="Create New Application"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 4v16m8-8H4" />
+            </svg>
+            <span>+ New Application</span>
+          </button>
+          <div className="hidden sm:flex items-center gap-2 bg-emerald-50 border border-emerald-100 px-3 py-2 rounded-xl">
+            <span className="h-2 w-2 bg-[#10B981] rounded-full animate-ping"></span>
+            <span className="text-[10px] text-[#10B981] font-extrabold uppercase tracking-wider">Live System Sync</span>
+          </div>
         </div>
       </div>
 
-      
-        {/* Dashboard Quick Action Tabs */}
-        <div className="flex items-center gap-2 border-b border-[#E2E8F0] pb-1">
-          <button className="px-4 py-2 text-xs font-black text-[#D99A1C] border-b-2 border-[#D99A1C] bg-white shadow-xs rounded-t-xl cursor-pointer">
-            📊 System Overview
-          </button>
-          <button 
-            onClick={() => onNavigateToBecomePartner && onNavigateToBecomePartner()}
-            className="px-4 py-2 text-xs font-bold text-slate-600 hover:text-slate-900 hover:bg-white rounded-t-xl transition-all flex items-center gap-1.5 cursor-pointer"
-          >
-            <span>🤝 Become our Partner</span>
-            <span className="px-1.5 py-0.5 bg-[#D99A1C]/20 text-[#D99A1C] text-[9px] font-black rounded-md uppercase">Onboard</span>
-          </button>
-        </div>
+      {/* Dashboard Quick Action Tabs */}
+      <div className="flex items-center gap-2 border-b border-[#E2E8F0] pb-1 overflow-x-auto">
+        <button className="px-4 py-2 text-xs font-black text-[#D99A1C] border-b-2 border-[#D99A1C] bg-white shadow-xs rounded-t-xl cursor-pointer shrink-0">
+          📊 System Overview
+        </button>
+        <button 
+          onClick={() => onNavigateToBecomePartner && onNavigateToBecomePartner()}
+          className="px-4 py-2 text-xs font-bold text-slate-600 hover:text-slate-900 hover:bg-white rounded-t-xl transition-all flex items-center gap-1.5 cursor-pointer shrink-0"
+        >
+          <span>🤝 Become our Partner</span>
+          <span className="px-1.5 py-0.5 bg-[#D99A1C]/20 text-[#D99A1C] text-[9px] font-black rounded-md uppercase">Onboard</span>
+        </button>
+        <button 
+          onClick={() => onNavigateToCreateApplication && onNavigateToCreateApplication()}
+          className="px-4 py-2 text-xs font-bold text-slate-600 hover:text-[#D99A1C] hover:bg-white rounded-t-xl transition-all flex items-center gap-1.5 cursor-pointer group shrink-0"
+        >
+          <span className="group-hover:text-[#D99A1C]">➕ New Application</span>
+          <span className="px-1.5 py-0.5 bg-blue-500/20 text-blue-600 text-[9px] font-black rounded-md uppercase">Apply</span>
+        </button>
+      </div>
 
       {/* Metric Cards Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Card 1 */}
-        <div className="bg-white border border-[#E2E8F0] border-t-4 border-t-[#D99A1C] rounded-2xl p-5 shadow-xs flex flex-col justify-between group transition-all duration-150">
+        <div 
+          onClick={() => onNavigateToApplications && onNavigateToApplications()}
+          className="bg-white border border-[#E2E8F0] border-t-4 border-t-[#D99A1C] rounded-2xl p-5 shadow-xs flex flex-col justify-between group transition-all duration-150 cursor-pointer hover:shadow-md"
+          title="Click to view Applications Registry"
+        >
           <div className="flex justify-between items-start">
-            <span className="text-[10px] font-extrabold uppercase tracking-widest text-slate-400">Applications Filed</span>
+            <span className="text-[10px] font-extrabold uppercase tracking-widest text-slate-400 group-hover:text-[#D99A1C] transition-colors">Applications Filed</span>
             <span className="text-[#D99A1C] bg-[#D99A1C]/10 text-[10px] font-bold px-2 py-0.5 rounded-full border border-[#D99A1C]/25">+12.4%</span>
           </div>
           <div className="mt-4 flex items-baseline gap-2">

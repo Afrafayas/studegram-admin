@@ -217,6 +217,30 @@ export function AuthProvider({ children }) {
         localStorage.setItem('studegram_user', JSON.stringify(userObj));
         localStorage.setItem('admin_token', token);
 
+        let activeSessionId = resData.sessionId;
+        if (!activeSessionId) {
+          try {
+            const sessRes = await API.post('/activity-logs/login', {
+              userId: userObj.id,
+              userEmail: userObj.email,
+              userName: userObj.name,
+              userRole: userObj.role,
+              userPhone: userObj.phone,
+              userCountry: userObj.country
+            });
+            if (sessRes.data?.sessionId) {
+              activeSessionId = sessRes.data.sessionId;
+            }
+          } catch (e) {
+            console.warn('Could not record activity login:', e.message);
+          }
+        }
+
+        if (activeSessionId) {
+          setCurrentSessionId(activeSessionId);
+          localStorage.setItem('admin_session_id', activeSessionId);
+        }
+
         const newLog = {
           id: Date.now(),
           timestamp: new Date().toISOString(),
@@ -239,14 +263,72 @@ export function AuthProvider({ children }) {
     }
   };
 
-  const logout = () => {
+  const [currentSessionId, setCurrentSessionId] = useState(() => {
+    return localStorage.getItem('admin_session_id') || null;
+  });
+
+  // Periodic heartbeat every 45 seconds to keep portal time spent updated accurately in DB
+  useEffect(() => {
+    if (!currentUser || !currentSessionId) return;
+
+    const intervalId = setInterval(async () => {
+      try {
+        await API.post('/activity-logs/heartbeat', {
+          sessionId: currentSessionId,
+          userId: currentUser.id
+        });
+      } catch (err) {
+        // Silently catch heartbeat error
+      }
+    }, 45000);
+
+    return () => clearInterval(intervalId);
+  }, [currentUser, currentSessionId]);
+
+  // Log specific action to activity timeline
+  const logPortalActivity = async (action, title, category = 'General', details = '', page = '') => {
+    if (!currentSessionId) return;
+    try {
+      await API.post('/activity-logs/action', {
+        sessionId: currentSessionId,
+        action,
+        title,
+        category,
+        details,
+        page
+      });
+    } catch (err) {
+      // Ignore non-fatal action logging failure
+    }
+  };
+
+  const logout = async () => {
+    const sessId = currentSessionId || localStorage.getItem('admin_session_id');
+    if (sessId || currentUser) {
+      try {
+        await API.post('/activity-logs/logout', {
+          sessionId: sessId,
+          userId: currentUser?.id,
+          userEmail: currentUser?.email
+        });
+      } catch (e) {
+        console.warn('Activity logout API error:', e.message);
+      }
+    }
+
     if (currentUser) {
       addAuditLog('LOGOUT', 'Session', 'SYS-AUTH', `User ${currentUser.name} signed out.`);
     }
+
     setCurrentUser(null);
+    setCurrentSessionId(null);
     localStorage.removeItem('studegram_user');
     localStorage.removeItem('admin_token');
+    localStorage.removeItem('admin_session_id');
+    localStorage.removeItem('studegram_admin_active_tab');
+    localStorage.removeItem('studegram_admin_active_subtab');
   };
+
 
   // Permission validation with dynamic DB checklist lookup
   const hasPermission = (permissionCode) => {
@@ -308,7 +390,9 @@ export function AuthProvider({ children }) {
       hasPermission,
       checkScope,
       auditLogs,
-      addAuditLog
+      addAuditLog,
+      currentSessionId,
+      logPortalActivity
     }}>
       {children}
     </AuthContext.Provider>

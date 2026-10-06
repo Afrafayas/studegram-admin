@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import AdminSidebar from './components/AdminSidebar';
 import AdminHeader from './components/AdminHeader';
+import LogoutConfirmModal from './components/LogoutConfirmModal';
 
 // Pages
 import DailyReport from './pages/DailyReport';
@@ -16,6 +17,8 @@ import TodoList from './pages/TodoList';
 import CommissionManagement from './pages/CommissionManagement';
 import RoleHierarchy from './pages/RoleHierarchy';
 import BecomePartner from './pages/BecomePartner';
+import StaffActivityLogs from './pages/StaffActivityLogs';
+
 
 // Auth & API
 import { useAuth } from './context/AuthContext';
@@ -29,6 +32,7 @@ export default function AdminPortal({ onLogout }) {
   const adminToken = localStorage.getItem('admin_token');
   const [isDataSyncing, setIsDataSyncing] = useState(false);
   const [selectedAppIdForSingleView, setSelectedAppIdForSingleView] = useState(null);
+  const [showLogoutConfirmModal, setShowLogoutConfirmModal] = useState(false);
 
   const fetchInitialData = async () => {
     if (!adminToken) return;
@@ -154,13 +158,26 @@ export default function AdminPortal({ onLogout }) {
     fetchInitialData();
   }, [adminToken]);
   
-  const [activeTab, setActiveTab] = useState('daily-report');
-  const [activeSubTab, setActiveSubTab] = useState(null);
+  const [activeTab, setActiveTab] = useState(() => {
+    return localStorage.getItem('studegram_admin_active_tab') || 'daily-report';
+  });
+  const [activeSubTab, setActiveSubTab] = useState(() => {
+    return localStorage.getItem('studegram_admin_active_subtab') || null;
+  });
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [navigationHistory, setNavigationHistory] = useState([]);
-  const prevActiveTabRef = useRef('daily-report');
-  const prevActiveSubTabRef = useRef(null);
+  const prevActiveTabRef = useRef(localStorage.getItem('studegram_admin_active_tab') || 'daily-report');
+  const prevActiveSubTabRef = useRef(localStorage.getItem('studegram_admin_active_subtab') || null);
   const isBackNavRef = useRef(false);
+
+  useEffect(() => {
+    localStorage.setItem('studegram_admin_active_tab', activeTab);
+    if (activeSubTab) {
+      localStorage.setItem('studegram_admin_active_subtab', activeSubTab);
+    } else {
+      localStorage.removeItem('studegram_admin_active_subtab');
+    }
+  }, [activeTab, activeSubTab]);
 
   useEffect(() => {
     if (isBackNavRef.current) {
@@ -537,7 +554,17 @@ export default function AdminPortal({ onLogout }) {
 
   const renderActiveTabContent = () => {
     if (activeTab === 'daily-report') {
-      return <DailyReport applications={scopedApplications} onNavigateToBecomePartner={() => setActiveTab('become-partner')} />;
+      return (
+        <DailyReport 
+          applications={scopedApplications} 
+          onNavigateToBecomePartner={() => setActiveTab('become-partner')} 
+          onNavigateToCreateApplication={() => {
+            setActiveTab('sales-order');
+            setActiveSubTab('study');
+          }}
+          onNavigateToApplications={() => setActiveTab('applications')}
+        />
+      );
     }
 
     if (activeTab === 'become-partner' || activeTab === 'partners') {
@@ -551,6 +578,8 @@ export default function AdminPortal({ onLogout }) {
           referralAgents={referralAgents}
           intakes={intakes}
           staffList={staffList}
+          universities={universities}
+          courses={courses}
           initialSelectedAppId={selectedAppIdForSingleView}
           onAddClick={() => {
             setActiveTab('sales-order');
@@ -577,6 +606,11 @@ export default function AdminPortal({ onLogout }) {
       return <Staff staffList={staffList} setStaffList={setStaffList} applications={applications} />;
     }
 
+    if (activeTab === 'staff-activity-logs' || activeTab === 'activity-logs') {
+      return <StaffActivityLogs />;
+    }
+
+
     if (activeTab === 'commissions') {
       return <CommissionManagement clients={scopedClients} referralAgents={referralAgents} applications={scopedApplications} />;
     }
@@ -585,11 +619,11 @@ export default function AdminPortal({ onLogout }) {
       return <RoleHierarchy />;
     }
     
-    if (activeTab === 'sales-order') {
+    if (activeTab === 'sales-order' || activeTab === 'new-application') {
       if (activeSubTab === 'tourist-package') {
         return <SalesOrderTourist />;
       }
-      if (activeSubTab === 'study') {
+      if (activeSubTab === 'study' || !activeSubTab) {
         return (
           <SalesOrderStudy 
             universities={universities}
@@ -647,7 +681,7 @@ export default function AdminPortal({ onLogout }) {
           setActiveTab={setActiveTab}
           activeSubTab={activeSubTab}
           setActiveSubTab={setActiveSubTab}
-          onLogout={onLogout}
+          onLogout={() => setShowLogoutConfirmModal(true)}
           isOpen={sidebarOpen}
           onClose={() => setSidebarOpen(false)}
         />
@@ -657,7 +691,7 @@ export default function AdminPortal({ onLogout }) {
             activeTab={activeTab}
             activeSubTab={activeSubTab}
             onToggleSidebar={() => setSidebarOpen(!sidebarOpen)}
-            onLogout={onLogout}
+            onLogout={() => setShowLogoutConfirmModal(true)}
             onBack={handleBack}
             isSyncing={isDataSyncing}
             onRefreshData={fetchInitialData}
@@ -675,6 +709,13 @@ export default function AdminPortal({ onLogout }) {
           </main>
         </div>
       </div>
+
+      {/* Logout Confirmation Modal */}
+      <LogoutConfirmModal
+        isOpen={showLogoutConfirmModal}
+        onClose={() => setShowLogoutConfirmModal(false)}
+        onConfirm={onLogout}
+      />
     </div>
   );
 }

@@ -150,23 +150,32 @@ export default function BecomePartner({ clients = [], setClients, applications =
     const token = localStorage.getItem('admin_token');
     try {
       if (partnerId) {
-        const response = await API.put(`/partners/${partnerId}`, { status: newStatus });
+        let response;
+        if (newStatus === 'Active') {
+          response = await API.put(`/partners/${partnerId}/approve`);
+        } else {
+          response = await API.put(`/partners/${partnerId}`, { status: newStatus });
+        }
         if (response.data?.success) {
           if (setClients) {
-            setClients(prev => prev.map(c => c.id === partnerId ? { ...c, status: newStatus } : c));
+            setClients(prev => prev.map(c => (c.id === partnerId || c._id === partnerId) ? { ...c, status: newStatus } : c));
           }
-          toast.success(`Partner status updated to ${newStatus}.`);
+          if (newStatus === 'Active') {
+            toast.success(response.data?.message || 'Partner approved! A 6-digit login password has been sent to their email.');
+          } else {
+            toast.success(`Partner status updated to ${newStatus}.`);
+          }
         } else {
           throw new Error(response.data?.message || 'Failed to update partner status');
         }
       } else {
         if (setClients) {
-          setClients(prev => prev.map(c => c.id === partnerId ? { ...c, status: newStatus } : c));
+          setClients(prev => prev.map(c => (c.id === partnerId || c._id === partnerId) ? { ...c, status: newStatus } : c));
         }
         toast.success(`Partner status updated to ${newStatus}.`);
       }
     } catch (err) {
-      toast.error(err.message || 'Failed to update status');
+      toast.error(err.response?.data?.message || err.message || 'Failed to update status');
     }
   };
 
@@ -189,6 +198,7 @@ export default function BecomePartner({ clients = [], setClients, applications =
   const handleSavePartnerEdit = async (e) => {
     e.preventDefault();
     if (!editingPartner) return;
+    setIsSavingPartner(true);
 
     if (!editingPartner.name || !editingPartner.email || !editingPartner.phone) {
       toast.error('Please fill in required fields (Name, Email, Phone).');
@@ -236,6 +246,8 @@ export default function BecomePartner({ clients = [], setClients, applications =
     } catch (err) {
       const errMsg = err.response?.data?.message || err.message || 'Update failed';
       toast.error(errMsg);
+    } finally {
+      setIsSavingPartner(false);
     }
   };
 
@@ -263,6 +275,8 @@ export default function BecomePartner({ clients = [], setClients, applications =
   });
 
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isUploadingEditDoc, setIsUploadingEditDoc] = useState(false);
+  const [isSavingPartner, setIsSavingPartner] = useState(false);
   const [isSubmittedSuccess, setIsSubmittedSuccess] = useState(false);
   const [submittedPartnerCode, setSubmittedPartnerCode] = useState('');
 
@@ -912,7 +926,7 @@ export default function BecomePartner({ clients = [], setClients, applications =
                                           {partner.documents && partner.documents.length > 0 ? (
                                             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
                                               {partner.documents.map((doc, dIdx) => {
-                                                const docTitle = typeof doc === 'string' ? doc : (doc.title || doc.fileName || `Document ${dIdx + 1}`);
+                                                const docTitle = typeof doc === 'string' ? doc : (doc.name || doc.title || doc.fileName || `Document ${dIdx + 1}`);
                                                 const docFileName = typeof doc === 'string' ? doc : (doc.fileName || doc.title || 'Attached Proof');
                                                 const docUrl = typeof doc === 'object' ? doc.previewUrl : null;
                                                 const docType = typeof doc === 'object' ? doc.type : 'pdf';
@@ -1308,7 +1322,7 @@ export default function BecomePartner({ clients = [], setClients, applications =
                 {singleViewPartner.documents && singleViewPartner.documents.length > 0 ? (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {singleViewPartner.documents.map((doc, dIdx) => {
-                      const docTitle = typeof doc === 'string' ? doc : (doc.title || doc.fileName || `Document ${dIdx + 1}`);
+                      const docTitle = typeof doc === 'string' ? doc : (doc.name || doc.title || doc.fileName || `Document ${dIdx + 1}`);
                       const docFileName = typeof doc === 'string' ? doc : (doc.fileName || doc.title || 'Attached Proof');
                       const rawUrl = typeof doc === 'object' ? doc.previewUrl : null;
                       const isImg = (typeof rawUrl === 'string' && (rawUrl.startsWith('data:image/') || docFileName.match(/\.(png|jpg|jpeg|gif|svg|webp)$/i)));
@@ -1598,7 +1612,13 @@ export default function BecomePartner({ clients = [], setClients, applications =
                 <button type="button" onClick={() => setSubView('directory')} className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-extrabold text-xs rounded-xl cursor-pointer">
                   Cancel
                 </button>
-                <button type="submit" disabled={isSubmitting} className="px-6 py-2.5 bg-[#D99A1C] hover:bg-[#F5B025] text-white font-black text-xs rounded-xl shadow-md cursor-pointer">
+                <button type="submit" disabled={isSubmitting} className="px-6 py-2.5 bg-[#D99A1C] hover:bg-[#F5B025] text-white font-black text-xs rounded-xl shadow-md cursor-pointer flex items-center gap-2 disabled:opacity-50">
+                  {isSubmitting && (
+                    <svg className="animate-spin h-3.5 w-3.5 text-white" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                    </svg>
+                  )}
                   {isSubmitting ? 'Onboarding Partner...' : 'Confirm Partner Onboarding →'}
                 </button>
               </div>
@@ -1745,11 +1765,22 @@ export default function BecomePartner({ clients = [], setClients, applications =
                       <option value="Other Compliance Proof">Other Compliance Proof</option>
                     </select>
 
-                    <label className="px-3 py-1.5 bg-[#D99A1C] hover:bg-[#F5B025] text-white rounded-xl text-[10px] font-black cursor-pointer shadow-xs flex items-center gap-1 transition-all">
-                      <span>+ Attach File Proof</span>
+                    <label className="px-3 py-1.5 bg-[#D99A1C] hover:bg-[#F5B025] text-white rounded-xl text-[10px] font-black cursor-pointer shadow-xs flex items-center gap-1.5 transition-all">
+                      {isUploadingEditDoc ? (
+                        <>
+                          <svg className="animate-spin h-3 w-3 text-white" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                          </svg>
+                          <span>Uploading...</span>
+                        </>
+                      ) : (
+                        <span>+ Attach File Proof</span>
+                      )}
                       <input
                         type="file"
                         accept=".pdf,.png,.jpg,.jpeg"
+                        disabled={isUploadingEditDoc}
                         className="hidden"
                         onChange={async (e) => {
                           const file = e.target.files[0];
@@ -1761,6 +1792,7 @@ export default function BecomePartner({ clients = [], setClients, applications =
                           const typeSelect = document.getElementById('editDocTypeSelect');
                           const docTitle = typeSelect ? typeSelect.value : 'Compliance Proof';
 
+                          setIsUploadingEditDoc(true);
                           let fileUrl = '';
                           try {
                             const uploadFormData = new FormData();
@@ -1773,6 +1805,8 @@ export default function BecomePartner({ clients = [], setClients, applications =
                             }
                           } catch (err) {
                             console.warn('Upload API fallback to Base64:', err.message);
+                          } finally {
+                            setIsUploadingEditDoc(false);
                           }
 
                           const attachDocObj = (preview) => {
@@ -1807,7 +1841,7 @@ export default function BecomePartner({ clients = [], setClients, applications =
                 {editingPartner.documents && editingPartner.documents.length > 0 ? (
                   <div className="space-y-2">
                     {editingPartner.documents.map((doc, dIdx) => {
-                      const docTitle = typeof doc === 'string' ? doc : (doc.title || doc.fileName || `Document ${dIdx + 1}`);
+                      const docTitle = typeof doc === 'string' ? doc : (doc.name || doc.title || doc.fileName || `Document ${dIdx + 1}`);
                       const docFileName = typeof doc === 'string' ? doc : (doc.fileName || doc.title || 'Attached Proof');
                       const docUrl = typeof doc === 'object' ? doc.previewUrl : null;
                       const docType = typeof doc === 'object' ? doc.type : 'pdf';
@@ -1865,9 +1899,16 @@ export default function BecomePartner({ clients = [], setClients, applications =
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2 bg-[#D99A1C] hover:bg-[#F5B025] text-white font-extrabold text-xs rounded-xl shadow-md cursor-pointer"
+                  disabled={isSavingPartner}
+                  className="px-5 py-2 bg-[#D99A1C] hover:bg-[#F5B025] disabled:opacity-50 text-white font-extrabold text-xs rounded-xl shadow-md cursor-pointer flex items-center gap-1.5"
                 >
-                  Save Partner Changes
+                  {isSavingPartner && (
+                    <svg className="animate-spin h-3.5 w-3.5 text-white" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                    </svg>
+                  )}
+                  {isSavingPartner ? 'Saving Changes...' : 'Save Partner Changes'}
                 </button>
               </div>
             </form>
