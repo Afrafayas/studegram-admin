@@ -227,10 +227,11 @@ export default function AdminHeader({
 
     const { tab, subTab } = getNotificationDestination(n);
     const extractedCams = (n.message || '').match(/CAMS-\d+/i)?.[0] || (n.title || '').match(/CAMS-\d+/i)?.[0];
-    const targetAppId = n.relatedId || n.applicationId || n.targetAppId || n.appId || extractedCams;
+    const extractedPartnerCode = (n.message || '').match(/PRTNR-\d+/i)?.[0] || (n.title || '').match(/PRTNR-\d+/i)?.[0];
+    const targetId = n.relatedId || n.applicationId || n.partnerId || n.studentId || n.targetAppId || n.appId || extractedCams || extractedPartnerCode || null;
 
     if (onNavigate) {
-      onNavigate(tab, subTab, targetAppId);
+      onNavigate(tab, subTab, targetId, n);
     }
   };
 

@@ -261,15 +261,53 @@ export default function Applications({ applications, referralAgents = [], intake
 
   // Auto-open Single View when initialSelectedAppId is provided from notification or comment click
   useEffect(() => {
-    if (initialSelectedAppId && applications && applications.length > 0) {
-      const found = applications.find(a => 
-        (a.id || a._id) === initialSelectedAppId || 
-        a.camsId === initialSelectedAppId ||
-        (a.camsId && typeof initialSelectedAppId === 'string' && a.camsId.toLowerCase() === initialSelectedAppId.toLowerCase())
-      );
-      if (found) {
-        setSingleViewApp(found);
-      }
+    if (!initialSelectedAppId || !applications || applications.length === 0) return;
+
+    let targetId = initialSelectedAppId;
+    let notifObj = null;
+    if (typeof initialSelectedAppId === 'object' && initialSelectedAppId !== null) {
+      targetId = initialSelectedAppId.targetId || initialSelectedAppId.relatedId || initialSelectedAppId.applicationId || initialSelectedAppId.id;
+      notifObj = initialSelectedAppId.notification || initialSelectedAppId;
+    }
+
+    const targetStr = String(targetId || '').trim().toLowerCase();
+    const notifText = notifObj ? `${notifObj.title || ''} ${notifObj.message || ''}`.toLowerCase() : '';
+
+    // 1. Direct ID / CAMS match
+    let found = applications.find(a => {
+      const aId = String(a.id || a._id || '').toLowerCase();
+      const aCams = String(a.camsId || '').toLowerCase();
+      return targetStr && (aId === targetStr || aCams === targetStr);
+    });
+
+    // 2. Student Name match from targetStr
+    if (!found && targetStr) {
+      found = applications.find(a => {
+        const sName = (a.studentName || '').toLowerCase();
+        return sName && (sName.includes(targetStr) || targetStr.includes(sName));
+      });
+    }
+
+    // 3. Match from notification title & message content
+    if (!found && notifText) {
+      found = applications.find(a => {
+        const sName = (a.studentName || '').toLowerCase();
+        const aCams = (a.camsId || '').toLowerCase();
+        return (
+          (sName && notifText.includes(sName)) ||
+          (aCams && notifText.includes(aCams))
+        );
+      });
+    }
+
+    // 4. Fallback: If it's an application notification, open the first application
+    if (!found && (notifObj?.type === 'application' || notifText.includes('application'))) {
+      found = applications[0];
+    }
+
+    if (found) {
+      setSingleViewApp(found);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     }
   }, [initialSelectedAppId, applications]);
 

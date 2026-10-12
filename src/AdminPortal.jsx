@@ -32,6 +32,8 @@ export default function AdminPortal({ onLogout }) {
   const adminToken = localStorage.getItem('admin_token');
   const [isDataSyncing, setIsDataSyncing] = useState(false);
   const [selectedAppIdForSingleView, setSelectedAppIdForSingleView] = useState(null);
+  const [selectedPartnerForSingleView, setSelectedPartnerForSingleView] = useState(null);
+  const [selectedStudentForSingleView, setSelectedStudentForSingleView] = useState(null);
   const [showLogoutConfirmModal, setShowLogoutConfirmModal] = useState(false);
 
   const fetchInitialData = async () => {
@@ -568,7 +570,7 @@ export default function AdminPortal({ onLogout }) {
     }
 
     if (activeTab === 'become-partner' || activeTab === 'partners') {
-      return <BecomePartner clients={scopedClients} setClients={setClients} applications={scopedApplications} onPartnerOnboarded={fetchInitialData} onBack={() => setActiveTab('daily-report')} />;
+      return <BecomePartner clients={scopedClients} setClients={setClients} applications={scopedApplications} onPartnerOnboarded={fetchInitialData} onBack={() => setActiveTab('daily-report')} initialSelectedPartnerId={selectedPartnerForSingleView} />;
     }
 
     if (activeTab === 'applications') {
@@ -599,7 +601,7 @@ export default function AdminPortal({ onLogout }) {
     }
     
     if (activeTab === 'students') {
-      return <Students clients={scopedClients} setClients={setClients} applications={scopedApplications} intakes={intakes} />;
+      return <Students clients={scopedClients} setClients={setClients} applications={scopedApplications} intakes={intakes} initialSelectedStudentId={selectedStudentForSingleView} />;
     }
     
     if (activeTab === 'staff') {
@@ -695,11 +697,16 @@ export default function AdminPortal({ onLogout }) {
             onBack={handleBack}
             isSyncing={isDataSyncing}
             onRefreshData={fetchInitialData}
-            onNavigate={(tab, subTab, targetAppId) => {
+            onNavigate={(tab, subTab, targetId, notification) => {
               setActiveTab(tab);
               setActiveSubTab(subTab || null);
-              if (targetAppId) {
-                setSelectedAppIdForSingleView(targetAppId);
+              const payload = { targetId, notification, timestamp: Date.now() };
+              if (tab === 'become-partner' || tab === 'partners') {
+                setSelectedPartnerForSingleView(payload);
+              } else if (tab === 'applications') {
+                setSelectedAppIdForSingleView(payload);
+              } else if (tab === 'students') {
+                setSelectedStudentForSingleView(payload);
               }
             }}
           />

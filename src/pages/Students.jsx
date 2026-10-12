@@ -3,7 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import ApplicationChatDrawer from '../components/ApplicationChatDrawer';
 import { useToast } from '../context/ToastContext';
 
-export default function Students({ clients, setClients, applications, intakes = [] }) {
+export default function Students({ clients, setClients, applications, intakes = [], initialSelectedStudentId }) {
   const toast = useToast();
   const { currentUser, addAuditLog } = useAuth();
   const [selectedChatApp, setSelectedChatApp] = useState(null);
@@ -13,6 +13,50 @@ export default function Students({ clients, setClients, applications, intakes = 
   const [partnerFilter, setPartnerFilter] = useState('All');
   const [intakeFilter, setIntakeFilter] = useState('All');
   const [expandedId, setExpandedId] = useState(null);
+
+  // Auto-expand student dossier if navigated from notification
+  useEffect(() => {
+    if (!initialSelectedStudentId || !clients || clients.length === 0) return;
+
+    const studentList = clients.filter(c => c.type === 'Student');
+    if (studentList.length === 0) return;
+
+    let targetId = initialSelectedStudentId;
+    let notifObj = null;
+    if (typeof initialSelectedStudentId === 'object' && initialSelectedStudentId !== null) {
+      targetId = initialSelectedStudentId.targetId || initialSelectedStudentId.relatedId || initialSelectedStudentId.studentId || initialSelectedStudentId.id;
+      notifObj = initialSelectedStudentId.notification || initialSelectedStudentId;
+    }
+
+    const targetStr = String(targetId || '').trim().toLowerCase();
+    const notifText = notifObj ? `${notifObj.title || ''} ${notifObj.message || ''}`.toLowerCase() : '';
+
+    let found = studentList.find(s => {
+      const sId = String(s.id || s._id || '').toLowerCase();
+      const sCode = String(s.studentCode || '').toLowerCase();
+      const sEmail = String(s.email || '').toLowerCase();
+      return (targetStr && (sId === targetStr || sCode === targetStr || sEmail === targetStr));
+    });
+
+    if (!found && targetStr) {
+      found = studentList.find(s => {
+        const sName = (s.name || '').toLowerCase();
+        return sName && (sName.includes(targetStr) || targetStr.includes(sName));
+      });
+    }
+
+    if (!found && notifText) {
+      found = studentList.find(s => {
+        const sName = (s.name || '').toLowerCase();
+        return sName && notifText.includes(sName);
+      });
+    }
+
+    if (found) {
+      setExpandedId(found.id);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  }, [initialSelectedStudentId, clients]);
   
   // Pagination State
   const [currentPage, setCurrentPage] = useState(1);

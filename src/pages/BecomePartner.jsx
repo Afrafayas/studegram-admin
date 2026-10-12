@@ -75,7 +75,7 @@ const handleDownloadDocument = (docUrl, fileName) => {
   document.body.removeChild(link);
 };
 
-export default function BecomePartner({ clients = [], setClients, applications = [], onPartnerOnboarded, onBack }) {
+export default function BecomePartner({ clients = [], setClients, applications = [], onPartnerOnboarded, onBack, initialSelectedPartnerId }) {
   const toast = useToast();
   const { addAuditLog } = useAuth();
 
@@ -84,6 +84,67 @@ export default function BecomePartner({ clients = [], setClients, applications =
 
   // Single Partner Detailed View State
   const [singleViewPartner, setSingleViewPartner] = useState(null);
+
+  // Auto-navigate to Partner Single View Dossier when initialSelectedPartnerId is passed from notifications
+  useEffect(() => {
+    if (!initialSelectedPartnerId) return;
+
+    const partnerList = (clients || []).filter(c => c.type === 'Agent');
+    if (partnerList.length === 0) return;
+
+    let targetId = initialSelectedPartnerId;
+    let notifObj = null;
+    if (typeof initialSelectedPartnerId === 'object' && initialSelectedPartnerId !== null) {
+      targetId = initialSelectedPartnerId.targetId || initialSelectedPartnerId.relatedId || initialSelectedPartnerId.partnerId || initialSelectedPartnerId.id;
+      notifObj = initialSelectedPartnerId.notification || initialSelectedPartnerId;
+    }
+
+    const targetStr = String(targetId || '').trim().toLowerCase();
+    const notifText = notifObj ? `${notifObj.title || ''} ${notifObj.message || ''}`.toLowerCase() : '';
+
+    // 1. Match by ID / Partner Code / Email
+    let found = partnerList.find(p => {
+      const pId = String(p.id || p._id || '').toLowerCase();
+      const pCode = String(p.partnerCode || '').toLowerCase();
+      const pEmail = String(p.email || '').toLowerCase();
+      return (targetStr && (pId === targetStr || pCode === targetStr || pEmail === targetStr));
+    });
+
+    // 2. Match by Name / Company name if targetStr provided
+    if (!found && targetStr) {
+      found = partnerList.find(p => {
+        const pName = (p.name || '').toLowerCase();
+        const pComp = (p.companyName || '').toLowerCase();
+        return (pName && (pName.includes(targetStr) || targetStr.includes(pName))) ||
+               (pComp && (pComp.includes(targetStr) || targetStr.includes(pComp)));
+      });
+    }
+
+    // 3. Match from notification title & message content
+    if (!found && notifText) {
+      found = partnerList.find(p => {
+        const pName = (p.name || '').toLowerCase();
+        const pComp = (p.companyName || '').toLowerCase();
+        const pCode = (p.partnerCode || '').toLowerCase();
+        return (
+          (pName && notifText.includes(pName)) ||
+          (pComp && notifText.includes(pComp)) ||
+          (pCode && notifText.includes(pCode))
+        );
+      });
+    }
+
+    // 4. Fallback: If it's a partner notification, open the pending partner or first partner
+    if (!found) {
+      found = partnerList.find(p => p.status === 'Pending') || partnerList[0];
+    }
+
+    if (found) {
+      setSubView('directory');
+      setSingleViewPartner(found);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  }, [initialSelectedPartnerId, clients]);
 
   // Document Preview Modal State
   const [previewModalDoc, setPreviewModalDoc] = useState(null);
