@@ -308,68 +308,192 @@ export default function Applications({ applications, referralAgents = [], intake
     if (found) {
       setSingleViewApp(found);
       window.scrollTo({ top: 0, behavior: 'smooth' });
+      document.getElementById('admin-main-content')?.scrollTo({ top: 0, behavior: 'smooth' });
+    } else if (targetId && typeof targetId === 'string' && /^[0-9a-fA-F]{24}$/.test(targetId)) {
+      // Direct API fetch if not found in memory list
+      API.get(`/applications/${targetId}`).then(res => {
+        if (res.data?.success && res.data.data) {
+          const freshApp = res.data.data;
+          const mappedApp = {
+            id: freshApp._id,
+            _id: freshApp._id,
+            camsId: freshApp.camsId || `CAMS-${freshApp._id.slice(-5)}`,
+            studentName: freshApp.student?.name || 'N/A',
+            passportNo: freshApp.student?.passportNo || 'N/A',
+            universityName: freshApp.university?.name || 'N/A',
+            courseName: freshApp.course?.title || 'N/A',
+            intake: freshApp.course?.intakes?.[0]?.title || 'September 2026',
+            secondaryStatus: freshApp.status || 'Pending',
+            paymentStatus: freshApp.paymentStatus || 'Pending',
+            dateAdded: new Date(freshApp.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
+            country: freshApp.university?.country || 'India',
+            assignedBdm: freshApp.partner?.name || 'Direct',
+            assignedExecutive: 'Rahul Krishnan',
+            statusHistory: freshApp.statusHistory || [],
+            dob: freshApp.student?.dob ? new Date(freshApp.student.dob).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : null,
+            studentEmail: freshApp.student?.email || null,
+            phone: freshApp.student?.phone || null,
+            documents: freshApp.documents || [],
+            notes: freshApp.notes || '',
+            applicationComments: freshApp.applicationComments || [],
+            pickedBy: freshApp.pickedBy || null,
+            submittedByStaff: freshApp.submittedByStaff || null
+          };
+          setSingleViewApp(mappedApp);
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+          document.getElementById('admin-main-content')?.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+      }).catch(err => console.warn('Could not fetch target application:', err.message));
     }
   }, [initialSelectedAppId, applications]);
 
-  // When singleViewApp is set, sync comments & notes
-  useEffect(() => {
-    if (singleViewApp) {
-      const initialComments = [];
-      if (singleViewApp.statusHistory && Array.isArray(singleViewApp.statusHistory)) {
-        singleViewApp.statusHistory.forEach(sh => {
-          if (sh.remarks) {
-            initialComments.push({
-              id: sh._id || Date.now() + Math.random(),
+  // Helper to compile all comments & audit history into a unified timeline
+  const buildCommentsList = (appObj) => {
+    if (!appObj) return [];
+    const list = [];
+    const seen = new Set();
+
+    // 1. Direct Application Comments (from DB applicationComments thread)
+    if (appObj.applicationComments && Array.isArray(appObj.applicationComments)) {
+      appObj.applicationComments.forEach((ac, idx) => {
+        if (ac && ac.text) {
+          const key = ac._id ? String(ac._id) : `ac-${ac.createdAt || idx}-${ac.text}`;
+          if (!seen.has(key)) {
+            seen.add(key);
+            let authorName = ac.author || 'User';
+            let roleName = 'Staff';
+            if (authorName.includes('(')) {
+              const match = authorName.match(/^(.*?)\s*\((.*?)\)$/);
+              if (match) {
+                authorName = match[1];
+                roleName = match[2];
+              }
+            } else if (authorName.toLowerCase().includes('agent')) {
+              roleName = 'Agent';
+            }
+            list.push({
+              id: key,
+              author: authorName,
+              role: roleName,
+              text: ac.text,
+              type: 'comment',
+              createdAt: ac.createdAt || appObj.dateAdded || new Date().toISOString()
+            });
+          }
+        }
+      });
+    }
+
+    // 2. Lifecycle Status Transitions & Remarks
+    if (appObj.statusHistory && Array.isArray(appObj.statusHistory)) {
+      appObj.statusHistory.forEach((sh, idx) => {
+        if (sh && sh.remarks) {
+          const key = sh._id ? String(sh._id) : `sh-${sh.updatedAt || sh.date || idx}-${sh.remarks}`;
+          if (!seen.has(key)) {
+            seen.add(key);
+            list.push({
+              id: key,
               author: sh.updatedBy?.name || sh.by || 'System Staff',
-              role: sh.updatedBy?.role || 'Staff',
+              role: sh.updatedBy?.role || 'Status Update',
               text: sh.remarks,
               status: sh.status,
+              type: 'status',
               createdAt: sh.updatedAt || sh.date || new Date().toISOString()
             });
           }
-        });
-      }
-
-      if (singleViewApp.notes) {
-        initialComments.push({
-          id: 'initial-note',
-          author: singleViewApp.submittedByStaff?.name || 'Submitting Staff',
-          role: 'Filing Staff',
-          text: singleViewApp.notes,
-          createdAt: singleViewApp.dateAdded || new Date().toISOString()
-        });
-      }
-
-      setCommentsList(initialComments);
-      setAppEditNotes(singleViewApp.notes || '');
+        }
+      });
     }
-  }, [singleViewApp]);
+
+    // 3. Initial Submission Notes
+    if (appObj.notes && typeof appObj.notes === 'string' && appObj.notes.trim()) {
+      const key = `note-${appObj.id || appObj._id || 'init'}`;
+      if (!seen.has(key)) {
+        seen.add(key);
+        list.push({
+          id: key,
+          author: appObj.submittedByStaff?.name || appObj.assignedBdm || 'Filing Agent',
+          role: 'Application Note',
+          text: appObj.notes,
+          type: 'note',
+          createdAt: appObj.dateAdded || new Date().toISOString()
+        });
+      }
+    }
+
+    // Sort: newest first
+    list.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+    return list;
+  };
+
+  // When singleViewApp is set, sync comments & notes and fetch fresh data from backend
+  useEffect(() => {
+    if (singleViewApp) {
+      setCommentsList(buildCommentsList(singleViewApp));
+      setAppEditNotes(singleViewApp.notes || '');
+
+      const appId = singleViewApp.id || singleViewApp._id;
+      if (appId) {
+        API.get(`/applications/${appId}`).then(res => {
+          if (res.data?.success && res.data.data) {
+            const freshApp = res.data.data;
+            const updatedApp = {
+              ...singleViewApp,
+              ...freshApp,
+              id: freshApp._id || singleViewApp.id,
+              applicationComments: freshApp.applicationComments || [],
+              statusHistory: freshApp.statusHistory || singleViewApp.statusHistory || [],
+              notes: freshApp.notes !== undefined ? freshApp.notes : singleViewApp.notes
+            };
+            setSingleViewApp(prev => ({
+              ...prev,
+              applicationComments: freshApp.applicationComments || [],
+              statusHistory: freshApp.statusHistory || prev?.statusHistory || [],
+              notes: freshApp.notes !== undefined ? freshApp.notes : prev?.notes
+            }));
+            setCommentsList(buildCommentsList(updatedApp));
+            if (freshApp.notes !== undefined) {
+              setAppEditNotes(freshApp.notes);
+            }
+          }
+        }).catch(err => {
+          console.warn('Could not refresh application comments:', err.message);
+        });
+      }
+    }
+  }, [singleViewApp?.id || singleViewApp?._id]);
 
   const handleAddComment = async (e) => {
     e.preventDefault();
     if (!newCommentInput.trim() || !singleViewApp) return;
 
+    const textToSave = newCommentInput.trim();
     const newCommentObj = {
-      id: Date.now(),
+      id: `local-${Date.now()}`,
       author: currentUser?.name || 'Super Admin',
       role: currentUser?.role || 'Admin',
-      text: newCommentInput.trim(),
+      text: textToSave,
+      type: 'comment',
       createdAt: new Date().toISOString()
     };
 
     setCommentsList(prev => [newCommentObj, ...prev]);
-    const textToSave = newCommentInput.trim();
     setNewCommentInput('');
 
     try {
       const appId = singleViewApp.id || singleViewApp._id;
-      await API.post(`/applications/${appId}/comments`, {
+      const res = await API.post(`/applications/${appId}/comments`, {
         text: textToSave
-      }).catch(async () => {
-        await API.put(`/applications/${appId}`, {
-          remarks: `Comment added: ${textToSave}`
-        }).catch(() => {});
       });
+
+      if (res.data?.success && Array.isArray(res.data.data)) {
+        const updatedApp = {
+          ...singleViewApp,
+          applicationComments: res.data.data
+        };
+        setSingleViewApp(updatedApp);
+        setCommentsList(buildCommentsList(updatedApp));
+      }
       toast.success('Comment posted successfully!');
       if (onRefresh) onRefresh();
     } catch (err) {

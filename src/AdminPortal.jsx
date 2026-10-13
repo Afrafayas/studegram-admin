@@ -128,6 +128,7 @@ export default function AdminPortal({ onLogout }) {
           phone: app.student?.phone || null,
           documents: app.documents || [],
           notes: app.notes || '',
+          applicationComments: app.applicationComments || [],
           pickedBy: app.pickedBy || null,
           submittedByStaff: app.submittedByStaff || null,
           commissionClaimed: app.commissionClaimed || false,
@@ -675,46 +676,51 @@ export default function AdminPortal({ onLogout }) {
     );
   };
 
+  useEffect(() => {
+    const mainEl = document.getElementById('admin-main-content');
+    if (mainEl) {
+      mainEl.scrollTop = 0;
+    }
+  }, [activeTab, activeSubTab, selectedAppIdForSingleView, selectedPartnerForSingleView, selectedStudentForSingleView]);
+
   return (
-    <div className="min-h-screen bg-[#F0F2F5] flex flex-col font-sans text-slate-900 select-text">
-      <div className="flex flex-1">
-        <AdminSidebar 
+    <div className="h-screen w-full bg-[#F0F2F5] flex font-sans text-slate-900 select-text overflow-hidden">
+      <AdminSidebar 
+        activeTab={activeTab}
+        setActiveTab={setActiveTab}
+        activeSubTab={activeSubTab}
+        setActiveSubTab={setActiveSubTab}
+        onLogout={() => setShowLogoutConfirmModal(true)}
+        isOpen={sidebarOpen}
+        onClose={() => setSidebarOpen(false)}
+      />
+
+      <div className="flex-1 flex flex-col h-screen min-w-0 overflow-hidden">
+        <AdminHeader 
           activeTab={activeTab}
-          setActiveTab={setActiveTab}
           activeSubTab={activeSubTab}
-          setActiveSubTab={setActiveSubTab}
+          onToggleSidebar={() => setSidebarOpen(!sidebarOpen)}
           onLogout={() => setShowLogoutConfirmModal(true)}
-          isOpen={sidebarOpen}
-          onClose={() => setSidebarOpen(false)}
+          onBack={handleBack}
+          isSyncing={isDataSyncing}
+          onRefreshData={fetchInitialData}
+          onNavigate={(tab, subTab, targetId, notification) => {
+            setActiveTab(tab);
+            setActiveSubTab(subTab || null);
+            const payload = { targetId, notification, timestamp: Date.now() };
+            if (tab === 'become-partner' || tab === 'partners') {
+              setSelectedPartnerForSingleView(payload);
+            } else if (tab === 'applications') {
+              setSelectedAppIdForSingleView(payload);
+            } else if (tab === 'students') {
+              setSelectedStudentForSingleView(payload);
+            }
+          }}
         />
 
-        <div className="flex-1 flex flex-col min-h-screen overflow-x-hidden">
-          <AdminHeader 
-            activeTab={activeTab}
-            activeSubTab={activeSubTab}
-            onToggleSidebar={() => setSidebarOpen(!sidebarOpen)}
-            onLogout={() => setShowLogoutConfirmModal(true)}
-            onBack={handleBack}
-            isSyncing={isDataSyncing}
-            onRefreshData={fetchInitialData}
-            onNavigate={(tab, subTab, targetId, notification) => {
-              setActiveTab(tab);
-              setActiveSubTab(subTab || null);
-              const payload = { targetId, notification, timestamp: Date.now() };
-              if (tab === 'become-partner' || tab === 'partners') {
-                setSelectedPartnerForSingleView(payload);
-              } else if (tab === 'applications') {
-                setSelectedAppIdForSingleView(payload);
-              } else if (tab === 'students') {
-                setSelectedStudentForSingleView(payload);
-              }
-            }}
-          />
-
-          <main key={`${activeTab}-${activeSubTab}`} className="flex-1 flex flex-col pb-16 animate-fade-in">
-            {renderActiveTabContent()}
-          </main>
-        </div>
+        <main id="admin-main-content" key={`${activeTab}-${activeSubTab}`} className="flex-1 overflow-y-auto overflow-x-hidden pb-16 animate-fade-in scroll-smooth">
+          {renderActiveTabContent()}
+        </main>
       </div>
 
       {/* Logout Confirmation Modal */}

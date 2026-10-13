@@ -282,7 +282,7 @@ export default function AdminHeader({
   const breadcrumbs = getBreadcrumbs();
 
   return (
-    <header className="flex flex-col select-none z-20 sticky top-0 bg-[#0A0A0F] text-white border-b border-slate-900">
+    <header className="flex flex-col select-none z-30 shrink-0 sticky top-0 bg-[#0A0A0F] text-white border-b border-slate-900 shadow-xs">
       {/* Top Navigation Bar */}
       <div className="h-[64px] min-h-[64px] px-6 flex items-center justify-between">
         {/* Left Side: Hamburger & Breadcrumbs */}
@@ -370,7 +370,7 @@ export default function AdminHeader({
                   onClick={() => setShowComments(false)}
                   className="fixed inset-0 z-10"
                 />
-                <div className="absolute right-0 top-11 w-80 sm:w-96 bg-[#0A0A0F] border border-slate-800 rounded-2xl shadow-2xl py-3 z-20 animate-in fade-in slide-in-from-top-2 duration-150">
+                <div className="absolute right-0 top-11 w-80 sm:w-96 bg-[#0A0A0F] border border-slate-800 rounded-2xl shadow-2xl py-3 z-50 animate-in fade-in slide-in-from-top-2 duration-150">
                   <div className="px-4 pb-2.5 border-b border-slate-900 flex justify-between items-center">
                     <div>
                       <h4 className="text-xs font-black text-white uppercase tracking-wider flex items-center gap-2">
@@ -454,7 +454,7 @@ export default function AdminHeader({
                   onClick={() => setShowNotifications(false)}
                   className="fixed inset-0 z-10"
                 />
-                <div className="absolute right-0 top-11 w-80 sm:w-96 bg-[#0A0A0F] border border-slate-800 rounded-2xl shadow-2xl py-3 z-20 animate-in fade-in slide-in-from-top-2 duration-150">
+                <div className="absolute right-0 top-11 w-80 sm:w-96 bg-[#0A0A0F] border border-slate-800 rounded-2xl shadow-2xl py-3 z-50 animate-in fade-in slide-in-from-top-2 duration-150">
                   <div className="px-4 pb-2.5 border-b border-slate-900 flex justify-between items-center">
                     <div>
                       <h4 className="text-xs font-black text-white uppercase tracking-wider">System Notifications</h4>
@@ -535,7 +535,7 @@ export default function AdminHeader({
                 className="fixed inset-0 z-10"
               ></div>
               
-              <div className="absolute right-0 top-11 w-52 bg-[#0A0A0F] border border-slate-800 rounded-xl shadow-2xl py-2 z-20 animate-in fade-in slide-in-from-top-2 duration-150">
+              <div className="absolute right-0 top-11 w-52 bg-[#0A0A0F] border border-slate-800 rounded-xl shadow-2xl py-2 z-50 animate-in fade-in slide-in-from-top-2 duration-150">
                 <div className="px-4 py-2 border-b border-slate-900">
                   <p className="text-xs font-bold text-white">{currentUser?.name}</p>
                   <p className="text-[9px] text-[#D99A1C] font-black uppercase mt-0.5">{currentUser?.role}</p>

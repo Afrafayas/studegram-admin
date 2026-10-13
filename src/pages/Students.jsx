@@ -56,6 +56,7 @@ export default function Students({ clients, setClients, applications, intakes = 
     if (found) {
       setExpandedId(found.id);
       window.scrollTo({ top: 0, behavior: 'smooth' });
+      document.getElementById('admin-main-content')?.scrollTo({ top: 0, behavior: 'smooth' });
     }
   }, [initialSelectedStudentId, clients]);
   

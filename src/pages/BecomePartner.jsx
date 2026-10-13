@@ -143,6 +143,7 @@ export default function BecomePartner({ clients = [], setClients, applications =
       setSubView('directory');
       setSingleViewPartner(found);
       window.scrollTo({ top: 0, behavior: 'smooth' });
+      document.getElementById('admin-main-content')?.scrollTo({ top: 0, behavior: 'smooth' });
     }
   }, [initialSelectedPartnerId, clients]);
 
