@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import API from '../api/axios';
@@ -119,7 +120,7 @@ export default function Staff({ staffList, setStaffList, applications }) {
 
   // Apply scope filtering (Country Head / Regional staff scoping)
   const filteredStaff = baseFiltered.filter(s => {
-    if (!currentUser?.role || ['Director', 'COO', 'Super Admin', 'SuperAdmin'].includes(currentUser.role)) return true;
+    if (!currentUser?.role || ['Director', 'COO', 'Super Admin', 'SuperAdmin', 'Admin'].includes(currentUser.role)) return true;
     if (currentUser.role === 'Country Head') {
       return (s.country || 'India').toLowerCase() === (currentUser.country || 'India').toLowerCase();
     }
@@ -153,7 +154,7 @@ export default function Staff({ staffList, setStaffList, applications }) {
     }
 
     // Role Hierarchy Validation: SuperAdmin / Director has unrestricted onboarding clearance
-    const isSuperAdminUser = !currentUser?.role || ['Super Admin', 'SuperAdmin', 'Director'].includes(currentUser.role);
+    const isSuperAdminUser = !currentUser?.role || ['Super Admin', 'SuperAdmin', 'Director', 'Admin'].includes(currentUser.role);
 
     if (!isSuperAdminUser) {
       const userRoleHierarchy = {
@@ -563,9 +564,9 @@ export default function Staff({ staffList, setStaffList, applications }) {
       </div>
 
       {/* Onboard Staff Modal */}
-      {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs select-none p-4">
-          <div className="bg-white border border-[#E2E8F0] border-t-4 border-t-[#D99A1C] rounded-2xl p-6 w-full max-w-lg shadow-2xl space-y-4 animate-in zoom-in-95 duration-150 max-h-[90vh] overflow-y-auto">
+      {isModalOpen && createPortal(
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-xs select-none p-4 overflow-y-auto">
+          <div className="bg-white border border-[#E2E8F0] border-t-4 border-t-[#D99A1C] rounded-2xl p-6 w-full max-w-lg shadow-2xl space-y-4 animate-in zoom-in-95 duration-150 max-h-[90vh] overflow-y-auto my-auto">
             <div className="flex justify-between items-center pb-2 border-b border-slate-100">
               <div>
                 <h3 className="text-xs font-black text-slate-900 uppercase tracking-wider">Onboard Admin Staff</h3>
@@ -793,7 +794,8 @@ export default function Staff({ staffList, setStaffList, applications }) {
               </div>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

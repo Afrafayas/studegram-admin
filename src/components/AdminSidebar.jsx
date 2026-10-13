@@ -37,7 +37,7 @@ export default function AdminSidebar({
         ></div>
       )}
 
-      <aside className={`fixed inset-y-0 left-0 z-50 lg:z-30 lg:sticky lg:top-0 w-[260px] min-w-[260px] bg-[#0A0A0F] border-r border-slate-900 text-slate-300 h-screen flex flex-col justify-between py-5 select-none transform ${
+      <aside className={`fixed inset-y-0 left-0 z-50 lg:z-30 lg:static w-[260px] min-w-[260px] bg-[#0A0A0F] border-r border-slate-900 text-slate-300 h-screen flex flex-col justify-between py-5 select-none shrink-0 transform ${
         isOpen ? 'translate-x-0' : '-translate-x-full'
       } lg:translate-x-0 transition-transform duration-200 ease-in-out`}>
         
@@ -88,7 +88,7 @@ export default function AdminSidebar({
             )}
 
             {/* Admin-Report Collapsible */}
-            {(currentUser.role === 'Director' || currentUser.role === 'COO' || currentUser.role === 'Country Head') && (
+            {(['SuperAdmin', 'Super Admin', 'Admin', 'Director', 'COO', 'Country Head'].includes(currentUser.role)) && (
               <div>
                 <button
                   onClick={() => setAdminReportsOpen(!adminReportsOpen)}
@@ -217,7 +217,7 @@ export default function AdminSidebar({
             )}
 
             {/* Staff Activity Log */}
-            {(hasPermission('staff:view') || hasPermission('activity_logs:view') || ['SuperAdmin', 'Director', 'COO', 'Country Head'].includes(currentUser.role)) && (
+            {(hasPermission('staff:view') || hasPermission('activity_logs:view') || ['SuperAdmin', 'Super Admin', 'Admin', 'Director', 'COO', 'Country Head'].includes(currentUser.role)) && (
               <button
                 onClick={() => handleTabClick('staff-activity-logs')}
                 className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left text-xs font-semibold transition-all duration-150 ${
@@ -236,7 +236,7 @@ export default function AdminSidebar({
 
 
             {/* Roles & Permissions */}
-            {(currentUser.role === 'Director' || currentUser.role === 'COO' || currentUser.role === 'SuperAdmin' || hasPermission('roles:manage')) && (
+            {(['SuperAdmin', 'Super Admin', 'Admin', 'Director', 'COO'].includes(currentUser.role) || hasPermission('roles:manage')) && (
               <button
                 onClick={() => handleTabClick('roles')}
                 className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left text-xs font-semibold transition-all duration-150 ${

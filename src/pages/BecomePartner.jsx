@@ -75,7 +75,7 @@ const handleDownloadDocument = (docUrl, fileName) => {
   document.body.removeChild(link);
 };
 
-export default function BecomePartner({ clients = [], setClients, applications = [], onPartnerOnboarded, onBack }) {
+export default function BecomePartner({ clients = [], setClients, applications = [], onPartnerOnboarded, onBack, initialSelectedPartnerId }) {
   const toast = useToast();
   const { addAuditLog } = useAuth();
 
@@ -85,11 +85,75 @@ export default function BecomePartner({ clients = [], setClients, applications =
   // Single Partner Detailed View State
   const [singleViewPartner, setSingleViewPartner] = useState(null);
 
+  // Auto-navigate to Partner Single View Dossier when initialSelectedPartnerId is passed from notifications
+  useEffect(() => {
+    if (!initialSelectedPartnerId) return;
+
+    const partnerList = (clients || []).filter(c => c.type === 'Agent');
+    if (partnerList.length === 0) return;
+
+    let targetId = initialSelectedPartnerId;
+    let notifObj = null;
+    if (typeof initialSelectedPartnerId === 'object' && initialSelectedPartnerId !== null) {
+      targetId = initialSelectedPartnerId.targetId || initialSelectedPartnerId.relatedId || initialSelectedPartnerId.partnerId || initialSelectedPartnerId.id;
+      notifObj = initialSelectedPartnerId.notification || initialSelectedPartnerId;
+    }
+
+    const targetStr = String(targetId || '').trim().toLowerCase();
+    const notifText = notifObj ? `${notifObj.title || ''} ${notifObj.message || ''}`.toLowerCase() : '';
+
+    // 1. Match by ID / Partner Code / Email
+    let found = partnerList.find(p => {
+      const pId = String(p.id || p._id || '').toLowerCase();
+      const pCode = String(p.partnerCode || '').toLowerCase();
+      const pEmail = String(p.email || '').toLowerCase();
+      return (targetStr && (pId === targetStr || pCode === targetStr || pEmail === targetStr));
+    });
+
+    // 2. Match by Name / Company name if targetStr provided
+    if (!found && targetStr) {
+      found = partnerList.find(p => {
+        const pName = (p.name || '').toLowerCase();
+        const pComp = (p.companyName || '').toLowerCase();
+        return (pName && (pName.includes(targetStr) || targetStr.includes(pName))) ||
+               (pComp && (pComp.includes(targetStr) || targetStr.includes(pComp)));
+      });
+    }
+
+    // 3. Match from notification title & message content
+    if (!found && notifText) {
+      found = partnerList.find(p => {
+        const pName = (p.name || '').toLowerCase();
+        const pComp = (p.companyName || '').toLowerCase();
+        const pCode = (p.partnerCode || '').toLowerCase();
+        return (
+          (pName && notifText.includes(pName)) ||
+          (pComp && notifText.includes(pComp)) ||
+          (pCode && notifText.includes(pCode))
+        );
+      });
+    }
+
+    // 4. Fallback: If it's a partner notification, open the pending partner or first partner
+    if (!found) {
+      found = partnerList.find(p => p.status === 'Pending') || partnerList[0];
+    }
+
+    if (found) {
+      setSubView('directory');
+      setSingleViewPartner(found);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      document.getElementById('admin-main-content')?.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  }, [initialSelectedPartnerId, clients]);
+
   // Document Preview Modal State
   const [previewModalDoc, setPreviewModalDoc] = useState(null);
 
   // Edit Partner Modal State
   const [editingPartner, setEditingPartner] = useState(null);
+  const [confirmStatusModal, setConfirmStatusModal] = useState(null);
+  const [isProcessingStatus, setIsProcessingStatus] = useState(false);
 
   // --- DIRECTORY STATES & LOGIC ---
   const [searchTerm, setSearchTerm] = useState('');
@@ -147,12 +211,13 @@ export default function BecomePartner({ clients = [], setClients, applications =
   };
 
   const handleUpdateStatus = async (partnerId, newStatus) => {
-    const token = localStorage.getItem('admin_token');
     try {
       if (partnerId) {
         let response;
         if (newStatus === 'Active') {
           response = await API.put(`/partners/${partnerId}/approve`);
+        } else if (newStatus === 'Inactive') {
+          response = await API.put(`/partners/${partnerId}/deactivate`).catch(() => API.put(`/partners/${partnerId}`, { status: 'Inactive' }));
         } else {
           response = await API.put(`/partners/${partnerId}`, { status: newStatus });
         }
@@ -162,9 +227,15 @@ export default function BecomePartner({ clients = [], setClients, applications =
           }
           if (newStatus === 'Active') {
             toast.success(response.data?.message || 'Partner approved! A 6-digit login password has been sent to their email.');
+          } else if (newStatus === 'Inactive') {
+            toast.success(response.data?.message || 'Partner deactivated! A deactivation notice email has been dispatched.');
           } else {
             toast.success(`Partner status updated to ${newStatus}.`);
           }
+          if (onPartnerOnboarded) {
+            onPartnerOnboarded();
+          }
+          return true;
         } else {
           throw new Error(response.data?.message || 'Failed to update partner status');
         }
@@ -173,11 +244,44 @@ export default function BecomePartner({ clients = [], setClients, applications =
           setClients(prev => prev.map(c => (c.id === partnerId || c._id === partnerId) ? { ...c, status: newStatus } : c));
         }
         toast.success(`Partner status updated to ${newStatus}.`);
+        if (onPartnerOnboarded) {
+          onPartnerOnboarded();
+        }
+        return true;
       }
     } catch (err) {
       toast.error(err.response?.data?.message || err.message || 'Failed to update status');
+      return false;
     }
   };
+
+  const handleConfirmStatusChange = async () => {
+    if (!confirmStatusModal) return;
+    const { partner, newStatus } = confirmStatusModal;
+    const partnerId = partner.id || partner._id;
+    setIsProcessingStatus(true);
+    try {
+      const ok = await handleUpdateStatus(partnerId, newStatus);
+      if (ok) {
+        setSingleViewPartner(prev => (prev && (prev.id === partnerId || prev._id === partnerId)) ? { ...prev, status: newStatus } : prev);
+        setConfirmStatusModal(null);
+      }
+    } finally {
+      setIsProcessingStatus(false);
+    }
+  };
+
+  // Close confirmation modal on ESC
+  useEffect(() => {
+    if (!confirmStatusModal) return;
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape' && !isProcessingStatus) {
+        setConfirmStatusModal(null);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [confirmStatusModal, isProcessingStatus]);
 
   const handleOpenEditModal = (partner, e) => {
     if (e) e.stopPropagation();
@@ -776,7 +880,11 @@ export default function BecomePartner({ clients = [], setClients, applications =
 
                                 {partner.status === 'Pending' && (
                                   <button
-                                    onClick={() => handleUpdateStatus(partner.id, 'Active')}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setSingleViewPartner(partner);
+                                      window.scrollTo({ top: 0, behavior: 'smooth' });
+                                    }}
                                     className="bg-emerald-600 hover:bg-emerald-700 text-white font-black text-[9px] px-2.5 py-1.5 rounded-lg transition-all shadow-2xs cursor-pointer uppercase"
                                   >
                                     Approve
@@ -784,7 +892,11 @@ export default function BecomePartner({ clients = [], setClients, applications =
                                 )}
                                 {partner.status === 'Active' && (
                                   <button
-                                    onClick={() => handleUpdateStatus(partner.id, 'Inactive')}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setSingleViewPartner(partner);
+                                      window.scrollTo({ top: 0, behavior: 'smooth' });
+                                    }}
                                     className="bg-rose-500 hover:bg-rose-600 text-white font-black text-[9px] px-2.5 py-1.5 rounded-lg transition-all shadow-2xs cursor-pointer uppercase"
                                   >
                                     Deactivate
@@ -792,7 +904,11 @@ export default function BecomePartner({ clients = [], setClients, applications =
                                 )}
                                 {partner.status === 'Inactive' && (
                                   <button
-                                    onClick={() => handleUpdateStatus(partner.id, 'Active')}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setSingleViewPartner(partner);
+                                      window.scrollTo({ top: 0, behavior: 'smooth' });
+                                    }}
                                     className="bg-emerald-600 hover:bg-emerald-700 text-white font-black text-[9px] px-2.5 py-1.5 rounded-lg transition-all shadow-2xs cursor-pointer uppercase"
                                   >
                                     Activate
@@ -1162,8 +1278,12 @@ export default function BecomePartner({ clients = [], setClients, applications =
               {singleViewPartner.status === 'Pending' && (
                 <button
                   onClick={() => {
-                    handleUpdateStatus(singleViewPartner.id, 'Active');
-                    setSingleViewPartner(prev => ({ ...prev, status: 'Active' }));
+                    setConfirmStatusModal({
+                      partner: singleViewPartner,
+                      actionType: 'approve',
+                      newStatus: 'Active'
+                    });
+
                   }}
                   className="px-5 py-2.5 bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-700 hover:to-emerald-600 text-white font-black text-xs rounded-xl shadow-md transition-all cursor-pointer flex items-center gap-2 uppercase tracking-wide"
                 >
@@ -1174,8 +1294,12 @@ export default function BecomePartner({ clients = [], setClients, applications =
               {singleViewPartner.status === 'Active' && (
                 <button
                   onClick={() => {
-                    handleUpdateStatus(singleViewPartner.id, 'Inactive');
-                    setSingleViewPartner(prev => ({ ...prev, status: 'Inactive' }));
+                    setConfirmStatusModal({
+                      partner: singleViewPartner,
+                      actionType: 'deactivate',
+                      newStatus: 'Inactive'
+                    });
+
                   }}
                   className="px-4 py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 font-extrabold text-xs rounded-xl transition-all cursor-pointer flex items-center gap-1.5"
                 >
@@ -1186,8 +1310,12 @@ export default function BecomePartner({ clients = [], setClients, applications =
               {singleViewPartner.status === 'Inactive' && (
                 <button
                   onClick={() => {
-                    handleUpdateStatus(singleViewPartner.id, 'Active');
-                    setSingleViewPartner(prev => ({ ...prev, status: 'Active' }));
+                    setConfirmStatusModal({
+                      partner: singleViewPartner,
+                      actionType: 'activate',
+                      newStatus: 'Active'
+                    });
+
                   }}
                   className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs rounded-xl shadow-md transition-all cursor-pointer flex items-center gap-2 uppercase"
                 >
@@ -1220,8 +1348,12 @@ export default function BecomePartner({ clients = [], setClients, applications =
               </div>
               <button
                 onClick={() => {
-                  handleUpdateStatus(singleViewPartner.id, 'Active');
-                  setSingleViewPartner(prev => ({ ...prev, status: 'Active' }));
+                  setConfirmStatusModal({
+                    partner: singleViewPartner,
+                    actionType: 'approve',
+                    newStatus: 'Active'
+                  });
+
                 }}
                 className="px-4 py-2 bg-[#D99A1C] hover:bg-[#F5B025] text-white font-black text-xs rounded-xl shadow-md cursor-pointer shrink-0 uppercase tracking-wider"
               >
@@ -1629,7 +1761,7 @@ export default function BecomePartner({ clients = [], setClients, applications =
 
       {/* EDIT PARTNER MODAL PORTAL */}
       {editingPartner && createPortal(
-        <div className="fixed inset-0 z-[9999] bg-black/75 backdrop-blur-xs p-4 flex justify-center items-center select-none animate-fade-in">
+        <div className="fixed inset-0 z-[9999] bg-black/75 backdrop-blur-xs p-4 flex justify-center items-center select-none animate-fade-in overflow-y-auto">
           <div className="bg-white border border-slate-200 border-t-4 border-t-[#D99A1C] rounded-3xl p-6 w-full max-w-xl shadow-2xl space-y-4 max-h-[90vh] flex flex-col my-auto overflow-y-auto">
             <div className="flex justify-between items-center pb-3 border-b border-slate-100 shrink-0">
               <div>
@@ -1919,7 +2051,7 @@ export default function BecomePartner({ clients = [], setClients, applications =
 
       {/* DOCUMENT PREVIEW MODAL PORTAL */}
       {previewModalDoc && createPortal(
-        <div className="fixed inset-0 z-[9999] bg-black/75 backdrop-blur-xs p-3 sm:p-6 flex justify-center items-center select-none animate-fade-in">
+        <div className="fixed inset-0 z-[9999] bg-black/75 backdrop-blur-xs p-3 sm:p-6 flex justify-center items-center select-none animate-fade-in overflow-y-auto">
           <div className="relative bg-white border border-slate-200 border-t-4 border-t-[#D99A1C] rounded-3xl p-4 sm:p-6 w-full max-w-3xl shadow-2xl flex flex-col my-auto max-h-[85vh]">
             <div className="flex justify-between items-center pb-3 border-b border-slate-100 shrink-0">
               <div className="space-y-0.5">
@@ -2000,6 +2132,155 @@ export default function BecomePartner({ clients = [], setClients, applications =
                 className="px-4 py-1.5 sm:px-5 sm:py-2 bg-slate-800 hover:bg-slate-900 text-white font-extrabold text-[11px] sm:text-xs rounded-xl shadow-md transition-all cursor-pointer"
               >
                 Close Preview
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* STATUS CHANGE CONFIRMATION MODAL (APPROVE / DEACTIVATE / ACTIVATE) */}
+      {confirmStatusModal && createPortal(
+        <div
+          className="fixed inset-0 z-[9999] bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 animate-fade-in select-none overflow-y-auto"
+          role="dialog"
+          aria-modal="true"
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="bg-white border border-slate-200 rounded-3xl p-6 sm:p-7 max-w-md w-full shadow-2xl relative space-y-4 animate-in zoom-in-95 duration-150 text-center max-h-[90vh] overflow-y-auto my-auto"
+          >
+            {/* Close button */}
+            <button
+              onClick={() => {
+                if (!isProcessingStatus) setConfirmStatusModal(null);
+              }}
+              type="button"
+              disabled={isProcessingStatus}
+              className="absolute top-4 right-4 w-7 h-7 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-400 hover:text-slate-600 flex items-center justify-center transition-colors cursor-pointer"
+            >
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+
+            {/* Icon */}
+            {confirmStatusModal.actionType === 'approve' ? (
+              <div className="w-16 h-16 bg-emerald-50 text-emerald-600 rounded-full flex items-center justify-center mx-auto ring-8 ring-emerald-50/70 shadow-inner">
+                <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                </svg>
+              </div>
+            ) : confirmStatusModal.actionType === 'deactivate' ? (
+              <div className="w-16 h-16 bg-rose-50 text-rose-600 rounded-full flex items-center justify-center mx-auto ring-8 ring-rose-50/70 shadow-inner">
+                <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+              </div>
+            ) : (
+              <div className="w-16 h-16 bg-emerald-50 text-emerald-600 rounded-full flex items-center justify-center mx-auto ring-8 ring-emerald-50/70 shadow-inner">
+                <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+              </div>
+            )}
+
+            {/* Title & Badge */}
+            <div className="space-y-1">
+              <span className={`text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full border tracking-wider ${
+                confirmStatusModal.actionType === 'approve'
+                  ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                  : confirmStatusModal.actionType === 'deactivate'
+                    ? 'bg-rose-50 text-rose-700 border-rose-200'
+                    : 'bg-emerald-50 text-emerald-700 border-emerald-200'
+              }`}>
+                {confirmStatusModal.actionType === 'approve' ? 'Partner Verification' : confirmStatusModal.actionType === 'deactivate' ? 'Account Deactivation' : 'Account Reactivation'}
+              </span>
+              <h3 className="text-base font-black text-slate-900 pt-1">
+                {confirmStatusModal.actionType === 'approve'
+                  ? 'Confirm Partner Approval'
+                  : confirmStatusModal.actionType === 'deactivate'
+                    ? 'Confirm Partner Deactivation'
+                    : 'Confirm Partner Reactivation'}
+              </h3>
+            </div>
+
+            {/* Partner Details Card */}
+            <div className="bg-slate-50 border border-slate-200 rounded-2xl p-3.5 text-left text-xs space-y-1.5">
+              <div className="flex justify-between items-center">
+                <span className="text-slate-400 font-semibold">Partner:</span>
+                <span className="font-black text-slate-800">{confirmStatusModal.partner.name}</span>
+              </div>
+              {confirmStatusModal.partner.companyName && confirmStatusModal.partner.companyName !== confirmStatusModal.partner.name && (
+                <div className="flex justify-between items-center">
+                  <span className="text-slate-400 font-semibold">Agency:</span>
+                  <span className="font-bold text-slate-700">{confirmStatusModal.partner.companyName}</span>
+                </div>
+              )}
+              <div className="flex justify-between items-center">
+                <span className="text-slate-400 font-semibold">Code:</span>
+                <span className="font-mono font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded text-[11px]">{confirmStatusModal.partner.partnerCode}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-slate-400 font-semibold">Email:</span>
+                <span className="font-semibold text-slate-700 truncate max-w-[200px]">{confirmStatusModal.partner.email}</span>
+              </div>
+            </div>
+
+            {/* Description */}
+            <p className="text-xs text-slate-500 leading-relaxed font-medium">
+              {confirmStatusModal.actionType === 'approve' && (
+                <>
+                  Are you sure you want to approve this partner? An email with a 6-digit login password will be dispatched to <strong className="text-slate-700">{confirmStatusModal.partner.email}</strong>, authorizing immediate partner portal access.
+                </>
+              )}
+              {confirmStatusModal.actionType === 'deactivate' && (
+                <>
+                  Are you sure you want to deactivate this partner? A formal deactivation notice email will be dispatched to <strong className="text-slate-700">{confirmStatusModal.partner.email}</strong>, and their access to the partner portal will be suspended.
+                </>
+              )}
+              {confirmStatusModal.actionType === 'activate' && (
+                <>
+                  Are you sure you want to re-activate this partner? Their access to the partner portal and student submission privileges will be restored.
+                </>
+              )}
+            </p>
+
+            {/* Action Buttons */}
+            <div className="flex items-center gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => setConfirmStatusModal(null)}
+                disabled={isProcessingStatus}
+                className="flex-1 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition-all cursor-pointer disabled:opacity-50"
+              >
+                No, Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmStatusChange}
+                disabled={isProcessingStatus}
+                className={`flex-1 py-2.5 text-white font-extrabold text-xs rounded-xl transition-all cursor-pointer shadow-md flex items-center justify-center gap-1.5 disabled:opacity-50 ${
+                  confirmStatusModal.actionType === 'approve'
+                    ? 'bg-emerald-600 hover:bg-emerald-700'
+                    : confirmStatusModal.actionType === 'deactivate'
+                      ? 'bg-rose-600 hover:bg-rose-700'
+                      : 'bg-emerald-600 hover:bg-emerald-700'
+                }`}
+              >
+                {isProcessingStatus ? (
+                  <>
+                    <svg className="animate-spin h-3.5 w-3.5 text-white" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                    </svg>
+                    <span>Processing...</span>
+                  </>
+                ) : (
+                  <>
+                    <span>{confirmStatusModal.actionType === 'approve' ? 'Yes, Approve' : confirmStatusModal.actionType === 'deactivate' ? 'Yes, Deactivate' : 'Yes, Re-Activate'}</span>
+                  </>
+                )}
               </button>
             </div>
           </div>

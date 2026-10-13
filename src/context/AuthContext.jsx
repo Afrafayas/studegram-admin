@@ -94,6 +94,9 @@ export const PRESET_USERS = [
 
 // Defined permissions for each role
 const ROLE_PERMISSIONS = {
+  'SuperAdmin': ['*'],
+  'Super Admin': ['*'],
+  'Admin': ['*'],
   'Director': ['*'], // Access to all actions
   'COO': [
     'dashboard:view', 'reports:view', 'partners:view', 'partners:manage',
@@ -195,8 +198,8 @@ export function AuthProvider({ children }) {
 
         const roleName = dbUser.role || 'Executive';
         let mappedLevel = 6;
-        if (['SuperAdmin', 'Director'].includes(roleName)) mappedLevel = 1;
-        else if (['Admin', 'COO'].includes(roleName)) mappedLevel = 2;
+        if (['SuperAdmin', 'Super Admin', 'Director', 'Admin'].includes(roleName)) mappedLevel = 1;
+        else if (['COO'].includes(roleName)) mappedLevel = 2;
         else if (['Finance', 'OperationsHead'].includes(roleName)) mappedLevel = 3;
         else if (['Country Head', 'CRE'].includes(roleName)) mappedLevel = 4;
         else if (roleName === 'BDM') mappedLevel = 5;
@@ -334,8 +337,8 @@ export function AuthProvider({ children }) {
   const hasPermission = (permissionCode) => {
     if (!currentUser) return false;
 
-    // Direct superadmin / director bypass
-    if (['SuperAdmin', 'Director'].includes(currentUser.role)) return true;
+    // Direct superadmin / director / admin bypass
+    if (['SuperAdmin', 'Super Admin', 'Admin', 'Director'].includes(currentUser.role)) return true;
 
     // Check dynamic DB role permissions
     const dbRoleMatch = dbRoles.find(r => r.name === currentUser.role || r.displayName === currentUser.role);

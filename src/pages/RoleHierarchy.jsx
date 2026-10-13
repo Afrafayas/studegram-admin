@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import API from '../api/axios';
@@ -44,6 +45,7 @@ const FEATURE_ACTION_PERMISSIONS = [
 const DEFAULT_PRESET_ROLES = [
   { _id: 'r1', name: 'SuperAdmin', displayName: 'Super Admin / Director', portalType: 'Admin', description: 'Full unconstrained administrative access across all system portals and data.', permissions: ['*'], isPreset: true },
   { _id: 'r2', name: 'Director', displayName: 'Director', portalType: 'Admin', description: 'Executive director level with full system access and audit reporting.', permissions: ['*'], isPreset: true },
+  { _id: 'r2_admin', name: 'Admin', displayName: 'Administrator', portalType: 'Admin', description: 'Full administrative access and CRUD management across all system modules.', permissions: ['*'], isPreset: true },
   { _id: 'r3', name: 'COO', displayName: 'Chief Operating Officer (COO)', portalType: 'Admin', description: 'Operational leadership overseeing applications, partner vetting, staff and commission pipelines.', permissions: ['sidebar:daily-report', 'sidebar:applications', 'sidebar:admin-report', 'sidebar:become-partner', 'sidebar:students', 'sidebar:commissions', 'sidebar:staff', 'sidebar:settings', 'sidebar:todo-list', 'applications:view', 'applications:create', 'applications:edit', 'applications:delete', 'partners:view', 'partners:approve', 'commissions:view', 'commissions:manage', 'staff:manage'], isPreset: true },
   { _id: 'r4', name: 'OperationsHead', displayName: 'Head of Operations', portalType: 'Admin', description: 'Manages operational application workflows, partner onboarding, and student file assignments.', permissions: ['sidebar:daily-report', 'sidebar:applications', 'sidebar:admin-report', 'sidebar:become-partner', 'sidebar:students', 'sidebar:todo-list', 'applications:view', 'applications:create', 'applications:edit', 'applications:delete', 'partners:view', 'partners:approve', 'students:manage'], isPreset: true },
   { _id: 'r5', name: 'CRE', displayName: 'Customer Relationship Executive (CRE)', portalType: 'Admin', description: 'Manages partner agent queries, incoming registrations, and initial application screening.', permissions: ['sidebar:daily-report', 'sidebar:applications', 'sidebar:become-partner', 'sidebar:students', 'sidebar:todo-list', 'applications:view', 'applications:create', 'applications:edit', 'partners:view', 'partners:approve'], isPreset: true },
@@ -406,8 +408,8 @@ export default function RoleHierarchy() {
       )}
 
       {/* EDIT / CREATE ROLE CHECKLIST MODAL */}
-      {isRoleModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs select-none p-4">
+      {isRoleModalOpen && createPortal(
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-xs select-none p-4 overflow-y-auto">
           <div className="bg-white border border-slate-200 rounded-2xl w-full max-w-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
             <div className="flex justify-between items-center p-4 bg-slate-900 text-white border-b border-white/10">
               <div>
@@ -569,7 +571,8 @@ export default function RoleHierarchy() {
               </div>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

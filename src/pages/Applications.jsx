@@ -261,77 +261,239 @@ export default function Applications({ applications, referralAgents = [], intake
 
   // Auto-open Single View when initialSelectedAppId is provided from notification or comment click
   useEffect(() => {
-    if (initialSelectedAppId && applications && applications.length > 0) {
-      const found = applications.find(a => 
-        (a.id || a._id) === initialSelectedAppId || 
-        a.camsId === initialSelectedAppId ||
-        (a.camsId && typeof initialSelectedAppId === 'string' && a.camsId.toLowerCase() === initialSelectedAppId.toLowerCase())
-      );
-      if (found) {
-        setSingleViewApp(found);
-      }
+    if (!initialSelectedAppId || !applications || applications.length === 0) return;
+
+    let targetId = initialSelectedAppId;
+    let notifObj = null;
+    if (typeof initialSelectedAppId === 'object' && initialSelectedAppId !== null) {
+      targetId = initialSelectedAppId.targetId || initialSelectedAppId.relatedId || initialSelectedAppId.applicationId || initialSelectedAppId.id;
+      notifObj = initialSelectedAppId.notification || initialSelectedAppId;
+    }
+
+    const targetStr = String(targetId || '').trim().toLowerCase();
+    const notifText = notifObj ? `${notifObj.title || ''} ${notifObj.message || ''}`.toLowerCase() : '';
+
+    // 1. Direct ID / CAMS match
+    let found = applications.find(a => {
+      const aId = String(a.id || a._id || '').toLowerCase();
+      const aCams = String(a.camsId || '').toLowerCase();
+      return targetStr && (aId === targetStr || aCams === targetStr);
+    });
+
+    // 2. Student Name match from targetStr
+    if (!found && targetStr) {
+      found = applications.find(a => {
+        const sName = (a.studentName || '').toLowerCase();
+        return sName && (sName.includes(targetStr) || targetStr.includes(sName));
+      });
+    }
+
+    // 3. Match from notification title & message content
+    if (!found && notifText) {
+      found = applications.find(a => {
+        const sName = (a.studentName || '').toLowerCase();
+        const aCams = (a.camsId || '').toLowerCase();
+        return (
+          (sName && notifText.includes(sName)) ||
+          (aCams && notifText.includes(aCams))
+        );
+      });
+    }
+
+    // 4. Fallback: If it's an application notification, open the first application
+    if (!found && (notifObj?.type === 'application' || notifText.includes('application'))) {
+      found = applications[0];
+    }
+
+    if (found) {
+      setSingleViewApp(found);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      document.getElementById('admin-main-content')?.scrollTo({ top: 0, behavior: 'smooth' });
+    } else if (targetId && typeof targetId === 'string' && /^[0-9a-fA-F]{24}$/.test(targetId)) {
+      // Direct API fetch if not found in memory list
+      API.get(`/applications/${targetId}`).then(res => {
+        if (res.data?.success && res.data.data) {
+          const freshApp = res.data.data;
+          const mappedApp = {
+            id: freshApp._id,
+            _id: freshApp._id,
+            camsId: freshApp.camsId || `CAMS-${freshApp._id.slice(-5)}`,
+            studentName: freshApp.student?.name || 'N/A',
+            passportNo: freshApp.student?.passportNo || 'N/A',
+            universityName: freshApp.university?.name || 'N/A',
+            courseName: freshApp.course?.title || 'N/A',
+            intake: freshApp.course?.intakes?.[0]?.title || 'September 2026',
+            secondaryStatus: freshApp.status || 'Pending',
+            paymentStatus: freshApp.paymentStatus || 'Pending',
+            dateAdded: new Date(freshApp.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
+            country: freshApp.university?.country || 'India',
+            assignedBdm: freshApp.partner?.name || 'Direct',
+            assignedExecutive: 'Rahul Krishnan',
+            statusHistory: freshApp.statusHistory || [],
+            dob: freshApp.student?.dob ? new Date(freshApp.student.dob).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : null,
+            studentEmail: freshApp.student?.email || null,
+            phone: freshApp.student?.phone || null,
+            documents: freshApp.documents || [],
+            notes: freshApp.notes || '',
+            applicationComments: freshApp.applicationComments || [],
+            pickedBy: freshApp.pickedBy || null,
+            submittedByStaff: freshApp.submittedByStaff || null
+          };
+          setSingleViewApp(mappedApp);
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+          document.getElementById('admin-main-content')?.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+      }).catch(err => console.warn('Could not fetch target application:', err.message));
     }
   }, [initialSelectedAppId, applications]);
 
-  // When singleViewApp is set, sync comments & notes
-  useEffect(() => {
-    if (singleViewApp) {
-      const initialComments = [];
-      if (singleViewApp.statusHistory && Array.isArray(singleViewApp.statusHistory)) {
-        singleViewApp.statusHistory.forEach(sh => {
-          if (sh.remarks) {
-            initialComments.push({
-              id: sh._id || Date.now() + Math.random(),
+  // Helper to compile all comments & audit history into a unified timeline
+  const buildCommentsList = (appObj) => {
+    if (!appObj) return [];
+    const list = [];
+    const seen = new Set();
+
+    // 1. Direct Application Comments (from DB applicationComments thread)
+    if (appObj.applicationComments && Array.isArray(appObj.applicationComments)) {
+      appObj.applicationComments.forEach((ac, idx) => {
+        if (ac && ac.text) {
+          const key = ac._id ? String(ac._id) : `ac-${ac.createdAt || idx}-${ac.text}`;
+          if (!seen.has(key)) {
+            seen.add(key);
+            let authorName = ac.author || 'User';
+            let roleName = 'Staff';
+            if (authorName.includes('(')) {
+              const match = authorName.match(/^(.*?)\s*\((.*?)\)$/);
+              if (match) {
+                authorName = match[1];
+                roleName = match[2];
+              }
+            } else if (authorName.toLowerCase().includes('agent')) {
+              roleName = 'Agent';
+            }
+            list.push({
+              id: key,
+              author: authorName,
+              role: roleName,
+              text: ac.text,
+              type: 'comment',
+              createdAt: ac.createdAt || appObj.dateAdded || new Date().toISOString()
+            });
+          }
+        }
+      });
+    }
+
+    // 2. Lifecycle Status Transitions & Remarks
+    if (appObj.statusHistory && Array.isArray(appObj.statusHistory)) {
+      appObj.statusHistory.forEach((sh, idx) => {
+        if (sh && sh.remarks) {
+          const key = sh._id ? String(sh._id) : `sh-${sh.updatedAt || sh.date || idx}-${sh.remarks}`;
+          if (!seen.has(key)) {
+            seen.add(key);
+            list.push({
+              id: key,
               author: sh.updatedBy?.name || sh.by || 'System Staff',
-              role: sh.updatedBy?.role || 'Staff',
+              role: sh.updatedBy?.role || 'Status Update',
               text: sh.remarks,
               status: sh.status,
+              type: 'status',
               createdAt: sh.updatedAt || sh.date || new Date().toISOString()
             });
           }
-        });
-      }
-
-      if (singleViewApp.notes) {
-        initialComments.push({
-          id: 'initial-note',
-          author: singleViewApp.submittedByStaff?.name || 'Submitting Staff',
-          role: 'Filing Staff',
-          text: singleViewApp.notes,
-          createdAt: singleViewApp.dateAdded || new Date().toISOString()
-        });
-      }
-
-      setCommentsList(initialComments);
-      setAppEditNotes(singleViewApp.notes || '');
+        }
+      });
     }
-  }, [singleViewApp]);
+
+    // 3. Initial Submission Notes
+    if (appObj.notes && typeof appObj.notes === 'string' && appObj.notes.trim()) {
+      const key = `note-${appObj.id || appObj._id || 'init'}`;
+      if (!seen.has(key)) {
+        seen.add(key);
+        list.push({
+          id: key,
+          author: appObj.submittedByStaff?.name || appObj.assignedBdm || 'Filing Agent',
+          role: 'Application Note',
+          text: appObj.notes,
+          type: 'note',
+          createdAt: appObj.dateAdded || new Date().toISOString()
+        });
+      }
+    }
+
+    // Sort: newest first
+    list.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+    return list;
+  };
+
+  // When singleViewApp is set, sync comments & notes and fetch fresh data from backend
+  useEffect(() => {
+    if (singleViewApp) {
+      setCommentsList(buildCommentsList(singleViewApp));
+      setAppEditNotes(singleViewApp.notes || '');
+
+      const appId = singleViewApp.id || singleViewApp._id;
+      if (appId) {
+        API.get(`/applications/${appId}`).then(res => {
+          if (res.data?.success && res.data.data) {
+            const freshApp = res.data.data;
+            const updatedApp = {
+              ...singleViewApp,
+              ...freshApp,
+              id: freshApp._id || singleViewApp.id,
+              applicationComments: freshApp.applicationComments || [],
+              statusHistory: freshApp.statusHistory || singleViewApp.statusHistory || [],
+              notes: freshApp.notes !== undefined ? freshApp.notes : singleViewApp.notes
+            };
+            setSingleViewApp(prev => ({
+              ...prev,
+              applicationComments: freshApp.applicationComments || [],
+              statusHistory: freshApp.statusHistory || prev?.statusHistory || [],
+              notes: freshApp.notes !== undefined ? freshApp.notes : prev?.notes
+            }));
+            setCommentsList(buildCommentsList(updatedApp));
+            if (freshApp.notes !== undefined) {
+              setAppEditNotes(freshApp.notes);
+            }
+          }
+        }).catch(err => {
+          console.warn('Could not refresh application comments:', err.message);
+        });
+      }
+    }
+  }, [singleViewApp?.id || singleViewApp?._id]);
 
   const handleAddComment = async (e) => {
     e.preventDefault();
     if (!newCommentInput.trim() || !singleViewApp) return;
 
+    const textToSave = newCommentInput.trim();
     const newCommentObj = {
-      id: Date.now(),
+      id: `local-${Date.now()}`,
       author: currentUser?.name || 'Super Admin',
       role: currentUser?.role || 'Admin',
-      text: newCommentInput.trim(),
+      text: textToSave,
+      type: 'comment',
       createdAt: new Date().toISOString()
     };
 
     setCommentsList(prev => [newCommentObj, ...prev]);
-    const textToSave = newCommentInput.trim();
     setNewCommentInput('');
 
     try {
       const appId = singleViewApp.id || singleViewApp._id;
-      await API.post(`/applications/${appId}/comments`, {
+      const res = await API.post(`/applications/${appId}/comments`, {
         text: textToSave
-      }).catch(async () => {
-        await API.put(`/applications/${appId}`, {
-          remarks: `Comment added: ${textToSave}`
-        }).catch(() => {});
       });
+
+      if (res.data?.success && Array.isArray(res.data.data)) {
+        const updatedApp = {
+          ...singleViewApp,
+          applicationComments: res.data.data
+        };
+        setSingleViewApp(updatedApp);
+        setCommentsList(buildCommentsList(updatedApp));
+      }
       toast.success('Comment posted successfully!');
       if (onRefresh) onRefresh();
     } catch (err) {
@@ -625,7 +787,7 @@ export default function Applications({ applications, referralAgents = [], intake
       </div>
 
       {/* SuperAdmin / Admin Overview Cards */}
-      {(currentUser?.role === 'SuperAdmin' || currentUser?.role === 'Director') && (
+      {(['SuperAdmin', 'Super Admin', 'Admin', 'Director'].includes(currentUser?.role)) && (
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div className="bg-white border border-slate-200 border-t-4 border-t-amber-500 p-4 rounded-2xl shadow-xs">
             <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest block">Waiting / Unpicked Applications</span>
@@ -863,7 +1025,7 @@ export default function Applications({ applications, referralAgents = [], intake
                             </button>
                           )}
 
-                          {(currentUser?.role === 'SuperAdmin' || currentUser?.role === 'Director') && (
+                          {(['SuperAdmin', 'Super Admin', 'Admin', 'Director'].includes(currentUser?.role)) && (
                             <button
                               onClick={() => {
                                 setAssignModalApp(app);
@@ -876,7 +1038,7 @@ export default function Applications({ applications, referralAgents = [], intake
                             </button>
                           )}
 
-                          {(currentUser?.role === 'CRE' || currentUser?.role === 'SuperAdmin') && displayStatus === 'Submitted' && (
+                          {(['CRE', 'SuperAdmin', 'Super Admin', 'Admin', 'Director'].includes(currentUser?.role)) && displayStatus === 'Submitted' && (
                             <button
                               onClick={() => handleForwardToOperations(app)}
                               className="bg-purple-600 hover:bg-purple-700 text-white font-extrabold text-[9px] px-2.5 py-1.5 rounded-xl transition-all shadow-3xs inline-flex items-center gap-1 cursor-pointer uppercase tracking-wider"
@@ -1018,7 +1180,7 @@ export default function Applications({ applications, referralAgents = [], intake
                 </button>
               )}
 
-              {(currentUser?.role === 'SuperAdmin' || currentUser?.role === 'Director') && (
+              {(['SuperAdmin', 'Super Admin', 'Admin', 'Director'].includes(currentUser?.role)) && (
                 <button
                   onClick={() => {
                     setAssignModalApp(singleViewApp);
@@ -1544,8 +1706,8 @@ export default function Applications({ applications, referralAgents = [], intake
 
       {/* Status Update Modal */}
       {statusModalApp && createPortal(
-        <div className="fixed inset-0 z-[9999] bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-100 space-y-5 animate-in fade-in zoom-in-95 my-auto">
+        <div className="fixed inset-0 z-[9999] bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-100 space-y-5 animate-in fade-in zoom-in-95 my-auto max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <div>
                 <h3 className="text-sm font-black text-slate-900">Update Application Status</h3>
@@ -1616,8 +1778,8 @@ export default function Applications({ applications, referralAgents = [], intake
 
       {/* Assign Staff Modal */}
       {assignModalApp && createPortal(
-        <div className="fixed inset-0 z-[9999] bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-100 space-y-5 animate-in fade-in zoom-in-95 my-auto">
+        <div className="fixed inset-0 z-[9999] bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-100 space-y-5 animate-in fade-in zoom-in-95 my-auto max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <div>
                 <h3 className="text-sm font-black text-slate-900 uppercase tracking-wider">Assign Staff Member</h3>
@@ -1687,7 +1849,7 @@ export default function Applications({ applications, referralAgents = [], intake
 
       {/* DOCUMENT PREVIEW MODAL PORTAL */}
       {previewModalDoc && createPortal(
-        <div className="fixed inset-0 z-[9999] bg-black/75 backdrop-blur-xs p-3 sm:p-6 flex justify-center items-center select-none animate-fade-in">
+        <div className="fixed inset-0 z-[9999] bg-black/75 backdrop-blur-xs p-3 sm:p-6 flex justify-center items-center select-none animate-fade-in overflow-y-auto">
           <div className="relative bg-white border border-slate-200 border-t-4 border-t-[#D99A1C] rounded-3xl p-4 sm:p-6 w-full max-w-3xl shadow-2xl flex flex-col my-auto max-h-[85vh]">
             <div className="flex justify-between items-center pb-3 border-b border-slate-100 shrink-0">
               <div className="space-y-0.5">

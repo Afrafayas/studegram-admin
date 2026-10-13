@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { useAuth } from '../context/AuthContext';
 import ApplicationChatDrawer from '../components/ApplicationChatDrawer';
 import { useToast } from '../context/ToastContext';
 
-export default function Students({ clients, setClients, applications, intakes = [] }) {
+export default function Students({ clients, setClients, applications, intakes = [], initialSelectedStudentId }) {
   const toast = useToast();
   const { currentUser, addAuditLog } = useAuth();
   const [selectedChatApp, setSelectedChatApp] = useState(null);
@@ -13,6 +14,51 @@ export default function Students({ clients, setClients, applications, intakes = 
   const [partnerFilter, setPartnerFilter] = useState('All');
   const [intakeFilter, setIntakeFilter] = useState('All');
   const [expandedId, setExpandedId] = useState(null);
+
+  // Auto-expand student dossier if navigated from notification
+  useEffect(() => {
+    if (!initialSelectedStudentId || !clients || clients.length === 0) return;
+
+    const studentList = clients.filter(c => c.type === 'Student');
+    if (studentList.length === 0) return;
+
+    let targetId = initialSelectedStudentId;
+    let notifObj = null;
+    if (typeof initialSelectedStudentId === 'object' && initialSelectedStudentId !== null) {
+      targetId = initialSelectedStudentId.targetId || initialSelectedStudentId.relatedId || initialSelectedStudentId.studentId || initialSelectedStudentId.id;
+      notifObj = initialSelectedStudentId.notification || initialSelectedStudentId;
+    }
+
+    const targetStr = String(targetId || '').trim().toLowerCase();
+    const notifText = notifObj ? `${notifObj.title || ''} ${notifObj.message || ''}`.toLowerCase() : '';
+
+    let found = studentList.find(s => {
+      const sId = String(s.id || s._id || '').toLowerCase();
+      const sCode = String(s.studentCode || '').toLowerCase();
+      const sEmail = String(s.email || '').toLowerCase();
+      return (targetStr && (sId === targetStr || sCode === targetStr || sEmail === targetStr));
+    });
+
+    if (!found && targetStr) {
+      found = studentList.find(s => {
+        const sName = (s.name || '').toLowerCase();
+        return sName && (sName.includes(targetStr) || targetStr.includes(sName));
+      });
+    }
+
+    if (!found && notifText) {
+      found = studentList.find(s => {
+        const sName = (s.name || '').toLowerCase();
+        return sName && notifText.includes(sName);
+      });
+    }
+
+    if (found) {
+      setExpandedId(found.id);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      document.getElementById('admin-main-content')?.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  }, [initialSelectedStudentId, clients]);
   
   // Pagination State
   const [currentPage, setCurrentPage] = useState(1);
@@ -460,9 +506,9 @@ export default function Students({ clients, setClients, applications, intakes = 
         )}
       </div>
 
-      {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs select-none">
-          <div className="bg-white border border-[#E2E8F0] border-t-4 border-t-[#D99A1C] rounded-2xl p-6 w-full max-w-md shadow-2xl space-y-4 animate-in zoom-in-95 duration-150">
+      {isModalOpen && createPortal(
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-xs select-none p-4 overflow-y-auto">
+          <div className="bg-white border border-[#E2E8F0] border-t-4 border-t-[#D99A1C] rounded-2xl p-6 w-full max-w-md shadow-2xl space-y-4 animate-in zoom-in-95 duration-150 max-h-[90vh] overflow-y-auto my-auto">
             <div className="flex justify-between items-center pb-2 border-b border-slate-100">
               <div>
                 <h3 className="text-xs font-black text-slate-900 uppercase tracking-wider">Onboard Student Profile</h3>
@@ -573,7 +619,8 @@ export default function Students({ clients, setClients, applications, intakes = 
               </div>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {selectedChatApp && (
