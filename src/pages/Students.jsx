@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { useAuth } from '../context/AuthContext';
 import ApplicationChatDrawer from '../components/ApplicationChatDrawer';
 import { useToast } from '../context/ToastContext';
@@ -504,9 +505,9 @@ export default function Students({ clients, setClients, applications, intakes = 
         )}
       </div>
 
-      {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs select-none">
-          <div className="bg-white border border-[#E2E8F0] border-t-4 border-t-[#D99A1C] rounded-2xl p-6 w-full max-w-md shadow-2xl space-y-4 animate-in zoom-in-95 duration-150">
+      {isModalOpen && createPortal(
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-xs select-none p-4 overflow-y-auto">
+          <div className="bg-white border border-[#E2E8F0] border-t-4 border-t-[#D99A1C] rounded-2xl p-6 w-full max-w-md shadow-2xl space-y-4 animate-in zoom-in-95 duration-150 max-h-[90vh] overflow-y-auto my-auto">
             <div className="flex justify-between items-center pb-2 border-b border-slate-100">
               <div>
                 <h3 className="text-xs font-black text-slate-900 uppercase tracking-wider">Onboard Student Profile</h3>
@@ -617,7 +618,8 @@ export default function Students({ clients, setClients, applications, intakes = 
               </div>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {selectedChatApp && (

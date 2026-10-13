@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { useAuth } from '../context/AuthContext';
 import API from '../api/axios';
 
@@ -16,8 +17,8 @@ export default function SettingsPortal({
   verificationDocuments, setVerificationDocuments,
   stagedActions, setStagedActions
 }) {
-  const { currentUser, addAuditLog } = useAuth();
-  const isWritable = currentUser?.role === 'Director';
+  const { currentUser, addAuditLog, hasPermission } = useAuth();
+  const isWritable = ['SuperAdmin', 'Super Admin', 'Admin', 'Director'].includes(currentUser?.role) || (typeof hasPermission === 'function' && hasPermission('settings:edit'));
 
   const [modalType, setModalType] = useState(null);
 
@@ -74,7 +75,7 @@ export default function SettingsPortal({
 
   const openAddModal = (type) => {
     if (!isWritable) {
-      alert("Permission Denied: System configurations can only be modified by the Director.");
+      alert("Permission Denied: System configurations can only be modified by SuperAdmin, Admin, or Director.");
       return;
     }
     setModalType(type);
@@ -188,15 +189,15 @@ export default function SettingsPortal({
     const token = localStorage.getItem('admin_token');
     try {
       if (token && token !== 'mock-admin-token-12345') {
-        await fetch(`/api/universities/${univId}`, {
-          method: 'DELETE',
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
+        const response = await API.delete(`/universities/${univId}`);
+        if (!response.data?.success) {
+          throw new Error(response.data?.message || 'Failed to delete university');
+        }
       }
       setUniversities(prev => prev.filter(u => (typeof u === 'object' ? (u._id || u.id) : u) !== univId));
       addAuditLog('DELETE_UNIVERSITY', 'Settings', nameStr, `Deleted university: ${nameStr}`);
     } catch (err) {
-      alert(err.message);
+      alert(err.response?.data?.message || err.message);
     }
   };
 
@@ -307,15 +308,15 @@ export default function SettingsPortal({
     const token = localStorage.getItem('admin_token');
     try {
       if (token && token !== 'mock-admin-token-12345') {
-        await fetch(`/api/courses/${courseId}`, {
-          method: 'DELETE',
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
+        const response = await API.delete(`/courses/${courseId}`);
+        if (!response.data?.success) {
+          throw new Error(response.data?.message || 'Failed to delete course');
+        }
       }
       setCourses(prev => prev.filter(c => (typeof c === 'object' ? (c._id || c.id) : c) !== courseId));
       addAuditLog('DELETE_COURSE', 'Settings', titleStr, `Deleted course: ${titleStr}`);
     } catch (err) {
-      alert(err.message);
+      alert(err.response?.data?.message || err.message);
     }
   };
 
@@ -406,15 +407,15 @@ export default function SettingsPortal({
     const token = localStorage.getItem('admin_token');
     try {
       if (token && token !== 'mock-admin-token-12345') {
-        await fetch(`/api/intakes/${intakeId}`, {
-          method: 'DELETE',
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
+        const response = await API.delete(`/intakes/${intakeId}`);
+        if (!response.data?.success) {
+          throw new Error(response.data?.message || 'Failed to delete intake');
+        }
       }
       setIntakes(prev => prev.filter(i => (typeof i === 'object' ? (i._id || i.id) : i) !== intakeId));
       addAuditLog('DELETE_INTAKE', 'Settings', titleStr, `Deleted intake: ${titleStr}`);
     } catch (err) {
-      alert(err.message);
+      alert(err.response?.data?.message || err.message);
     }
   };
 
@@ -484,7 +485,7 @@ export default function SettingsPortal({
 
   const handleDeleteSettingItem = async (itemToDelete, listStateSetter, typeLabel) => {
     if (!isWritable) {
-      alert("Permission Denied: System configurations can only be modified by the Director.");
+      alert("Permission Denied: System configurations can only be modified by SuperAdmin, Admin, or Director.");
       return;
     }
 
@@ -518,13 +519,13 @@ export default function SettingsPortal({
 
       addAuditLog(`DELETE_SETTING_${(typeLabel || 'ITEM').toUpperCase()}`, 'Settings', itemLabel, `Deleted ${typeLabel || 'item'}: ${itemLabel}`);
     } catch (err) {
-      alert(err.message);
+      alert(err.response?.data?.message || err.message);
     }
   };
 
   const handleDeleteItem = (itemToDelete, listStateSetter, typeLabel) => {
     if (!isWritable) {
-      alert("Permission Denied: System configurations can only be modified by the Director.");
+      alert("Permission Denied: System configurations can only be modified by SuperAdmin, Admin, or Director.");
       return;
     }
     listStateSetter(prev => prev.filter(item => item !== itemToDelete));
@@ -533,7 +534,7 @@ export default function SettingsPortal({
 
   const handleDeleteDoc = (siNo, docName) => {
     if (!isWritable) {
-      alert("Permission Denied: System configurations can only be modified by the Director.");
+      alert("Permission Denied: System configurations can only be modified by SuperAdmin, Admin, or Director.");
       return;
     }
     setCourseDocuments(prev => prev.filter(doc => doc.siNo !== siNo).map((doc, idx) => ({ ...doc, siNo: idx + 1 })));
@@ -542,7 +543,7 @@ export default function SettingsPortal({
 
   const handleDeleteAgent = (siNo, agentName) => {
     if (!isWritable) {
-      alert("Permission Denied: System configurations can only be modified by the Director.");
+      alert("Permission Denied: System configurations can only be modified by SuperAdmin, Admin, or Director.");
       return;
     }
     setReferralAgents(prev => prev.filter(agent => agent.siNo !== siNo).map((agent, idx) => ({ ...agent, siNo: idx + 1 })));
@@ -551,7 +552,7 @@ export default function SettingsPortal({
 
   const moveStage = (index, direction) => {
     if (!isWritable) {
-      alert("Permission Denied: System configurations can only be modified by the Director.");
+      alert("Permission Denied: System configurations can only be modified by SuperAdmin, Admin, or Director.");
       return;
     }
     if (direction === 'up' && index === 0) return;
@@ -1294,14 +1295,14 @@ export default function SettingsPortal({
       {!isWritable && (
         <div className="bg-blue-50 border border-blue-200 text-blue-700 text-[11.5px] font-bold py-2.5 px-4 rounded-xl flex items-center gap-2 shadow-xs mb-5">
           <span>ℹ️</span>
-          <span>View-Only Mode: You are logged in as {currentUser?.role}. Portal configuration changes are reserved for the Director role.</span>
+          <span>View-Only Mode: You are logged in as {currentUser?.role}. Portal configuration changes are reserved for Administrator and Director roles.</span>
         </div>
       )}
       {renderSettingsView()}
 
-      {modalType && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs select-none">
-          <div className="bg-white border border-[#E2E8F0] border-t-4 border-t-[#D99A1C] rounded-2xl p-6 w-full max-w-md shadow-2xl space-y-4 animate-in zoom-in-95 duration-150">
+      {modalType && createPortal(
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-xs select-none p-4 overflow-y-auto">
+          <div className="bg-white border border-[#E2E8F0] border-t-4 border-t-[#D99A1C] rounded-2xl p-6 w-full max-w-md shadow-2xl space-y-4 animate-in zoom-in-95 duration-150 max-h-[90vh] overflow-y-auto my-auto">
             
             <div className="flex justify-between items-center pb-2 border-b border-slate-100">
               <h3 className="text-xs font-black text-slate-950 uppercase tracking-wider">
@@ -1829,12 +1830,13 @@ export default function SettingsPortal({
               </form>
             )}
           </div>
-        </div>
+        </div>,
+        document.body
       )}
       {/* Single View University Modal */}
-      {viewingUniv && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fade-in">
-          <div className="bg-white border border-slate-200 rounded-2xl max-w-2xl w-full p-6 shadow-2xl space-y-5 relative max-h-[90vh] overflow-y-auto">
+      {viewingUniv && createPortal(
+        <div className="fixed inset-0 z-[9999] bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 animate-fade-in overflow-y-auto">
+          <div className="bg-white border border-slate-200 rounded-2xl max-w-2xl w-full p-6 shadow-2xl space-y-5 relative max-h-[90vh] overflow-y-auto my-auto">
             <button
               onClick={() => setViewingUniv(null)}
               className="absolute top-4 right-4 text-slate-400 hover:text-slate-700 text-lg font-bold w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center cursor-pointer"
@@ -1934,12 +1936,13 @@ export default function SettingsPortal({
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
       {/* Single View Course Modal */}
-      {viewingCourse && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fade-in">
-          <div className="bg-white border border-slate-200 rounded-2xl max-w-xl w-full p-6 shadow-2xl space-y-5 relative max-h-[90vh] overflow-y-auto">
+      {viewingCourse && createPortal(
+        <div className="fixed inset-0 z-[9999] bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fade-in overflow-y-auto">
+          <div className="bg-white border border-slate-200 rounded-2xl max-w-xl w-full p-6 shadow-2xl space-y-5 relative max-h-[90vh] overflow-y-auto my-auto">
             <button
               onClick={() => setViewingCourse(null)}
               className="absolute top-4 right-4 text-slate-400 hover:text-slate-700 text-lg font-bold w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center cursor-pointer"
@@ -2021,13 +2024,14 @@ export default function SettingsPortal({
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* Single View Intake Modal */}
-      {viewingIntake && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fade-in">
-          <div className="bg-white border border-slate-200 rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-5 relative max-h-[90vh] overflow-y-auto">
+      {viewingIntake && createPortal(
+        <div className="fixed inset-0 z-[9999] bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fade-in overflow-y-auto">
+          <div className="bg-white border border-slate-200 rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-5 relative max-h-[90vh] overflow-y-auto my-auto">
             <button
               onClick={() => setViewingIntake(null)}
               className="absolute top-4 right-4 text-slate-400 hover:text-slate-700 text-lg font-bold w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center cursor-pointer"
@@ -2095,7 +2099,8 @@ export default function SettingsPortal({
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

@@ -711,7 +711,7 @@ export default function AdminPortal({ onLogout }) {
             }}
           />
 
-          <main key={`${activeTab}-${activeSubTab}`} className="flex-1 flex flex-col pb-16 animate-fade-in-up">
+          <main key={`${activeTab}-${activeSubTab}`} className="flex-1 flex flex-col pb-16 animate-fade-in">
             {renderActiveTabContent()}
           </main>
         </div>

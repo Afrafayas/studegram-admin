@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { useAuth } from '../context/AuthContext';
 import API, { API_BASE_URL } from '../api/axios';
 import { useToast } from '../context/ToastContext';
@@ -236,16 +237,16 @@ export default function ApplicationChatDrawer({ app, onClose }) {
     return lower.endsWith('.jpg') || lower.endsWith('.jpeg') || lower.endsWith('.png') || lower.startsWith('blob:');
   };
 
-  return (
+  return typeof document !== 'undefined' ? createPortal(
     <>
       {/* Backdrop overlay */}
       <div 
         onClick={onClose}
-        className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-40 transition-opacity duration-300 animate-in fade-in"
+        className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-[9998] transition-opacity duration-300 animate-in fade-in"
       />
 
       {/* Slide-over Panel */}
-      <aside className="fixed inset-y-0 right-0 max-w-md w-full bg-white shadow-2xl z-50 flex flex-col h-full transform transition-transform duration-300 animate-in slide-in-from-right">
+      <aside className="fixed inset-y-0 right-0 max-w-md w-full bg-white shadow-2xl z-[9999] flex flex-col h-full transform transition-transform duration-300 animate-in slide-in-from-right">
         {/* Drawer Header */}
         <div className="p-4 border-b border-slate-100 bg-[#0A0A0F] text-slate-100 flex items-center justify-between">
           <div className="space-y-1">
@@ -774,6 +775,7 @@ export default function ApplicationChatDrawer({ app, onClose }) {
           </div>
         )}
       </aside>
-    </>
-  );
+    </>,
+    document.body
+  ) : null;
 }

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import API from '../api/axios';
@@ -612,14 +613,13 @@ export default function CommissionManagement({ clients = [], referralAgents = []
       </div>
 
       {/* Set Commission Modal */}
-      {modalCommission && (
+      {modalCommission && createPortal(
         <div 
-          onClick={() => !isSavingModal && setModalCommission(null)}
-          className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-in fade-in duration-200 select-none"
+          className="fixed inset-0 z-[9999] bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-200 select-none overflow-y-auto"
         >
           <div 
             onClick={(e) => e.stopPropagation()}
-            className="bg-white border border-slate-200 rounded-2xl p-6 max-w-lg w-full shadow-2xl relative space-y-5 animate-in zoom-in-95 duration-150"
+            className="bg-white border border-slate-200 rounded-2xl p-6 max-w-lg w-full shadow-2xl relative space-y-5 animate-in zoom-in-95 duration-150 max-h-[90vh] overflow-y-auto my-auto"
           >
             {/* Modal Header */}
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
@@ -805,7 +805,8 @@ export default function CommissionManagement({ clients = [], referralAgents = []
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

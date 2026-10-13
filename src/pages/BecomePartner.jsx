@@ -1760,7 +1760,7 @@ export default function BecomePartner({ clients = [], setClients, applications =
 
       {/* EDIT PARTNER MODAL PORTAL */}
       {editingPartner && createPortal(
-        <div className="fixed inset-0 z-[9999] bg-black/75 backdrop-blur-xs p-4 flex justify-center items-center select-none animate-fade-in">
+        <div className="fixed inset-0 z-[9999] bg-black/75 backdrop-blur-xs p-4 flex justify-center items-center select-none animate-fade-in overflow-y-auto">
           <div className="bg-white border border-slate-200 border-t-4 border-t-[#D99A1C] rounded-3xl p-6 w-full max-w-xl shadow-2xl space-y-4 max-h-[90vh] flex flex-col my-auto overflow-y-auto">
             <div className="flex justify-between items-center pb-3 border-b border-slate-100 shrink-0">
               <div>
@@ -2050,7 +2050,7 @@ export default function BecomePartner({ clients = [], setClients, applications =
 
       {/* DOCUMENT PREVIEW MODAL PORTAL */}
       {previewModalDoc && createPortal(
-        <div className="fixed inset-0 z-[9999] bg-black/75 backdrop-blur-xs p-3 sm:p-6 flex justify-center items-center select-none animate-fade-in">
+        <div className="fixed inset-0 z-[9999] bg-black/75 backdrop-blur-xs p-3 sm:p-6 flex justify-center items-center select-none animate-fade-in overflow-y-auto">
           <div className="relative bg-white border border-slate-200 border-t-4 border-t-[#D99A1C] rounded-3xl p-4 sm:p-6 w-full max-w-3xl shadow-2xl flex flex-col my-auto max-h-[85vh]">
             <div className="flex justify-between items-center pb-3 border-b border-slate-100 shrink-0">
               <div className="space-y-0.5">
@@ -2141,16 +2141,13 @@ export default function BecomePartner({ clients = [], setClients, applications =
       {/* STATUS CHANGE CONFIRMATION MODAL (APPROVE / DEACTIVATE / ACTIVATE) */}
       {confirmStatusModal && createPortal(
         <div
-          onClick={() => {
-            if (!isProcessingStatus) setConfirmStatusModal(null);
-          }}
-          className="fixed inset-0 z-[9999] bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 animate-fade-in select-none"
+          className="fixed inset-0 z-[9999] bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 animate-fade-in select-none overflow-y-auto"
           role="dialog"
           aria-modal="true"
         >
           <div
             onClick={(e) => e.stopPropagation()}
-            className="bg-white border border-slate-200 rounded-3xl p-6 sm:p-7 max-w-md w-full shadow-2xl relative space-y-4 animate-in zoom-in-95 duration-150 text-center"
+            className="bg-white border border-slate-200 rounded-3xl p-6 sm:p-7 max-w-md w-full shadow-2xl relative space-y-4 animate-in zoom-in-95 duration-150 text-center max-h-[90vh] overflow-y-auto my-auto"
           >
             {/* Close button */}
             <button

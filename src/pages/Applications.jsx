@@ -663,7 +663,7 @@ export default function Applications({ applications, referralAgents = [], intake
       </div>
 
       {/* SuperAdmin / Admin Overview Cards */}
-      {(currentUser?.role === 'SuperAdmin' || currentUser?.role === 'Director') && (
+      {(['SuperAdmin', 'Super Admin', 'Admin', 'Director'].includes(currentUser?.role)) && (
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div className="bg-white border border-slate-200 border-t-4 border-t-amber-500 p-4 rounded-2xl shadow-xs">
             <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest block">Waiting / Unpicked Applications</span>
@@ -901,7 +901,7 @@ export default function Applications({ applications, referralAgents = [], intake
                             </button>
                           )}
 
-                          {(currentUser?.role === 'SuperAdmin' || currentUser?.role === 'Director') && (
+                          {(['SuperAdmin', 'Super Admin', 'Admin', 'Director'].includes(currentUser?.role)) && (
                             <button
                               onClick={() => {
                                 setAssignModalApp(app);
@@ -914,7 +914,7 @@ export default function Applications({ applications, referralAgents = [], intake
                             </button>
                           )}
 
-                          {(currentUser?.role === 'CRE' || currentUser?.role === 'SuperAdmin') && displayStatus === 'Submitted' && (
+                          {(['CRE', 'SuperAdmin', 'Super Admin', 'Admin', 'Director'].includes(currentUser?.role)) && displayStatus === 'Submitted' && (
                             <button
                               onClick={() => handleForwardToOperations(app)}
                               className="bg-purple-600 hover:bg-purple-700 text-white font-extrabold text-[9px] px-2.5 py-1.5 rounded-xl transition-all shadow-3xs inline-flex items-center gap-1 cursor-pointer uppercase tracking-wider"
@@ -1056,7 +1056,7 @@ export default function Applications({ applications, referralAgents = [], intake
                 </button>
               )}
 
-              {(currentUser?.role === 'SuperAdmin' || currentUser?.role === 'Director') && (
+              {(['SuperAdmin', 'Super Admin', 'Admin', 'Director'].includes(currentUser?.role)) && (
                 <button
                   onClick={() => {
                     setAssignModalApp(singleViewApp);
@@ -1582,8 +1582,8 @@ export default function Applications({ applications, referralAgents = [], intake
 
       {/* Status Update Modal */}
       {statusModalApp && createPortal(
-        <div className="fixed inset-0 z-[9999] bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-100 space-y-5 animate-in fade-in zoom-in-95 my-auto">
+        <div className="fixed inset-0 z-[9999] bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-100 space-y-5 animate-in fade-in zoom-in-95 my-auto max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <div>
                 <h3 className="text-sm font-black text-slate-900">Update Application Status</h3>
@@ -1654,8 +1654,8 @@ export default function Applications({ applications, referralAgents = [], intake
 
       {/* Assign Staff Modal */}
       {assignModalApp && createPortal(
-        <div className="fixed inset-0 z-[9999] bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-100 space-y-5 animate-in fade-in zoom-in-95 my-auto">
+        <div className="fixed inset-0 z-[9999] bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-100 space-y-5 animate-in fade-in zoom-in-95 my-auto max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <div>
                 <h3 className="text-sm font-black text-slate-900 uppercase tracking-wider">Assign Staff Member</h3>
@@ -1725,7 +1725,7 @@ export default function Applications({ applications, referralAgents = [], intake
 
       {/* DOCUMENT PREVIEW MODAL PORTAL */}
       {previewModalDoc && createPortal(
-        <div className="fixed inset-0 z-[9999] bg-black/75 backdrop-blur-xs p-3 sm:p-6 flex justify-center items-center select-none animate-fade-in">
+        <div className="fixed inset-0 z-[9999] bg-black/75 backdrop-blur-xs p-3 sm:p-6 flex justify-center items-center select-none animate-fade-in overflow-y-auto">
           <div className="relative bg-white border border-slate-200 border-t-4 border-t-[#D99A1C] rounded-3xl p-4 sm:p-6 w-full max-w-3xl shadow-2xl flex flex-col my-auto max-h-[85vh]">
             <div className="flex justify-between items-center pb-3 border-b border-slate-100 shrink-0">
               <div className="space-y-0.5">

@@ -88,7 +88,7 @@ export default function AdminSidebar({
             )}
 
             {/* Admin-Report Collapsible */}
-            {(currentUser.role === 'Director' || currentUser.role === 'COO' || currentUser.role === 'Country Head') && (
+            {(['SuperAdmin', 'Super Admin', 'Admin', 'Director', 'COO', 'Country Head'].includes(currentUser.role)) && (
               <div>
                 <button
                   onClick={() => setAdminReportsOpen(!adminReportsOpen)}
@@ -217,7 +217,7 @@ export default function AdminSidebar({
             )}
 
             {/* Staff Activity Log */}
-            {(hasPermission('staff:view') || hasPermission('activity_logs:view') || ['SuperAdmin', 'Director', 'COO', 'Country Head'].includes(currentUser.role)) && (
+            {(hasPermission('staff:view') || hasPermission('activity_logs:view') || ['SuperAdmin', 'Super Admin', 'Admin', 'Director', 'COO', 'Country Head'].includes(currentUser.role)) && (
               <button
                 onClick={() => handleTabClick('staff-activity-logs')}
                 className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left text-xs font-semibold transition-all duration-150 ${
@@ -236,7 +236,7 @@ export default function AdminSidebar({
 
 
             {/* Roles & Permissions */}
-            {(currentUser.role === 'Director' || currentUser.role === 'COO' || currentUser.role === 'SuperAdmin' || hasPermission('roles:manage')) && (
+            {(['SuperAdmin', 'Super Admin', 'Admin', 'Director', 'COO'].includes(currentUser.role) || hasPermission('roles:manage')) && (
               <button
                 onClick={() => handleTabClick('roles')}
                 className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left text-xs font-semibold transition-all duration-150 ${
