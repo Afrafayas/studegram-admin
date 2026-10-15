@@ -54,9 +54,74 @@ export default function StaffActivityLogs() {
   const toast = useToast();
   const { currentUser, hasPermission } = useAuth();
 
-  // Navigation / Single View State
-  const [selectedStaffId, setSelectedStaffId] = useState(null);
-  const [activeSubView, setActiveSubView] = useState('summary'); // 'summary' | 'sessions'
+  // Navigation / Single View State (persists across page refresh)
+  const [selectedStaffId, setSelectedStaffId] = useState(() => {
+    const params = new URLSearchParams(window.location.search);
+    return params.get('staffId') || localStorage.getItem('studegram_admin_selected_staff_id') || null;
+  });
+  const [activeSubView, setActiveSubView] = useState(() => {
+    return localStorage.getItem('studegram_admin_staff_logs_subview') || 'summary';
+  });
+
+  useEffect(() => {
+    localStorage.setItem('studegram_admin_staff_logs_subview', activeSubView);
+  }, [activeSubView]);
+
+  useEffect(() => {
+    if (selectedStaffId) {
+      localStorage.setItem('studegram_admin_selected_staff_id', String(selectedStaffId));
+      try {
+        const url = new URL(window.location.href);
+        if (url.searchParams.get('staffId') !== String(selectedStaffId)) {
+          url.searchParams.set('staffId', String(selectedStaffId));
+          window.history.replaceState({}, '', url.toString());
+        }
+      } catch (e) {}
+    } else {
+      localStorage.removeItem('studegram_admin_selected_staff_id');
+      try {
+        const url = new URL(window.location.href);
+        if (url.searchParams.has('staffId')) {
+          url.searchParams.delete('staffId');
+          window.history.replaceState({}, '', url.toString());
+        }
+      } catch (e) {}
+    }
+  }, [selectedStaffId]);
+
+  useEffect(() => {
+    const handleClearStaffSingleView = () => {
+      setSelectedStaffId(null);
+      localStorage.removeItem('studegram_admin_selected_staff_id');
+      try {
+        const url = new URL(window.location.href);
+        url.searchParams.delete('staffId');
+        window.history.replaceState({}, '', url.toString());
+      } catch (e) {}
+    };
+
+    window.addEventListener('clear_single_view_staff', handleClearStaffSingleView);
+    return () => {
+      window.removeEventListener('clear_single_view_staff', handleClearStaffSingleView);
+    };
+  }, []);
+
+  useEffect(() => {
+    const handlePopState = () => {
+      const params = new URLSearchParams(window.location.search);
+      const urlStaffId = params.get('staffId');
+      if (!urlStaffId) {
+        setSelectedStaffId(null);
+      } else if (urlStaffId !== selectedStaffId) {
+        setSelectedStaffId(urlStaffId);
+      }
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+    };
+  }, [selectedStaffId]);
 
   // Data States
   const [staffSummary, setStaffSummary] = useState([]);

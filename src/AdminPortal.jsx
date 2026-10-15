@@ -115,7 +115,8 @@ export default function AdminPortal({ onLogout }) {
           passportNo: app.student?.passportNo || 'N/A',
           universityName: app.university?.name || 'N/A',
           courseName: app.course?.title || 'N/A',
-          intake: app.course?.intakes?.[0]?.title || 'September 2026',
+          level: app.level || 'Undergraduate (UG)',
+          intake: app.intake || app.course?.intakes?.[0]?.title || 'September 2026',
           secondaryStatus: (app.status === 'Paid Students' || app.paymentStatus === 'Paid') ? 'Paid Students' : (app.status || 'Pending'),
           paymentStatus: app.paymentStatus || 'Pending',
           dateAdded: new Date(app.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
@@ -472,6 +473,8 @@ export default function AdminPortal({ onLogout }) {
           student: studentId,
           university: newApp.universityId,
           course: newApp.courseId,
+          level: newApp.level || 'Undergraduate (UG)',
+          intake: newApp.intake || 'September 2026',
           status: 'Pending',
           documents: newApp.documents || [],
           notes: newApp.notes
@@ -560,12 +563,24 @@ export default function AdminPortal({ onLogout }) {
       return (
         <DailyReport 
           applications={scopedApplications} 
-          onNavigateToBecomePartner={() => setActiveTab('become-partner')} 
+          onNavigateToBecomePartner={() => {
+            setSelectedPartnerForSingleView(null);
+            localStorage.removeItem('studegram_admin_single_view_partner_id');
+            localStorage.removeItem('studegram_admin_single_view_partner');
+            window.dispatchEvent(new CustomEvent('clear_single_view_partner'));
+            setActiveTab('become-partner');
+          }}
           onNavigateToCreateApplication={() => {
             setActiveTab('sales-order');
             setActiveSubTab('study');
           }}
-          onNavigateToApplications={() => setActiveTab('applications')}
+          onNavigateToApplications={() => {
+            setSelectedAppIdForSingleView(null);
+            localStorage.removeItem('studegram_admin_single_view_app_id');
+            localStorage.removeItem('studegram_admin_single_view_app');
+            window.dispatchEvent(new CustomEvent('clear_single_view_app'));
+            setActiveTab('applications');
+          }}
         />
       );
     }
@@ -683,11 +698,36 @@ export default function AdminPortal({ onLogout }) {
     }
   }, [activeTab, activeSubTab, selectedAppIdForSingleView, selectedPartnerForSingleView, selectedStudentForSingleView]);
 
+  const handleSelectTab = (tabId) => {
+    if (tabId === 'applications' && activeTab === 'applications') {
+      setSelectedAppIdForSingleView(null);
+      localStorage.removeItem('studegram_admin_single_view_app_id');
+      localStorage.removeItem('studegram_admin_single_view_app');
+      window.dispatchEvent(new CustomEvent('clear_single_view_app'));
+    }
+    if ((tabId === 'become-partner' || tabId === 'partners') && (activeTab === 'become-partner' || activeTab === 'partners')) {
+      setSelectedPartnerForSingleView(null);
+      localStorage.removeItem('studegram_admin_single_view_partner_id');
+      localStorage.removeItem('studegram_admin_single_view_partner');
+      window.dispatchEvent(new CustomEvent('clear_single_view_partner'));
+    }
+    if ((tabId === 'staff-activity-logs' || tabId === 'activity-logs') && (activeTab === 'staff-activity-logs' || activeTab === 'activity-logs')) {
+      localStorage.removeItem('studegram_admin_selected_staff_id');
+      window.dispatchEvent(new CustomEvent('clear_single_view_staff'));
+    }
+    if (tabId === 'students' && activeTab === 'students') {
+      setSelectedStudentForSingleView(null);
+      localStorage.removeItem('studegram_admin_expanded_student_id');
+      window.dispatchEvent(new CustomEvent('clear_student_expanded'));
+    }
+    setActiveTab(tabId);
+  };
+
   return (
     <div className="h-screen w-full bg-[#F0F2F5] flex font-sans text-slate-900 select-text overflow-hidden">
       <AdminSidebar 
         activeTab={activeTab}
-        setActiveTab={setActiveTab}
+        setActiveTab={handleSelectTab}
         activeSubTab={activeSubTab}
         setActiveSubTab={setActiveSubTab}
         onLogout={() => setShowLogoutConfirmModal(true)}

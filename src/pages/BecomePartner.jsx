@@ -80,23 +80,69 @@ export default function BecomePartner({ clients = [], setClients, applications =
   const { addAuditLog } = useAuth();
 
   // Sub-view mode: 'directory' | 'onboard'
-  const [subView, setSubView] = useState('directory');
+  const [subView, setSubView] = useState(() => {
+    return localStorage.getItem('studegram_admin_partner_subview') || 'directory';
+  });
 
-  // Single Partner Detailed View State
-  const [singleViewPartner, setSingleViewPartner] = useState(null);
+  // Single Partner Detailed View State (persists across page refresh)
+  const [singleViewPartner, setSingleViewPartner] = useState(() => {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const urlPartnerId = params.get('agentId') || params.get('partnerId');
+      const savedPartnerId = urlPartnerId || localStorage.getItem('studegram_admin_single_view_partner_id');
+      const savedPartnerJson = localStorage.getItem('studegram_admin_single_view_partner');
 
-  // Auto-navigate to Partner Single View Dossier when initialSelectedPartnerId is passed from notifications
+      let parsedPartner = null;
+      if (savedPartnerJson) {
+        try {
+          parsedPartner = JSON.parse(savedPartnerJson);
+        } catch (e) {}
+      }
+
+      const partnerList = (clients || []).filter(c => c.type === 'Agent');
+      if (partnerList.length > 0) {
+        const targetSearchId = savedPartnerId || parsedPartner?.id || parsedPartner?._id || parsedPartner?.partnerCode;
+        if (targetSearchId) {
+          const targetStr = String(targetSearchId).trim().toLowerCase();
+          const found = partnerList.find(p => 
+            String(p.id || p._id || '').toLowerCase() === targetStr ||
+            String(p.partnerCode || '').toLowerCase() === targetStr ||
+            String(p.email || '').toLowerCase() === targetStr
+          );
+          if (found) {
+            return { ...(parsedPartner || {}), ...found };
+          }
+        }
+      }
+
+      if (parsedPartner && (parsedPartner.id || parsedPartner._id)) {
+        return parsedPartner;
+      }
+    } catch (e) {}
+    return null;
+  });
+
   useEffect(() => {
-    if (!initialSelectedPartnerId) return;
+    localStorage.setItem('studegram_admin_partner_subview', subView);
+  }, [subView]);
+
+  // Auto-navigate to Partner Single View Dossier when initialSelectedPartnerId is passed from notifications or saved ID
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const urlPartnerId = params.get('agentId') || params.get('partnerId');
+    const savedPartnerId = urlPartnerId || localStorage.getItem('studegram_admin_single_view_partner_id');
+    const effectiveTarget = initialSelectedPartnerId || (!singleViewPartner ? savedPartnerId : null);
+
+    if (!effectiveTarget) return;
 
     const partnerList = (clients || []).filter(c => c.type === 'Agent');
     if (partnerList.length === 0) return;
 
-    let targetId = initialSelectedPartnerId;
+    let targetId = effectiveTarget;
     let notifObj = null;
-    if (typeof initialSelectedPartnerId === 'object' && initialSelectedPartnerId !== null) {
-      targetId = initialSelectedPartnerId.targetId || initialSelectedPartnerId.relatedId || initialSelectedPartnerId.partnerId || initialSelectedPartnerId.id;
-      notifObj = initialSelectedPartnerId.notification || initialSelectedPartnerId;
+    if (typeof effectiveTarget === 'object' && effectiveTarget !== null) {
+      targetId = effectiveTarget.targetId || effectiveTarget.relatedId || effectiveTarget.partnerId || effectiveTarget.id;
+      notifObj = effectiveTarget.notification || effectiveTarget;
     }
 
     const targetStr = String(targetId || '').trim().toLowerCase();
@@ -135,7 +181,7 @@ export default function BecomePartner({ clients = [], setClients, applications =
     }
 
     // 4. Fallback: If it's a partner notification, open the pending partner or first partner
-    if (!found) {
+    if (!found && notifObj) {
       found = partnerList.find(p => p.status === 'Pending') || partnerList[0];
     }
 
@@ -145,7 +191,99 @@ export default function BecomePartner({ clients = [], setClients, applications =
       window.scrollTo({ top: 0, behavior: 'smooth' });
       document.getElementById('admin-main-content')?.scrollTo({ top: 0, behavior: 'smooth' });
     }
-  }, [initialSelectedPartnerId, clients]);
+  }, [initialSelectedPartnerId, clients, singleViewPartner]);
+
+  // Keep singleViewPartner in sync with live clients prop
+  useEffect(() => {
+    if (!singleViewPartner || !clients || clients.length === 0) return;
+    const partnerList = clients.filter(c => c.type === 'Agent');
+    const currentId = String(singleViewPartner.id || singleViewPartner._id || singleViewPartner.partnerCode || '').toLowerCase();
+    const updated = partnerList.find(p => 
+      String(p.id || p._id || '').toLowerCase() === currentId ||
+      String(p.partnerCode || '').toLowerCase() === currentId ||
+      String(p.email || '').toLowerCase() === currentId
+    );
+    if (updated) {
+      setSingleViewPartner(prev => ({ ...(prev || {}), ...updated }));
+    }
+  }, [clients]);
+
+  // Persist singleViewPartner to localStorage and URL search params
+  useEffect(() => {
+    if (singleViewPartner) {
+      const partnerId = singleViewPartner.id || singleViewPartner._id || singleViewPartner.partnerCode;
+      if (partnerId) {
+        localStorage.setItem('studegram_admin_single_view_partner_id', String(partnerId));
+      }
+      try {
+        localStorage.setItem('studegram_admin_single_view_partner', JSON.stringify(singleViewPartner));
+      } catch (e) {
+        console.warn('Could not serialize singleViewPartner:', e);
+      }
+
+      try {
+        const url = new URL(window.location.href);
+        if (partnerId && url.searchParams.get('agentId') !== String(partnerId)) {
+          url.searchParams.set('agentId', String(partnerId));
+          window.history.replaceState({}, '', url.toString());
+        }
+      } catch (e) {}
+    } else {
+      localStorage.removeItem('studegram_admin_single_view_partner_id');
+      localStorage.removeItem('studegram_admin_single_view_partner');
+      try {
+        const url = new URL(window.location.href);
+        if (url.searchParams.has('agentId') || url.searchParams.has('partnerId')) {
+          url.searchParams.delete('agentId');
+          url.searchParams.delete('partnerId');
+          window.history.replaceState({}, '', url.toString());
+        }
+      } catch (e) {}
+    }
+  }, [singleViewPartner]);
+
+  // Listen for clear events (e.g. from sidebar clicks or navigation away)
+  useEffect(() => {
+    const handleClearSingleViewPartner = () => {
+      setSingleViewPartner(null);
+      localStorage.removeItem('studegram_admin_single_view_partner_id');
+      localStorage.removeItem('studegram_admin_single_view_partner');
+      try {
+        const url = new URL(window.location.href);
+        url.searchParams.delete('agentId');
+        url.searchParams.delete('partnerId');
+        window.history.replaceState({}, '', url.toString());
+      } catch (e) {}
+    };
+
+    window.addEventListener('clear_single_view_partner', handleClearSingleViewPartner);
+    return () => {
+      window.removeEventListener('clear_single_view_partner', handleClearSingleViewPartner);
+    };
+  }, []);
+
+  // Handle browser Back / Forward history navigation
+  useEffect(() => {
+    const handlePopState = () => {
+      const params = new URLSearchParams(window.location.search);
+      const urlPartnerId = params.get('agentId') || params.get('partnerId');
+      if (!urlPartnerId) {
+        setSingleViewPartner(null);
+      } else if (!singleViewPartner || (singleViewPartner.id !== urlPartnerId && singleViewPartner._id !== urlPartnerId && singleViewPartner.partnerCode !== urlPartnerId)) {
+        const partnerList = (clients || []).filter(c => c.type === 'Agent');
+        const found = partnerList.find(p => 
+          String(p.id || p._id || '').toLowerCase() === urlPartnerId.toLowerCase() ||
+          String(p.partnerCode || '').toLowerCase() === urlPartnerId.toLowerCase()
+        );
+        if (found) setSingleViewPartner(found);
+      }
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+    };
+  }, [clients, singleViewPartner]);
 
   // Document Preview Modal State
   const [previewModalDoc, setPreviewModalDoc] = useState(null);
