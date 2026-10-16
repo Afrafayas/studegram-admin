@@ -35,6 +35,7 @@ export default function SalesOrderStudy({
 
   const [university, setUniversity] = useState('');
   const [course, setCourse] = useState('');
+  const [level, setLevel] = useState('Undergraduate (UG)');
   const [intake, setIntake] = useState(() => getInitialId(intakes));
   const [partner, setPartner] = useState('');
   const [notes, setNotes] = useState('');
@@ -123,6 +124,7 @@ export default function SalesOrderStudy({
         universityName: uName,
         courseId: course,
         courseName: cName,
+        level: level || 'Undergraduate (UG)',
         intakeId: intake,
         intake: iName,
         partnerId: partner || null,
@@ -143,6 +145,7 @@ export default function SalesOrderStudy({
         universityName: uName,
         courseId: course,
         courseName: cName,
+        level: level || 'Undergraduate (UG)',
         intakeId: intake,
         intake: iName,
         partnerId: partner || null,
@@ -435,6 +438,22 @@ export default function SalesOrderStudy({
                   ⚠️ No courses registered under this university.
                 </p>
               )}
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">
+                Level of Study <span className="text-rose-500">*</span>
+              </label>
+              <select
+                value={level}
+                onChange={(e) => setLevel(e.target.value)}
+                required
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs font-semibold focus:outline-none focus:bg-white focus:ring-1 focus:ring-[#D99A1C] focus:border-[#D99A1C] cursor-pointer"
+              >
+                <option value="Undergraduate (UG)">Undergraduate (UG)</option>
+                <option value="Postgraduate (PG)">Postgraduate (PG)</option>
+                <option value="PhD">PhD</option>
+              </select>
             </div>
 
             <div className="space-y-1.5">

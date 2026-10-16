@@ -13,20 +13,88 @@ export default function Students({ clients, setClients, applications, intakes = 
   const [statusFilter, setStatusFilter] = useState('All');
   const [partnerFilter, setPartnerFilter] = useState('All');
   const [intakeFilter, setIntakeFilter] = useState('All');
-  const [expandedId, setExpandedId] = useState(null);
+  const [expandedId, setExpandedId] = useState(() => {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      return params.get('studentId') || localStorage.getItem('studegram_admin_expanded_student_id') || null;
+    } catch (e) {
+      return null;
+    }
+  });
 
-  // Auto-expand student dossier if navigated from notification
   useEffect(() => {
-    if (!initialSelectedStudentId || !clients || clients.length === 0) return;
+    if (expandedId) {
+      localStorage.setItem('studegram_admin_expanded_student_id', String(expandedId));
+      try {
+        const url = new URL(window.location.href);
+        if (url.searchParams.get('studentId') !== String(expandedId)) {
+          url.searchParams.set('studentId', String(expandedId));
+          window.history.replaceState({}, '', url.toString());
+        }
+      } catch (e) {}
+    } else {
+      localStorage.removeItem('studegram_admin_expanded_student_id');
+      try {
+        const url = new URL(window.location.href);
+        if (url.searchParams.has('studentId')) {
+          url.searchParams.delete('studentId');
+          window.history.replaceState({}, '', url.toString());
+        }
+      } catch (e) {}
+    }
+  }, [expandedId]);
+
+  useEffect(() => {
+    const handleClearStudentExpanded = () => {
+      setExpandedId(null);
+      localStorage.removeItem('studegram_admin_expanded_student_id');
+      try {
+        const url = new URL(window.location.href);
+        url.searchParams.delete('studentId');
+        window.history.replaceState({}, '', url.toString());
+      } catch (e) {}
+    };
+
+    window.addEventListener('clear_student_expanded', handleClearStudentExpanded);
+    return () => {
+      window.removeEventListener('clear_student_expanded', handleClearStudentExpanded);
+    };
+  }, []);
+
+  useEffect(() => {
+    const handlePopState = () => {
+      const params = new URLSearchParams(window.location.search);
+      const urlStudentId = params.get('studentId');
+      if (!urlStudentId) {
+        setExpandedId(null);
+      } else if (urlStudentId !== expandedId) {
+        setExpandedId(urlStudentId);
+      }
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+    };
+  }, [expandedId]);
+
+  // Auto-expand student dossier if navigated from notification or saved ID
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const urlStudentId = params.get('studentId');
+    const savedStudentId = urlStudentId || localStorage.getItem('studegram_admin_expanded_student_id');
+    const effectiveTarget = initialSelectedStudentId || (!expandedId ? savedStudentId : null);
+
+    if (!effectiveTarget || !clients || clients.length === 0) return;
 
     const studentList = clients.filter(c => c.type === 'Student');
     if (studentList.length === 0) return;
 
-    let targetId = initialSelectedStudentId;
+    let targetId = effectiveTarget;
     let notifObj = null;
-    if (typeof initialSelectedStudentId === 'object' && initialSelectedStudentId !== null) {
-      targetId = initialSelectedStudentId.targetId || initialSelectedStudentId.relatedId || initialSelectedStudentId.studentId || initialSelectedStudentId.id;
-      notifObj = initialSelectedStudentId.notification || initialSelectedStudentId;
+    if (typeof effectiveTarget === 'object' && effectiveTarget !== null) {
+      targetId = effectiveTarget.targetId || effectiveTarget.relatedId || effectiveTarget.studentId || effectiveTarget.id;
+      notifObj = effectiveTarget.notification || effectiveTarget;
     }
 
     const targetStr = String(targetId || '').trim().toLowerCase();
@@ -58,7 +126,7 @@ export default function Students({ clients, setClients, applications, intakes = 
       window.scrollTo({ top: 0, behavior: 'smooth' });
       document.getElementById('admin-main-content')?.scrollTo({ top: 0, behavior: 'smooth' });
     }
-  }, [initialSelectedStudentId, clients]);
+  }, [initialSelectedStudentId, clients, expandedId]);
   
   // Pagination State
   const [currentPage, setCurrentPage] = useState(1);

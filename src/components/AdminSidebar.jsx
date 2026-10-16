@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 
 export default function AdminSidebar({ 
@@ -13,7 +13,19 @@ export default function AdminSidebar({
   const { currentUser, hasPermission } = useAuth();
   const [salesOrderOpen, setSalesOrderOpen] = useState(true);
   const [settingsOpen, setSettingsOpen] = useState(true);
-  const [adminReportsOpen, setAdminReportsOpen] = useState(false);
+  const [adminReportsOpen, setAdminReportsOpen] = useState(() => activeTab === 'admin-report');
+
+  useEffect(() => {
+    if (activeTab === 'admin-report') {
+      setAdminReportsOpen(true);
+    }
+    if (activeTab === 'settings') {
+      setSettingsOpen(true);
+    }
+    if (activeTab === 'sales-order' || activeTab === 'new-application') {
+      setSalesOrderOpen(true);
+    }
+  }, [activeTab]);
 
   const handleTabClick = (tabId) => {
     setActiveTab(tabId);

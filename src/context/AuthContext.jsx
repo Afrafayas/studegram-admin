@@ -330,6 +330,14 @@ export function AuthProvider({ children }) {
     localStorage.removeItem('admin_session_id');
     localStorage.removeItem('studegram_admin_active_tab');
     localStorage.removeItem('studegram_admin_active_subtab');
+    localStorage.removeItem('studegram_admin_single_view_app_id');
+    localStorage.removeItem('studegram_admin_single_view_app');
+    localStorage.removeItem('studegram_admin_single_view_partner_id');
+    localStorage.removeItem('studegram_admin_single_view_partner');
+    localStorage.removeItem('studegram_admin_partner_subview');
+    localStorage.removeItem('studegram_admin_selected_staff_id');
+    localStorage.removeItem('studegram_admin_staff_logs_subview');
+    localStorage.removeItem('studegram_admin_expanded_student_id');
   };
 
 

@@ -41,14 +41,33 @@ export default function AdminPortal({ onLogout }) {
     setIsDataSyncing(true);
     try {
       // Execute all API requests concurrently in parallel
-      const [intakeRes, univRes, courseRes, partnerRes, studentRes, appRes] = await Promise.all([
+      const [intakeRes, univRes, courseRes, partnerRes, studentRes, appRes, userRes] = await Promise.all([
         API.get('/intakes').catch(err => ({ error: err })),
         API.get('/universities').catch(err => ({ error: err })),
         API.get('/courses').catch(err => ({ error: err })),
         API.get('/partners').catch(err => ({ error: err })),
         API.get('/students').catch(err => ({ error: err })),
-        API.get('/applications').catch(err => ({ error: err }))
+        API.get('/applications').catch(err => ({ error: err })),
+        API.get('/users').catch(err => ({ error: err }))
       ]);
+
+      if (userRes.data?.success && Array.isArray(userRes.data.data) && userRes.data.data.length > 0) {
+        const mappedUsers = userRes.data.data.map(u => ({
+          id: u._id,
+          _id: u._id,
+          name: u.name,
+          email: u.email,
+          phone: u.phone || '',
+          role: u.role || 'Executive',
+          status: u.status || 'Active',
+          country: u.country || (u.countries && u.countries[0]) || 'India',
+          countries: (Array.isArray(u.countries) && u.countries.length > 0) ? u.countries : [u.country || 'India'],
+          accessLevel: `${u.role} (${['SuperAdmin', 'Super Admin', 'Director', 'Admin'].includes(u.role) ? 'Full Access' : 'Read & Write'})`,
+          dateAdded: new Date(u.createdAt || Date.now()).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
+          passwordType: 'Configured & Active'
+        }));
+        setStaffList(mappedUsers);
+      }
 
       if (intakeRes.data?.success && Array.isArray(intakeRes.data.data) && intakeRes.data.data.length > 0) {
         setIntakes(intakeRes.data.data);
@@ -110,17 +129,22 @@ export default function AdminPortal({ onLogout }) {
         const mapped = appRes.data.data.map((app, idx) => ({
           id: app._id,
           _id: app._id,
-          camsId: `CAMS-${10001 + idx}`,
+          camsId: app.camsId || (app._id ? `CAMS-${app._id.toString().slice(-5).toUpperCase()}` : `CAMS-${10001 + idx}`),
           studentName: app.student?.name || 'N/A',
           passportNo: app.student?.passportNo || 'N/A',
           universityName: app.university?.name || 'N/A',
           courseName: app.course?.title || 'N/A',
-          intake: app.course?.intakes?.[0]?.title || 'September 2026',
+          level: app.level || 'Undergraduate (UG)',
+          intake: app.intake || app.course?.intakes?.[0]?.title || 'September 2026',
+          status: app.status || 'Submitted',
           secondaryStatus: (app.status === 'Paid Students' || app.paymentStatus === 'Paid') ? 'Paid Students' : (app.status || 'Pending'),
           paymentStatus: app.paymentStatus || 'Pending',
           dateAdded: new Date(app.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
           country: app.university?.country || 'India',
-          assignedBdm: app.partner?.name || 'Direct',
+          partner: app.partner || null,
+          partnerName: app.partner?.name || (typeof app.partner === 'string' ? app.partner : 'Direct'),
+          partnerCompanyName: app.partner?.companyName || app.partner?.name || 'Direct',
+          assignedBdm: app.partner?.companyName || app.partner?.name || 'Direct',
           assignedExecutive: 'Rahul Krishnan',
           statusHistory: app.statusHistory || [],
           dob: app.student?.dob ? new Date(app.student.dob).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : null,
@@ -129,7 +153,7 @@ export default function AdminPortal({ onLogout }) {
           documents: app.documents || [],
           notes: app.notes || '',
           applicationComments: app.applicationComments || [],
-          pickedBy: app.pickedBy || null,
+          pickedBy: (app.pickedBy && (app.pickedBy.id || app.pickedBy._id || (app.pickedBy.name && app.pickedBy.name.trim()))) ? app.pickedBy : null,
           submittedByStaff: app.submittedByStaff || null,
           commissionClaimed: app.commissionClaimed || false,
           commissionStatus: app.commissionStatus || 'Unclaimed',
@@ -472,6 +496,8 @@ export default function AdminPortal({ onLogout }) {
           student: studentId,
           university: newApp.universityId,
           course: newApp.courseId,
+          level: newApp.level || 'Undergraduate (UG)',
+          intake: newApp.intake || 'September 2026',
           status: 'Pending',
           documents: newApp.documents || [],
           notes: newApp.notes
@@ -560,12 +586,24 @@ export default function AdminPortal({ onLogout }) {
       return (
         <DailyReport 
           applications={scopedApplications} 
-          onNavigateToBecomePartner={() => setActiveTab('become-partner')} 
+          onNavigateToBecomePartner={() => {
+            setSelectedPartnerForSingleView(null);
+            localStorage.removeItem('studegram_admin_single_view_partner_id');
+            localStorage.removeItem('studegram_admin_single_view_partner');
+            window.dispatchEvent(new CustomEvent('clear_single_view_partner'));
+            setActiveTab('become-partner');
+          }}
           onNavigateToCreateApplication={() => {
             setActiveTab('sales-order');
             setActiveSubTab('study');
           }}
-          onNavigateToApplications={() => setActiveTab('applications')}
+          onNavigateToApplications={() => {
+            setSelectedAppIdForSingleView(null);
+            localStorage.removeItem('studegram_admin_single_view_app_id');
+            localStorage.removeItem('studegram_admin_single_view_app');
+            window.dispatchEvent(new CustomEvent('clear_single_view_app'));
+            setActiveTab('applications');
+          }}
         />
       );
     }
@@ -683,11 +721,36 @@ export default function AdminPortal({ onLogout }) {
     }
   }, [activeTab, activeSubTab, selectedAppIdForSingleView, selectedPartnerForSingleView, selectedStudentForSingleView]);
 
+  const handleSelectTab = (tabId) => {
+    if (tabId === 'applications' && activeTab === 'applications') {
+      setSelectedAppIdForSingleView(null);
+      localStorage.removeItem('studegram_admin_single_view_app_id');
+      localStorage.removeItem('studegram_admin_single_view_app');
+      window.dispatchEvent(new CustomEvent('clear_single_view_app'));
+    }
+    if ((tabId === 'become-partner' || tabId === 'partners') && (activeTab === 'become-partner' || activeTab === 'partners')) {
+      setSelectedPartnerForSingleView(null);
+      localStorage.removeItem('studegram_admin_single_view_partner_id');
+      localStorage.removeItem('studegram_admin_single_view_partner');
+      window.dispatchEvent(new CustomEvent('clear_single_view_partner'));
+    }
+    if ((tabId === 'staff-activity-logs' || tabId === 'activity-logs') && (activeTab === 'staff-activity-logs' || activeTab === 'activity-logs')) {
+      localStorage.removeItem('studegram_admin_selected_staff_id');
+      window.dispatchEvent(new CustomEvent('clear_single_view_staff'));
+    }
+    if (tabId === 'students' && activeTab === 'students') {
+      setSelectedStudentForSingleView(null);
+      localStorage.removeItem('studegram_admin_expanded_student_id');
+      window.dispatchEvent(new CustomEvent('clear_student_expanded'));
+    }
+    setActiveTab(tabId);
+  };
+
   return (
     <div className="h-screen w-full bg-[#F0F2F5] flex font-sans text-slate-900 select-text overflow-hidden">
       <AdminSidebar 
         activeTab={activeTab}
-        setActiveTab={setActiveTab}
+        setActiveTab={handleSelectTab}
         activeSubTab={activeSubTab}
         setActiveSubTab={setActiveSubTab}
         onLogout={() => setShowLogoutConfirmModal(true)}
