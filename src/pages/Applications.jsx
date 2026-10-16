@@ -25,7 +25,12 @@ const isPicked = (app) => {
   const pb = app.pickedBy;
   if (!pb) return false;
   if (typeof pb === 'object') {
-    return !!(pb.name || pb.email || pb._id || pb.id);
+    return !!(
+      pb.id ||
+      pb._id ||
+      (typeof pb.name === 'string' && pb.name.trim().length > 0) ||
+      (typeof pb.email === 'string' && pb.email.trim().length > 0)
+    );
   }
   if (typeof pb === 'string') {
     return pb.trim().length > 0 && pb.trim() !== 'null' && pb.trim() !== 'undefined';
@@ -112,6 +117,7 @@ export default function Applications({ applications, referralAgents = [], intake
   const [statusFilter, setStatusFilter] = useState('All');
   const [partnerFilter, setPartnerFilter] = useState('All');
   const [intakeFilter, setIntakeFilter] = useState('All');
+  const [ownershipTab, setOwnershipTab] = useState('All'); // 'All' | 'My Picked' | 'Unpicked'
   const [selectedChatApp, setSelectedChatApp] = useState(null);
 
   // Single View Application State (persists across page refresh)
@@ -372,11 +378,15 @@ export default function Applications({ applications, referralAgents = [], intake
             courseName: freshApp.course?.title || 'N/A',
             level: freshApp.level || 'Undergraduate (UG)',
             intake: freshApp.intake || freshApp.course?.intakes?.[0]?.title || 'September 2026',
+            status: freshApp.status || 'Submitted',
             secondaryStatus: freshApp.status || 'Pending',
             paymentStatus: freshApp.paymentStatus || 'Pending',
             dateAdded: new Date(freshApp.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
             country: freshApp.university?.country || 'India',
-            assignedBdm: freshApp.partner?.name || 'Direct',
+            partner: freshApp.partner || null,
+            partnerName: freshApp.partner?.name || 'Direct',
+            partnerCompanyName: freshApp.partner?.companyName || freshApp.partner?.name || 'Direct',
+            assignedBdm: freshApp.partner?.companyName || freshApp.partner?.name || 'Direct',
             assignedExecutive: 'Rahul Krishnan',
             statusHistory: freshApp.statusHistory || [],
             dob: freshApp.student?.dob ? new Date(freshApp.student.dob).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : null,
@@ -385,7 +395,7 @@ export default function Applications({ applications, referralAgents = [], intake
             documents: freshApp.documents || [],
             notes: freshApp.notes || '',
             applicationComments: freshApp.applicationComments || [],
-            pickedBy: freshApp.pickedBy || null,
+            pickedBy: (freshApp.pickedBy && (freshApp.pickedBy.id || freshApp.pickedBy._id || (freshApp.pickedBy.name && freshApp.pickedBy.name.trim()))) ? freshApp.pickedBy : null,
             submittedByStaff: freshApp.submittedByStaff || null
           };
           setSingleViewApp(mappedApp);
@@ -686,10 +696,10 @@ export default function Applications({ applications, referralAgents = [], intake
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(5);
 
-  // Reset page on filter change
+  // Reset page on filter or tab change
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm, statusFilter, partnerFilter, intakeFilter]);
+  }, [searchTerm, statusFilter, partnerFilter, intakeFilter, ownershipTab]);
 
   // Status update modal state
   const [statusModalApp, setStatusModalApp] = useState(null);
@@ -759,7 +769,6 @@ export default function Applications({ applications, referralAgents = [], intake
   };
 
   // Application Pick / Assign / Forward Handlers
-  const [ownershipTab, setOwnershipTab] = useState('All'); // 'All' | 'My Picked' | 'Unpicked'
   const [assignModalApp, setAssignModalApp] = useState(null);
   const [selectedStaffId, setSelectedStaffId] = useState('');
   const [staffOptions, setStaffOptions] = useState(() => {
@@ -847,7 +856,7 @@ export default function Applications({ applications, referralAgents = [], intake
 
     try {
       const appId = assignModalApp.id || assignModalApp._id;
-      await API.put(`/applications/${appId}/assign`, { pickedBy: selectedStaffId }).catch(() => {});
+      await API.put(`/applications/${appId}/assign`, { staffId: selectedStaffId, pickedBy: selectedStaffId }).catch(() => {});
     } catch (err) {}
 
     if (singleViewApp && (singleViewApp.id === assignModalApp.id || singleViewApp._id === assignModalApp._id)) {
@@ -881,35 +890,70 @@ export default function Applications({ applications, referralAgents = [], intake
 
   // Search and filter applications
   const filteredApps = applications.filter(app => {
-    const camsId = app.camsId || '';
-    const student = app.studentName || '';
-    const univ = app.universityName || '';
-    const course = app.courseName || '';
-    const partner = app.assignedBdm || 'Direct';
+    const term = searchTerm.toLowerCase().trim();
+    let searchMatch = true;
+    if (term) {
+      const camsId = (app.camsId || '').toLowerCase();
+      const student = (app.studentName || '').toLowerCase();
+      const passport = (app.passportNo || '').toLowerCase();
+      const email = (app.studentEmail || '').toLowerCase();
+      const univ = (app.universityName || '').toLowerCase();
+      const course = (app.courseName || '').toLowerCase();
+      searchMatch = camsId.includes(term) ||
+                    student.includes(term) ||
+                    passport.includes(term) ||
+                    email.includes(term) ||
+                    univ.includes(term) ||
+                    course.includes(term);
+    }
 
-    const searchMatch = camsId.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                        student.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                        univ.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                        course.toLowerCase().includes(searchTerm.toLowerCase());
+    let statusMatch = true;
+    if (statusFilter !== 'All') {
+      const currentAppStatus = (app.secondaryStatus === 'Paid Students' || app.status === 'Paid Students' || app.paymentStatus === 'Paid')
+        ? 'Paid Students'
+        : (app.status || app.secondaryStatus || 'Submitted');
+      statusMatch = currentAppStatus.toLowerCase().trim() === statusFilter.toLowerCase().trim();
+    }
 
-    const currentAppStatus = app.secondaryStatus || app.status || 'Submitted';
-    const statusMatch = statusFilter === 'All' || currentAppStatus === statusFilter;
-    const partnerMatch = partnerFilter === 'All' || partner === partnerFilter;
-    const intakeMatch = intakeFilter === 'All' || (app.intake && app.intake.toLowerCase().includes(intakeFilter.toLowerCase()));
+    let partnerMatch = true;
+    if (partnerFilter !== 'All') {
+      if (partnerFilter === 'Direct') {
+        partnerMatch = !app.partner || app.assignedBdm === 'Direct' || app.partnerName === 'Direct';
+      } else {
+        const pf = partnerFilter.toLowerCase().trim();
+        const pName = (app.partnerName || app.partner?.name || app.assignedBdm || '').toLowerCase().trim();
+        const pCompany = (app.partnerCompanyName || app.partner?.companyName || '').toLowerCase().trim();
+        const pId = String(app.partner?._id || app.partner?.id || app.partner || '');
+        partnerMatch = pName === pf || pCompany === pf || pName.includes(pf) || pCompany.includes(pf) || pId === partnerFilter;
+      }
+    }
 
-    // Ownership Tab Filter
+    let intakeMatch = true;
+    if (intakeFilter !== 'All') {
+      const inf = intakeFilter.toLowerCase().trim();
+      const appIntake = (app.intake || '').toLowerCase().trim();
+      intakeMatch = appIntake === inf || appIntake.includes(inf);
+    }
+
+    // Ownership Tab Filter ('All' | 'My Picked' | 'Unpicked')
     let ownershipMatch = true;
-    const myId = currentUser?._id || currentUser?.id;
+    const myId = String(currentUser?._id || currentUser?.id || '').trim();
+    const myEmail = String(currentUser?.email || '').toLowerCase().trim();
     if (ownershipTab === 'My Picked') {
-      ownershipMatch = app.pickedBy && (app.pickedBy._id === myId || app.pickedBy.id === myId || app.pickedBy.email === currentUser?.email);
+      const pickerId = String(app.pickedBy?._id || app.pickedBy?.id || '').trim();
+      const pickerEmail = String(app.pickedBy?.email || '').toLowerCase().trim();
+      ownershipMatch = isPicked(app) && (
+        (myId && pickerId === myId) ||
+        (myEmail && pickerEmail === myEmail)
+      );
     } else if (ownershipTab === 'Unpicked') {
-      ownershipMatch = !app.pickedBy;
+      ownershipMatch = !isPicked(app);
     }
 
     return searchMatch && statusMatch && partnerMatch && intakeMatch && ownershipMatch;
   });
 
-  const unpickedCount = applications.filter(a => !a.pickedBy).length;
+  const unpickedCount = applications.filter(a => !isPicked(a)).length;
   const unrepliedCount = applications.filter(a => a.hasUnrepliedMessage).length;
 
   // Pagination Math
@@ -1089,7 +1133,7 @@ export default function Applications({ applications, referralAgents = [], intake
                 {paginatedApps.map((app) => {
                   const displayStatus = app.secondaryStatus || app.status || 'Submitted';
                   const isClosed = displayStatus.includes('Closed');
-                  const pickedStaffName = app.pickedBy?.name || app.pickedBy?.email || null;
+                  const pickedStaffName = typeof app.pickedBy === 'string' ? app.pickedBy : ((app.pickedBy?.name && app.pickedBy.name.trim()) || app.pickedBy?.email || null);
 
                   return (
                     <tr 
@@ -1126,9 +1170,9 @@ export default function Applications({ applications, referralAgents = [], intake
                         <p className="text-[10px] text-indigo-500 font-bold">{app.courseName} ({app.intake}){app.level ? ` • ${app.level}` : ''}</p>
                       </td>
                       <td className="px-6 py-4">
-                        {pickedStaffName ? (
+                        {isPicked(app) ? (
                           <span className="px-2.5 py-1 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-xl text-[10px] font-black">
-                            👤 {pickedStaffName}
+                            👤 {pickedStaffName || 'Picked Staff'}
                           </span>
                         ) : (
                           <span className="px-2.5 py-1 bg-amber-50 text-amber-700 border border-amber-200 rounded-xl text-[10px] font-black italic">
