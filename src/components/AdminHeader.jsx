@@ -42,17 +42,13 @@ export default function AdminHeader({
   const fetchNotifications = async () => {
     try {
       const res = await API.get('/notifications');
-      if (res.data?.success && Array.isArray(res.data.data) && res.data.data.length > 0) {
+      if (res.data?.success && Array.isArray(res.data.data)) {
         setNotifications(res.data.data);
-        setUnreadCount(res.data.data.filter(n => !n.isRead).length);
-      } else {
-        setNotifications(defaultNotifications);
-        setUnreadCount(defaultNotifications.filter(n => !n.isRead).length);
+        const actualUnread = res.data.data.filter(n => !n.isRead).length;
+        setUnreadCount(actualUnread);
       }
     } catch (err) {
       console.warn('Failed to fetch admin notifications:', err.message);
-      setNotifications(defaultNotifications);
-      setUnreadCount(defaultNotifications.filter(n => !n.isRead).length);
     }
   };
 
@@ -61,11 +57,16 @@ export default function AdminHeader({
   const [unreadCommentsCount, setUnreadCommentsCount] = useState(0);
   const [showComments, setShowComments] = useState(false);
 
+  const getCommentsStorageKey = () => {
+    const userId = currentUser?._id || currentUser?.id || 'admin';
+    return `studegram_admin_read_comments_${userId}`;
+  };
+
   const fetchComments = async () => {
     try {
       const res = await API.get('/applications/recent-comments');
       if (res.data?.success && Array.isArray(res.data.data)) {
-        const readStorageKey = 'studegram_admin_read_comments';
+        const readStorageKey = getCommentsStorageKey();
         let readIds = new Set();
         try {
           readIds = new Set(JSON.parse(localStorage.getItem(readStorageKey) || '[]'));
@@ -73,7 +74,7 @@ export default function AdminHeader({
 
         const updatedList = res.data.data.map(c => {
           const idKey = c.commentId || `${c.applicationId}_${c.createdAt}`;
-          const isMarkedRead = readIds.has(idKey);
+          const isMarkedRead = Boolean(c.isRead || readIds.has(idKey) || readIds.has(String(c.applicationId)));
           return {
             ...c,
             isUnreplied: isMarkedRead ? false : c.isUnreplied,
@@ -82,8 +83,8 @@ export default function AdminHeader({
         });
 
         setCommentsList(updatedList);
-        const unreplied = updatedList.filter(c => c.isUnreplied).length;
-        setUnreadCommentsCount(unreplied);
+        const actualUnreplied = updatedList.filter(c => c.isUnreplied).length;
+        setUnreadCommentsCount(actualUnreplied);
       }
     } catch (err) {
       console.warn('Failed to fetch comments for admin header:', err.message);
@@ -92,20 +93,32 @@ export default function AdminHeader({
 
   const handleCommentClick = (comm) => {
     setShowComments(false);
-    const readStorageKey = 'studegram_admin_read_comments';
-    try {
-      const readIds = new Set(JSON.parse(localStorage.getItem(readStorageKey) || '[]'));
-      const idKey = comm.commentId || `${comm.applicationId}_${comm.createdAt}`;
-      readIds.add(idKey);
-      localStorage.setItem(readStorageKey, JSON.stringify([...readIds]));
-    } catch (e) {}
 
-    setCommentsList(prev => prev.map(c => 
-      (c.applicationId === comm.applicationId)
-        ? { ...c, isUnreplied: false, isRead: true } 
-        : c
-    ));
-    setUnreadCommentsCount(prev => Math.max(0, prev - 1));
+    const isUnread = Boolean(comm.isUnreplied && !comm.isRead);
+
+    if (isUnread) {
+      const readStorageKey = getCommentsStorageKey();
+      try {
+        const readIds = new Set(JSON.parse(localStorage.getItem(readStorageKey) || '[]'));
+        const idKey = comm.commentId || `${comm.applicationId}_${comm.createdAt}`;
+        readIds.add(idKey);
+        readIds.add(String(comm.applicationId));
+        localStorage.setItem(readStorageKey, JSON.stringify([...readIds]));
+      } catch (e) {}
+
+      // Only decrement count for the specific read comment
+      setCommentsList(prev => prev.map(c => 
+        (c.applicationId === comm.applicationId || (comm.commentId && c.commentId === comm.commentId))
+          ? { ...c, isUnreplied: false, isRead: true } 
+          : c
+      ));
+      setUnreadCommentsCount(prev => Math.max(0, prev - 1));
+
+      if (comm.applicationId) {
+        const commentIdParam = comm.commentId || 'latest';
+        API.put(`/applications/${comm.applicationId}/comments/${commentIdParam}/read`).catch(() => {});
+      }
+    }
 
     if (onNavigate) onNavigate('applications', null, comm.applicationId);
   };
@@ -210,14 +223,17 @@ export default function AdminHeader({
   };
 
   const handleNotificationClick = async (n) => {
+    const notifId = n._id || n.id;
+    if (!notifId) return;
+
     if (!n.isRead) {
-      setNotifications(prev => prev.map(item => item._id === n._id ? { ...item, isRead: true } : item));
+      setNotifications(prev => prev.map(item => 
+        (item._id === notifId || item.id === notifId) ? { ...item, isRead: true } : item
+      ));
       setUnreadCount(prev => Math.max(0, prev - 1));
       
       try {
-        await API.put(`/notifications/${n._id}/read`).catch(() => {
-          API.put('/notifications/read-all').catch(() => {});
-        });
+        await API.put(`/notifications/${notifId}/read`);
       } catch (err) {
         console.warn('Could not mark notification read on backend:', err.message);
       }
