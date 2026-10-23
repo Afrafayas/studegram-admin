@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useAuth } from '../context/AuthContext';
 import API from '../api/axios';
@@ -56,6 +56,14 @@ export default function SettingsPortal({
   const [courseDescription, setCourseDescription] = useState('');
   const [editingCourse, setEditingCourse] = useState(null);
   const [viewingCourse, setViewingCourse] = useState(null);
+
+  // Course Excel Bulk Import State
+  const courseFileInputRef = useRef(null);
+  const [selectedCourseFile, setSelectedCourseFile] = useState(null);
+  const [isUploadingCourseExcel, setIsUploadingCourseExcel] = useState(false);
+  const [isDownloadingTemplate, setIsDownloadingTemplate] = useState(false);
+  const [importSummaryModalOpen, setImportSummaryModalOpen] = useState(false);
+  const [importSummaryData, setImportSummaryData] = useState(null);
 
   // Intake Add/Edit/View State
   const [intakeTitle, setIntakeTitle] = useState('');
@@ -374,6 +382,83 @@ export default function SettingsPortal({
       setModalType(null);
     } catch (err) {
       alert(err.message);
+    }
+  };
+
+  // Course Excel Import & Template Handlers
+  const handleDownloadCourseTemplate = async () => {
+    try {
+      setIsDownloadingTemplate(true);
+      const res = await API.get('/courses/excel-template', { responseType: 'blob' });
+      const blob = new Blob([res.data], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', 'Academic_Courses_Import_Template.xlsx');
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      alert('Failed to download Excel template: ' + (err.response?.data?.message || err.message));
+    } finally {
+      setIsDownloadingTemplate(false);
+    }
+  };
+
+  const handleCourseFileSelect = (e) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const ext = file.name.split('.').pop().toLowerCase();
+      if (!['xlsx', 'xls'].includes(ext)) {
+        alert('Please choose a valid Excel file (.xlsx or .xls)');
+        e.target.value = '';
+        setSelectedCourseFile(null);
+        return;
+      }
+      setSelectedCourseFile(file);
+    } else {
+      setSelectedCourseFile(null);
+    }
+  };
+
+  const handleUploadCourseExcel = async () => {
+    if (!isWritable) return;
+    if (!selectedCourseFile) {
+      alert('Please choose an Excel file to import.');
+      return;
+    }
+
+    try {
+      setIsUploadingCourseExcel(true);
+      const formData = new FormData();
+      formData.append('file', selectedCourseFile);
+
+      const res = await API.post('/courses/bulk-import', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+
+      if (res.data?.success) {
+        if (res.data.data?.coursesCreated && res.data.data.coursesCreated.length > 0) {
+          setCourses(prev => [...res.data.data.coursesCreated, ...prev]);
+        }
+        setImportSummaryData(res.data.data);
+        setImportSummaryModalOpen(true);
+        if (courseFileInputRef.current) courseFileInputRef.current.value = '';
+        setSelectedCourseFile(null);
+      } else {
+        alert(res.data?.message || 'Failed to import courses from Excel.');
+      }
+    } catch (err) {
+      const errData = err.response?.data;
+      if (errData?.data) {
+        setImportSummaryData(errData.data);
+        setImportSummaryModalOpen(true);
+      } else {
+        alert(errData?.message || err.message || 'Failed to upload Excel file.');
+      }
+    } finally {
+      setIsUploadingCourseExcel(false);
     }
   };
 
@@ -708,17 +793,69 @@ export default function SettingsPortal({
 
         return (
           <div className="space-y-4">
-            <div className="flex justify-between items-center">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
               <div>
                 <h2 className="text-xs font-black text-slate-900 uppercase tracking-wider">Academic Programs Directory</h2>
                 <p className="text-[10px] text-slate-400 font-semibold mt-0.5">Manage degree programs, tuition fees, assigned universities, and intake calendar associations.</p>
               </div>
-              <button
-                onClick={openAddCourseModal}
-                className="bg-[#D99A1C] hover:bg-[#F5B025] text-white font-extrabold text-[10px] px-3.5 py-2 rounded-xl transition-all shadow-md uppercase tracking-wider cursor-pointer flex items-center gap-1"
-              >
-                <span>+ Add Course Program</span>
-              </button>
+
+              <div className="flex flex-wrap items-center gap-3">
+                {/* Excel Bulk Import & Template Controls */}
+                <div className="flex flex-col items-start md:items-end gap-1">
+                  <div className="flex items-center gap-1.5">
+                    <input
+                      type="file"
+                      ref={courseFileInputRef}
+                      accept=".xlsx, .xls"
+                      onChange={handleCourseFileSelect}
+                      disabled={!isWritable || isUploadingCourseExcel}
+                      className="text-[11px] text-slate-500 file:mr-2 file:py-1 file:px-2.5 file:rounded-lg file:border file:border-slate-300 file:text-[10px] file:font-bold file:bg-white file:text-slate-700 hover:file:bg-slate-50 cursor-pointer disabled:opacity-50"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleUploadCourseExcel}
+                      disabled={!isWritable || !selectedCourseFile || isUploadingCourseExcel}
+                      className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all flex items-center gap-1 shrink-0 ${
+                        isWritable && selectedCourseFile && !isUploadingCourseExcel
+                          ? 'bg-[#10B981] hover:bg-[#059669] text-white shadow-xs cursor-pointer'
+                          : 'bg-slate-200 text-slate-400 cursor-not-allowed'
+                      }`}
+                      title={!isWritable ? "You don't have permission to import courses" : (!selectedCourseFile ? "Please choose an Excel file first" : "Upload and process Excel file")}
+                    >
+                      {isUploadingCourseExcel ? (
+                        <>
+                          <span className="w-2.5 h-2.5 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                          <span>Uploading...</span>
+                        </>
+                      ) : (
+                        <span>Upload</span>
+                      )}
+                    </button>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleDownloadCourseTemplate}
+                    disabled={isDownloadingTemplate}
+                    className="text-[10px] text-blue-600 hover:text-blue-700 font-bold hover:underline cursor-pointer flex items-center gap-1"
+                    title="Download pre-formatted Excel template with guidelines"
+                  >
+                    {isDownloadingTemplate ? (
+                      <span>Downloading template...</span>
+                    ) : (
+                      <span>Download the Excel Format</span>
+                    )}
+                  </button>
+                </div>
+
+                {/* + Add Course Program Action */}
+                <button
+                  onClick={openAddCourseModal}
+                  disabled={!isWritable}
+                  className="bg-[#D99A1C] hover:bg-[#F5B025] disabled:opacity-50 text-white font-extrabold text-[10px] px-3.5 py-2 rounded-xl transition-all shadow-md uppercase tracking-wider cursor-pointer flex items-center gap-1 shrink-0 h-fit"
+                >
+                  <span>+ Add Course Program</span>
+                </button>
+              </div>
             </div>
 
             <div className="bg-white border border-[#E2E8F0] border-t-4 border-t-[#D99A1C] rounded-2xl shadow-xs overflow-hidden">
@@ -2096,6 +2233,132 @@ export default function SettingsPortal({
                 className="px-5 py-2 bg-[#D99A1C] hover:bg-[#F5B025] text-white text-xs font-extrabold rounded-xl shadow-md cursor-pointer"
               >
                 Close
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* Excel Bulk Course Import Summary Modal */}
+      {importSummaryModalOpen && importSummaryData && createPortal(
+        <div className="fixed inset-0 z-[9999] bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 animate-fade-in overflow-y-auto">
+          <div className="bg-white border border-slate-200 rounded-2xl max-w-2xl w-full p-6 shadow-2xl space-y-4 relative max-h-[90vh] flex flex-col my-auto">
+            {/* Modal Header */}
+            <div className="flex justify-between items-start pb-3 border-b border-slate-100">
+              <div>
+                <h3 className="text-sm font-black text-slate-900 uppercase tracking-wider flex items-center gap-2">
+                  <span>📊 Course Excel Import Summary</span>
+                </h3>
+                <p className="text-[11px] text-slate-500 font-medium mt-0.5">
+                  Detailed review of processed academic course rows from the uploaded Excel file.
+                </p>
+              </div>
+              <button
+                onClick={() => setImportSummaryModalOpen(false)}
+                className="text-slate-400 hover:text-slate-700 text-lg font-bold p-1 rounded-lg transition-colors cursor-pointer"
+                title="Close"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Metrics Cards */}
+            <div className="grid grid-cols-3 gap-3">
+              <div className="bg-slate-50 border border-slate-200 p-3 rounded-xl text-center">
+                <span className="block text-[10px] font-extrabold text-slate-400 uppercase tracking-wider">Total Rows</span>
+                <span className="text-lg font-black text-slate-800">{importSummaryData.totalProcessed || 0}</span>
+              </div>
+              <div className="bg-emerald-50 border border-emerald-200 p-3 rounded-xl text-center">
+                <span className="block text-[10px] font-extrabold text-emerald-600 uppercase tracking-wider">Imported ✅</span>
+                <span className="text-lg font-black text-emerald-700">{importSummaryData.successCount || 0}</span>
+              </div>
+              <div className={`p-3 rounded-xl text-center border ${
+                (importSummaryData.failureCount || 0) > 0 
+                  ? 'bg-rose-50 border-rose-200' 
+                  : 'bg-slate-50 border-slate-200'
+              }`}>
+                <span className={`block text-[10px] font-extrabold uppercase tracking-wider ${
+                  (importSummaryData.failureCount || 0) > 0 ? 'text-rose-600' : 'text-slate-400'
+                }`}>Failed ❌</span>
+                <span className={`text-lg font-black ${
+                  (importSummaryData.failureCount || 0) > 0 ? 'text-rose-700' : 'text-slate-700'
+                }`}>{importSummaryData.failureCount || 0}</span>
+              </div>
+            </div>
+
+            {/* Status overview message */}
+            <div className={`p-3 rounded-xl text-xs font-semibold ${
+              (importSummaryData.failureCount || 0) === 0
+                ? 'bg-emerald-100/60 text-emerald-800 border border-emerald-200'
+                : (importSummaryData.successCount || 0) > 0
+                  ? 'bg-amber-100/60 text-amber-900 border border-amber-200'
+                  : 'bg-rose-100/60 text-rose-900 border border-rose-200'
+            }`}>
+              {(importSummaryData.failureCount || 0) === 0 ? (
+                <span>🎉 All course programs in the file were successfully imported and added to the directory!</span>
+              ) : (importSummaryData.successCount || 0) > 0 ? (
+                <span>⚠️ Partial Import: {importSummaryData.successCount} courses were saved. {importSummaryData.failureCount} rows require manual correction as detailed below.</span>
+              ) : (
+                <span>❌ Import Failed: None of the rows could be imported. Please review the errors below, correct the master records or Excel file, and re-upload.</span>
+              )}
+            </div>
+
+            {/* Failed Rows Detail Table */}
+            {Array.isArray(importSummaryData.failedRows) && importSummaryData.failedRows.length > 0 && (
+              <div className="flex-1 overflow-y-auto space-y-2 border border-slate-200 rounded-xl p-3 bg-slate-50/50">
+                <h4 className="text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">
+                  Actionable Error Details ({importSummaryData.failedRows.length} Rows Failed)
+                </h4>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs border-collapse">
+                    <thead>
+                      <tr className="border-b border-slate-200 text-[10px] font-extrabold text-slate-400 uppercase tracking-wider">
+                        <th className="py-2 px-2.5">Excel Row</th>
+                        <th className="py-2 px-2.5">Course Program</th>
+                        <th className="py-2 px-2.5">Field / Reason</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-200">
+                      {importSummaryData.failedRows.map((fail, idx) => (
+                        <tr key={idx} className="bg-white hover:bg-rose-50/30 transition-colors">
+                          <td className="py-2.5 px-2.5 font-black text-rose-600 align-top whitespace-nowrap">
+                            Row {fail.rowNumber}
+                          </td>
+                          <td className="py-2.5 px-2.5 align-top">
+                            <span className="font-bold text-slate-800 block">{fail.courseTitle || 'Untitled Course'}</span>
+                            <span className="text-[10px] text-slate-400 font-semibold">Univ: {fail.university || 'Unassigned'}</span>
+                          </td>
+                          <td className="py-2.5 px-2.5 space-y-1 align-top">
+                            {Array.isArray(fail.errors) ? (
+                              fail.errors.map((err, errIdx) => (
+                                <div key={errIdx} className="text-[11px] leading-snug">
+                                  <span className="font-black text-rose-700 bg-rose-50 px-1.5 py-0.5 rounded text-[10px] mr-1.5 inline-block">
+                                    {err.field}
+                                  </span>
+                                  <span className="text-slate-600 font-medium">{err.message}</span>
+                                </div>
+                              ))
+                            ) : (
+                              <span className="text-slate-600">Validation error occurred.</span>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+            {/* Modal Actions */}
+            <div className="flex justify-end pt-3 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={() => setImportSummaryModalOpen(false)}
+                className="px-5 py-2 bg-[#D99A1C] hover:bg-[#F5B025] text-white text-xs font-extrabold rounded-xl shadow-md transition-all cursor-pointer"
+              >
+                Close Summary
               </button>
             </div>
           </div>

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useAuth, PRESET_USERS } from '../context/AuthContext';
 import ApplicationChatDrawer from '../components/ApplicationChatDrawer';
@@ -304,15 +304,41 @@ export default function Applications({ applications, referralAgents = [], intake
     }
   };
   const [isSavingApp, setIsSavingApp] = useState(false);
+  const dismissedTargetRef = useRef(false);
+
+  const handleBackToList = () => {
+    dismissedTargetRef.current = true;
+    try {
+      const url = new URL(window.location.href);
+      url.searchParams.delete('appId');
+      url.searchParams.delete('applicationId');
+      window.history.replaceState({}, '', url.toString());
+    } catch (e) {}
+    localStorage.removeItem('studegram_admin_single_view_app_id');
+    localStorage.removeItem('studegram_admin_single_view_app');
+    setSingleViewApp(null);
+    window.dispatchEvent(new CustomEvent('clear_single_view_app'));
+  };
+
+  const handleOpenSingleView = (app) => {
+    dismissedTargetRef.current = false;
+    setSingleViewApp(app);
+  };
 
   // Auto-open Single View when initialSelectedAppId or saved single view ID is provided
   useEffect(() => {
+    if (dismissedTargetRef.current && !initialSelectedAppId) return;
+
     const params = new URLSearchParams(window.location.search);
     const urlAppId = params.get('appId') || params.get('applicationId');
     const savedAppId = urlAppId || localStorage.getItem('studegram_admin_single_view_app_id');
     const effectiveTarget = initialSelectedAppId || (!singleViewApp ? savedAppId : null);
 
     if (!effectiveTarget) return;
+
+    if (initialSelectedAppId) {
+      dismissedTargetRef.current = false;
+    }
 
     let targetId = effectiveTarget;
     let notifObj = null;
@@ -404,7 +430,7 @@ export default function Applications({ applications, referralAgents = [], intake
         }
       }).catch(err => console.warn('Could not fetch target application:', err.message));
     }
-  }, [initialSelectedAppId, applications, singleViewApp]);
+  }, [initialSelectedAppId, applications]);
 
   // Keep singleViewApp in sync with latest applications list updates
   useEffect(() => {
@@ -469,6 +495,7 @@ export default function Applications({ applications, referralAgents = [], intake
   // Listen for reset events (e.g. sidebar navigation or header navigation)
   useEffect(() => {
     const handleClearSingleView = () => {
+      dismissedTargetRef.current = true;
       setSingleViewApp(null);
       localStorage.removeItem('studegram_admin_single_view_app_id');
       localStorage.removeItem('studegram_admin_single_view_app');
@@ -492,8 +519,10 @@ export default function Applications({ applications, referralAgents = [], intake
       const params = new URLSearchParams(window.location.search);
       const urlAppId = params.get('appId') || params.get('applicationId');
       if (!urlAppId) {
+        dismissedTargetRef.current = true;
         setSingleViewApp(null);
       } else if (!singleViewApp || (singleViewApp.id !== urlAppId && singleViewApp._id !== urlAppId && singleViewApp.camsId !== urlAppId)) {
+        dismissedTargetRef.current = false;
         if (Array.isArray(applications) && applications.length > 0) {
           const found = applications.find(a => 
             String(a.id || a._id || '').toLowerCase() === urlAppId.toLowerCase() ||
@@ -1144,7 +1173,7 @@ export default function Applications({ applications, referralAgents = [], intake
                     >
                       <td 
                         className="px-6 py-4 font-extrabold text-[#D99A1C] pl-6 truncate max-w-[120px] cursor-pointer group"
-                        onClick={() => setSingleViewApp(app)}
+                        onClick={() => handleOpenSingleView(app)}
                       >
                         <div>
                           <span className="group-hover:underline group-hover:text-[#F5B025] transition-colors flex items-center gap-1">
@@ -1206,7 +1235,7 @@ export default function Applications({ applications, referralAgents = [], intake
                       <td className="px-6 py-4 text-right pr-6" onClick={(e) => e.stopPropagation()}>
                         <div className="flex items-center justify-end gap-1.5 flex-wrap">
                           <button
-                            onClick={() => setSingleViewApp(app)}
+                            onClick={() => handleOpenSingleView(app)}
                             className="bg-slate-800 hover:bg-slate-900 text-white font-extrabold text-[9px] px-2.5 py-1.5 rounded-xl transition-all shadow-3xs inline-flex items-center gap-1 cursor-pointer uppercase tracking-wider"
                             title="View Full Single Application Page"
                           >
@@ -1349,7 +1378,7 @@ export default function Applications({ applications, referralAgents = [], intake
           <div className="bg-white border border-slate-200 border-t-4 border-t-[#D99A1C] p-6 rounded-3xl shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div className="flex items-center gap-4">
               <button
-                onClick={() => setSingleViewApp(null)}
+                onClick={handleBackToList}
                 className="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-extrabold text-xs rounded-xl transition-all flex items-center gap-1.5 cursor-pointer border border-slate-200 shadow-2xs"
               >
                 <span>← Back to Applications List</span>
