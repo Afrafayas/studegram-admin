@@ -721,6 +721,22 @@ export default function AdminPortal({ onLogout }) {
     }
   }, [activeTab, activeSubTab, selectedAppIdForSingleView, selectedPartnerForSingleView, selectedStudentForSingleView]);
 
+  useEffect(() => {
+    const handleClearApp = () => setSelectedAppIdForSingleView(null);
+    const handleClearPartner = () => setSelectedPartnerForSingleView(null);
+    const handleClearStudent = () => setSelectedStudentForSingleView(null);
+
+    window.addEventListener('clear_single_view_app', handleClearApp);
+    window.addEventListener('clear_single_view_partner', handleClearPartner);
+    window.addEventListener('clear_student_expanded', handleClearStudent);
+
+    return () => {
+      window.removeEventListener('clear_single_view_app', handleClearApp);
+      window.removeEventListener('clear_single_view_partner', handleClearPartner);
+      window.removeEventListener('clear_student_expanded', handleClearStudent);
+    };
+  }, []);
+
   const handleSelectTab = (tabId) => {
     if (tabId === 'applications' && activeTab === 'applications') {
       setSelectedAppIdForSingleView(null);

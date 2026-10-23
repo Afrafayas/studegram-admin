@@ -74,7 +74,7 @@ export default function AdminHeader({
 
         const updatedList = res.data.data.map(c => {
           const idKey = c.commentId || `${c.applicationId}_${c.createdAt}`;
-          const isMarkedRead = Boolean(c.isRead || readIds.has(idKey) || readIds.has(String(c.applicationId)));
+          const isMarkedRead = Boolean(c.isRead || readIds.has(idKey));
           return {
             ...c,
             isUnreplied: isMarkedRead ? false : c.isUnreplied,
@@ -97,22 +97,26 @@ export default function AdminHeader({
     const isUnread = Boolean(comm.isUnreplied && !comm.isRead);
 
     if (isUnread) {
+      const idKey = comm.commentId || `${comm.applicationId}_${comm.createdAt}`;
       const readStorageKey = getCommentsStorageKey();
       try {
         const readIds = new Set(JSON.parse(localStorage.getItem(readStorageKey) || '[]'));
-        const idKey = comm.commentId || `${comm.applicationId}_${comm.createdAt}`;
         readIds.add(idKey);
-        readIds.add(String(comm.applicationId));
         localStorage.setItem(readStorageKey, JSON.stringify([...readIds]));
       } catch (e) {}
 
-      // Only decrement count for the specific read comment
-      setCommentsList(prev => prev.map(c => 
-        (c.applicationId === comm.applicationId || (comm.commentId && c.commentId === comm.commentId))
-          ? { ...c, isUnreplied: false, isRead: true } 
-          : c
-      ));
-      setUnreadCommentsCount(prev => Math.max(0, prev - 1));
+      // Update only the specific read comment and recount unreplied items
+      setCommentsList(prev => {
+        const updated = prev.map(c => {
+          const currentKey = c.commentId || `${c.applicationId}_${c.createdAt}`;
+          return (currentKey === idKey)
+            ? { ...c, isUnreplied: false, isRead: true } 
+            : c;
+        });
+        const actualUnreplied = updated.filter(c => c.isUnreplied).length;
+        setUnreadCommentsCount(actualUnreplied);
+        return updated;
+      });
 
       if (comm.applicationId) {
         const commentIdParam = comm.commentId || 'latest';
@@ -227,10 +231,17 @@ export default function AdminHeader({
     if (!notifId) return;
 
     if (!n.isRead) {
-      setNotifications(prev => prev.map(item => 
-        (item._id === notifId || item.id === notifId) ? { ...item, isRead: true } : item
-      ));
-      setUnreadCount(prev => Math.max(0, prev - 1));
+      setNotifications(prev => {
+        const updated = prev.map(item => {
+          const itemId = item._id || item.id;
+          return (itemId && String(itemId) === String(notifId))
+            ? { ...item, isRead: true } 
+            : item;
+        });
+        const actualUnread = updated.filter(item => !item.isRead).length;
+        setUnreadCount(actualUnread);
+        return updated;
+      });
       
       try {
         await API.put(`/notifications/${notifId}/read`);
