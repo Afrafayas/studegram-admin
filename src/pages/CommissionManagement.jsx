@@ -11,6 +11,9 @@ export default function CommissionManagement({ clients = [], referralAgents = []
   const [commissions, setCommissions] = useState([]);
   const [filterStatus, setFilterStatus] = useState('All');
   const [isUpdatingId, setIsUpdatingId] = useState(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
 
   // Set Commission Modal state
   const [modalCommission, setModalCommission] = useState(null);
@@ -110,16 +113,46 @@ export default function CommissionManagement({ clients = [], referralAgents = []
     fetchCommissions();
   }, [applications]);
   
-  // Scoped filtering
-  const displayCommissions = commissions.filter(c => {
+  // All commissions scoped by user role (e.g., Country Head)
+  const scopedCommissions = commissions.filter(c => {
+    if (currentUser?.role === 'Country Head') {
+      return c.country === currentUser.country;
+    }
+    return true;
+  });
+
+  // Filtered by status and search query
+  const displayCommissions = scopedCommissions.filter(c => {
     const matchesStatus = filterStatus === 'All' 
       || c.status === filterStatus 
       || (filterStatus === 'Pending Approval' && (c.status === 'Pending Approval' || c.status === 'Claimed'));
-    if (currentUser?.role === 'Country Head') {
-      return matchesStatus && c.country === currentUser.country;
+    
+    if (!matchesStatus) return false;
+
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      const sName = (c.studentName || '').toLowerCase();
+      const cId = (c.id || c.commissionId || '').toLowerCase();
+      const cName = (c.courseName || '').toLowerCase();
+      const pName = (c.partnerName || '').toLowerCase();
+      const country = (c.country || '').toLowerCase();
+      return sName.includes(q) || cId.includes(q) || cName.includes(q) || pName.includes(q) || country.includes(q);
     }
-    return matchesStatus;
+
+    return true;
   });
+
+  // Auto-reset page to 1 whenever search query, country, or status filter changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, filterStatus, currentUser?.country]);
+
+  // Pagination Math
+  const totalItems = displayCommissions.length;
+  const totalPages = Math.ceil(totalItems / itemsPerPage) || 1;
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = Math.min(startIndex + itemsPerPage, totalItems);
+  const paginatedCommissions = displayCommissions.slice(startIndex, startIndex + itemsPerPage);
 
   const handleExport = () => {
     if (!hasPermission('commissions:export')) {
@@ -363,9 +396,9 @@ export default function CommissionManagement({ clients = [], referralAgents = []
     : (commissions.length > 0 ? new Set(commissions.map(c => c.partnerName)).size : 0);
 
   // Calculate stats
-  const totalAmount = displayCommissions.reduce((acc, c) => acc + (c.amount || 0), 0);
-  const paidAmount = displayCommissions.filter(c => c.status === 'Paid').reduce((acc, c) => acc + (c.amount || 0), 0);
-  const pendingAmount = displayCommissions.filter(c => c.status === 'Pending Approval' || c.status === 'Claimed').reduce((acc, c) => acc + (c.amount || 0), 0);
+  const totalAmount = scopedCommissions.reduce((acc, c) => acc + (c.amount || 0), 0);
+  const paidAmount = scopedCommissions.filter(c => c.status === 'Paid').reduce((acc, c) => acc + (c.amount || 0), 0);
+  const pendingAmount = scopedCommissions.filter(c => c.status === 'Pending Approval' || c.status === 'Claimed').reduce((acc, c) => acc + (c.amount || 0), 0);
 
   return (
     <div className="flex-1 p-6 space-y-6 bg-[#F0F2F5]">
@@ -433,25 +466,48 @@ export default function CommissionManagement({ clients = [], referralAgents = []
 
       {/* Table */}
       <div className="bg-white border border-[#E2E8F0] rounded-2xl shadow-xs overflow-hidden">
-        <div className="px-6 py-4 border-b border-[#E2E8F0] flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="px-6 py-4 border-b border-[#E2E8F0] flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="space-y-0.5">
-            <h2 className="text-xs font-black text-slate-900 uppercase tracking-wider">Calculated Partner Commissions</h2>
+            <div className="flex items-center gap-2">
+              <h2 className="text-xs font-black text-slate-900 uppercase tracking-wider">Calculated Partner Commissions</h2>
+              <span className="px-2 py-0.5 bg-slate-100 text-slate-600 rounded-md text-[10px] font-bold">
+                {displayCommissions.length} records
+              </span>
+            </div>
             <p className="text-[10px] text-slate-400 font-semibold">
               Default commission: 10% of Tuition. Enable University Payment toggle to unlock Pay button.
             </p>
           </div>
-          <div className="bg-slate-100 p-1 rounded-xl flex gap-1 text-[10px] font-bold">
-            {['All', 'Paid', 'Pending Approval', 'Under Review'].map((status) => (
-              <button
-                key={status}
-                onClick={() => setFilterStatus(status)}
-                className={`px-3 py-1 rounded-lg transition-all ${
-                  filterStatus === status ? 'bg-white text-[#D99A1C] shadow-sm font-black' : 'text-slate-500 hover:text-slate-900'
-                }`}
-              >
-                {status}
-              </button>
-            ))}
+
+          <div className="flex flex-col sm:flex-row items-center gap-3">
+            {/* Search Input */}
+            <div className="relative w-full sm:w-64">
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search student, partner, ID..."
+                className="w-full pl-8 pr-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#D99A1C] focus:bg-white transition-all font-medium"
+              />
+              <svg className="w-4 h-4 text-slate-400 absolute left-2.5 top-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+            </div>
+
+            {/* Filter Tabs */}
+            <div className="bg-slate-100 p-1 rounded-xl flex gap-1 text-[10px] font-bold w-full sm:w-auto">
+              {['All', 'Paid', 'Pending Approval', 'Under Review'].map((status) => (
+                <button
+                  key={status}
+                  onClick={() => setFilterStatus(status)}
+                  className={`px-3 py-1 rounded-lg transition-all flex-1 sm:flex-none text-center ${
+                    filterStatus === status ? 'bg-white text-[#D99A1C] shadow-sm font-black' : 'text-slate-500 hover:text-slate-900'
+                  }`}
+                >
+                  {status}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
         <div className="overflow-x-auto">
@@ -471,7 +527,7 @@ export default function CommissionManagement({ clients = [], referralAgents = []
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 text-xs font-semibold text-slate-700">
-                {displayCommissions.map((comm, idx) => {
+                {paginatedCommissions.map((comm, idx) => {
                   const isPaidStatus = comm.status === 'Paid';
                   const isUniPaid = comm.universityPaid;
 
@@ -610,6 +666,64 @@ export default function CommissionManagement({ clients = [], referralAgents = []
             </div>
           )}
         </div>
+
+        {/* Pagination at bottom */}
+        {totalItems > 0 && (
+          <div className="px-6 py-4 bg-slate-50 border-t border-[#E2E8F0] flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-[#64748B] font-semibold select-none">
+            <div className="flex items-center gap-3">
+              <span className="text-xs font-semibold text-slate-500">Rows per page:</span>
+              <select
+                value={itemsPerPage}
+                onChange={(e) => {
+                  setItemsPerPage(Number(e.target.value));
+                  setCurrentPage(1);
+                }}
+                className="bg-white border border-slate-200 rounded-lg px-2.5 py-1 text-xs font-bold text-slate-700 focus:outline-none focus:border-[#D99A1C] cursor-pointer"
+              >
+                <option value={5}>5</option>
+                <option value={10}>10</option>
+                <option value={20}>20</option>
+                <option value={50}>50</option>
+                <option value={100}>100</option>
+              </select>
+              <span className="text-xs font-semibold text-slate-400">
+                Showing {totalItems > 0 ? startIndex + 1 : 0} to {endIndex} of {totalItems} entries
+              </span>
+            </div>
+
+            <div className="flex items-center gap-1.5">
+              <button
+                disabled={currentPage === 1}
+                onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                className="px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-bold bg-white text-slate-600 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer"
+              >
+                ◀ Prev
+              </button>
+
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+                <button
+                  key={page}
+                  onClick={() => setCurrentPage(page)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-extrabold transition-all cursor-pointer ${
+                    currentPage === page
+                      ? 'bg-[#D99A1C] text-white shadow-xs'
+                      : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-100'
+                  }`}
+                >
+                  {page}
+                </button>
+              ))}
+
+              <button
+                disabled={currentPage === totalPages}
+                onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                className="px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-bold bg-white text-slate-600 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer"
+              >
+                Next ▶
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Set Commission Modal */}
@@ -785,8 +899,14 @@ export default function CommissionManagement({ clients = [], referralAgents = []
                 type="button"
                 disabled={isSavingModal}
                 onClick={() => handleSaveModalCommission(false)}
-                className="px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-black text-xs transition-all shadow-md active:scale-95 cursor-pointer"
+                className="px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-black text-xs transition-all shadow-md active:scale-95 inline-flex items-center justify-center gap-1.5"
               >
+                {isSavingModal && (
+                  <svg className="animate-spin h-3.5 w-3.5 text-current shrink-0" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                  </svg>
+                )}
                 {isSavingModal ? 'Saving...' : 'Save Commission'}
               </button>
               <button
@@ -794,12 +914,18 @@ export default function CommissionManagement({ clients = [], referralAgents = []
                 disabled={isSavingModal || !modalCommission.universityPaid}
                 onClick={() => handleSaveModalCommission(true)}
                 title={!modalCommission.universityPaid ? 'Disabled: Waiting for University Payment' : 'Save & Disburse Now'}
-                className={`px-4 py-2.5 rounded-xl font-black text-xs transition-all shadow-md inline-flex items-center gap-1 ${
+                className={`px-4 py-2.5 rounded-xl font-black text-xs transition-all shadow-md inline-flex items-center justify-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed ${
                   modalCommission.universityPaid
                     ? 'bg-emerald-600 hover:bg-emerald-700 text-white cursor-pointer active:scale-95'
                     : 'bg-slate-200 text-slate-400 border border-slate-300 cursor-not-allowed opacity-60'
                 }`}
               >
+                {isSavingModal && (
+                  <svg className="animate-spin h-3.5 w-3.5 text-current shrink-0" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                  </svg>
+                )}
                 <span>Save & Pay</span>
                 {!modalCommission.universityPaid ? <span>🔒</span> : <span>✓</span>}
               </button>

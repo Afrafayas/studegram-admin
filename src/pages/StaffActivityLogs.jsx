@@ -149,13 +149,28 @@ export default function StaffActivityLogs() {
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [totalSessionsCount, setTotalSessionsCount] = useState(0);
 
+  const getTimeframeLabel = (tf) => {
+    switch (tf) {
+      case 'today': return 'Today';
+      case 'yesterday': return 'Yesterday';
+      case 'week': return 'Past 7 Days';
+      case '15days': return 'Past 15 Days';
+      case 'month': return 'Past 30 Days';
+      default: return 'Today';
+    }
+  };
+
   const fetchOverviewData = async () => {
     setIsRefreshing(true);
     try {
       // Parallel requests for stats, staff summary, and session logs
       const [statsRes, summaryRes, logsRes] = await Promise.all([
         API.get('/activity-logs/stats').catch(e => ({ error: e })),
-        API.get('/activity-logs/staff-summary').catch(e => ({ error: e })),
+        API.get('/activity-logs/staff-summary', {
+          params: {
+            timeframe: timeframe !== 'All' ? timeframe : undefined
+          }
+        }).catch(e => ({ error: e })),
         API.get('/activity-logs', {
           params: {
             search: searchTerm,
@@ -181,7 +196,7 @@ export default function StaffActivityLogs() {
         setTotalSessionsCount(logsRes.data.total || logsRes.data.data.length);
       }
     } catch (err) {
-      console.error('Error fetching staff activity logs:', err);
+      console.error('Error fetching staff activity data:', err);
       toast.showToast('Failed to sync staff activity data', 'error');
     } finally {
       setLoading(false);
@@ -216,7 +231,14 @@ export default function StaffActivityLogs() {
       (statusFilter === 'Online' && staff.isOnline) ||
       (statusFilter === 'Offline' && !staff.isOnline);
 
-    return matchesSearch && matchesRole && matchesStatus;
+    const matchesTimeframe =
+      timeframe === 'All' ||
+      searchTerm.trim() !== '' ||
+      staff.wasActiveInPeriod ||
+      (staff.periodMinutes > 0) ||
+      (timeframe === 'today' && (staff.isOnline || staff.todayMinutes > 0));
+
+    return matchesSearch && matchesRole && matchesStatus && matchesTimeframe;
   });
 
   // Unique roles for dropdown filter
@@ -447,6 +469,7 @@ export default function StaffActivityLogs() {
               <option value="today">Today</option>
               <option value="yesterday">Yesterday</option>
               <option value="week">Past 7 Days</option>
+              <option value="15days">Past 15 Days</option>
               <option value="month">Past 30 Days</option>
             </select>
           </div>
@@ -466,7 +489,11 @@ export default function StaffActivityLogs() {
                   <th className="py-3 px-4">Current Status</th>
                   <th className="py-3 px-4">Last Login Time</th>
                   <th className="py-3 px-4">Last Logout Time</th>
-                  <th className="py-3 px-4">Time Spent (Today)</th>
+                  <th className="py-3 px-4">
+                    {timeframe === 'All' || timeframe === 'today'
+                      ? 'Time Spent (Today)'
+                      : `Time Spent (${getTimeframeLabel(timeframe)})`}
+                  </th>
                   <th className="py-3 px-4">Total Time Spent</th>
                   <th className="py-3 px-4 text-right">Actions</th>
                 </tr>
@@ -550,11 +577,17 @@ export default function StaffActivityLogs() {
                         )}
                       </td>
 
-                      {/* Time Spent Today */}
+                      {/* Time Spent in Timeframe */}
                       <td className="py-3.5 px-4">
                         <div className="flex items-center gap-1.5">
-                          <span className={`font-black ${staff.todayMinutes > 0 ? 'text-amber-600' : 'text-slate-400'}`}>
-                            {staff.todayTimeFormatted || '0m'}
+                          <span className={`font-black ${
+                            (timeframe === 'All' || timeframe === 'today' ? (staff.todayMinutes > 0) : ((staff.periodMinutes || 0) > 0 || (staff.todayMinutes || 0) > 0))
+                              ? 'text-amber-600'
+                              : 'text-slate-400'
+                          }`}>
+                            {timeframe === 'All' || timeframe === 'today'
+                              ? (staff.todayTimeFormatted || '0m')
+                              : (staff.periodTimeFormatted || staff.todayTimeFormatted || '0m')}
                           </span>
                         </div>
                       </td>

@@ -123,32 +123,146 @@ export default function StaffActivitySingleView({ staffId, onBack }) {
     );
   }
 
-  const { staff, stats, sessions = [], timeline = [] } = data;
+  const { staff, stats = {}, sessions = [], timeline = [] } = data;
+
+  // Helper for formatting minutes
+  const formatMinutes = (mins) => {
+    if (!mins || mins <= 0) return '0m';
+    const h = Math.floor(mins / 60);
+    const m = mins % 60;
+    if (h > 0) return `${h}h ${m}m`;
+    return `${m}m`;
+  };
+
+  // Activity category classification helpers
+  const isAuthActivity = (item) => {
+    const cat = (item.category || '').toLowerCase().trim();
+    const act = (item.action || '').toUpperCase().trim();
+    return cat === 'auth' || cat === 'authentication' || act === 'LOGIN' || act === 'LOGOUT';
+  };
+
+  const isApplicationActivity = (item) => {
+    const cat = (item.category || '').toLowerCase().trim();
+    const act = (item.action || '').toUpperCase().trim();
+    if (['application', 'applications', 'student', 'students'].includes(cat)) return true;
+    if (
+      act.startsWith('APPLICATION_') ||
+      act.startsWith('DOCUMENT_') ||
+      act.startsWith('STATUS_') ||
+      act.startsWith('STAGE_')
+    ) {
+      return true;
+    }
+    return false;
+  };
+
+  const isOtherActivity = (item) => {
+    return !isAuthActivity(item) && !isApplicationActivity(item);
+  };
+
+  // Dynamic metrics calculation based on selected timeframe
+  let displayTotalTime = stats.totalTimeFormatted || '0m';
+  let displayTotalSessions = stats.totalSessions || 0;
+  let displayAvgSessionTime = stats.avgSessionFormatted || '0m';
+  let metricSubtitle = 'Across all sessions';
+
+  if (dateFilter !== 'All') {
+    const now = Date.now();
+    const startOfToday = new Date();
+    startOfToday.setHours(0, 0, 0, 0);
+
+    let rangeStart = null;
+    let rangeEnd = new Date(now);
+
+    if (dateFilter === 'today') {
+      rangeStart = startOfToday;
+      metricSubtitle = 'Today';
+    } else if (dateFilter === 'yesterday') {
+      rangeStart = new Date(startOfToday);
+      rangeStart.setDate(rangeStart.getDate() - 1);
+      rangeEnd = startOfToday;
+      metricSubtitle = 'Yesterday';
+    } else if (dateFilter === 'week') {
+      rangeStart = new Date();
+      rangeStart.setDate(rangeStart.getDate() - 7);
+      rangeStart.setHours(0, 0, 0, 0);
+      metricSubtitle = 'In past 7 days';
+    } else if (dateFilter === '15days') {
+      rangeStart = new Date();
+      rangeStart.setDate(rangeStart.getDate() - 15);
+      rangeStart.setHours(0, 0, 0, 0);
+      metricSubtitle = 'In past 15 days';
+    } else if (dateFilter === 'month') {
+      rangeStart = new Date();
+      rangeStart.setDate(rangeStart.getDate() - 30);
+      rangeStart.setHours(0, 0, 0, 0);
+      metricSubtitle = 'In past 30 days';
+    }
+
+    if (rangeStart) {
+      const rStart = rangeStart.getTime();
+      const rEnd = rangeEnd.getTime();
+      let periodMins = 0;
+      let sessionCount = 0;
+
+      sessions.forEach(sess => {
+        const sStart = new Date(sess.loginTime).getTime();
+        const sEnd = sess.isActive
+          ? now
+          : (sess.logoutTime ? new Date(sess.logoutTime).getTime() : sStart + ((sess.durationMinutes || 0) * 60000));
+
+        if (sEnd >= rStart && sStart <= rEnd) {
+          sessionCount++;
+          const overlapStart = Math.max(sStart, rStart);
+          const overlapEnd = Math.min(sEnd, rEnd);
+          if (overlapEnd > overlapStart) {
+            periodMins += Math.max(1, Math.round((overlapEnd - overlapStart) / 60000));
+          }
+        }
+      });
+
+      displayTotalSessions = sessionCount;
+      displayTotalTime = formatMinutes(periodMins);
+      const avgMins = sessionCount > 0 ? Math.round(periodMins / sessionCount) : 0;
+      displayAvgSessionTime = formatMinutes(avgMins);
+    }
+  }
 
   // Filter timeline items
   const filteredTimeline = timeline.filter(item => {
     // Category filter
     if (categoryFilter !== 'All') {
-      if (categoryFilter === 'Auth' && item.category !== 'Auth') return false;
-      if (categoryFilter === 'Application' && item.category !== 'Application') return false;
-      if (categoryFilter === 'Other' && ['Auth', 'Application'].includes(item.category)) return false;
+      if (categoryFilter === 'Auth' && !isAuthActivity(item)) return false;
+      if (categoryFilter === 'Application' && !isApplicationActivity(item)) return false;
+      if (categoryFilter === 'Other' && !isOtherActivity(item)) return false;
     }
 
     // Date filter
     if (dateFilter !== 'All') {
       const itemDate = new Date(item.timestamp);
-      const startOfDay = new Date();
-      startOfDay.setHours(0, 0, 0, 0);
+      const startOfToday = new Date();
+      startOfToday.setHours(0, 0, 0, 0);
 
       if (dateFilter === 'today') {
-        if (itemDate < startOfDay) return false;
-      } else if (dateFilter === 'week') {
+        if (itemDate < startOfToday) return false;
+      } else if (dateFilter === 'yesterday') {
+        const startOfYesterday = new Date(startOfToday);
+        startOfYesterday.setDate(startOfYesterday.getDate() - 1);
+        if (itemDate < startOfYesterday || itemDate >= startOfToday) return false;
+      } else if (dateFilter === 'week' || dateFilter === '7days') {
         const weekAgo = new Date();
         weekAgo.setDate(weekAgo.getDate() - 7);
+        weekAgo.setHours(0, 0, 0, 0);
         if (itemDate < weekAgo) return false;
-      } else if (dateFilter === 'month') {
+      } else if (dateFilter === '15days') {
+        const fifteenDaysAgo = new Date();
+        fifteenDaysAgo.setDate(fifteenDaysAgo.getDate() - 15);
+        fifteenDaysAgo.setHours(0, 0, 0, 0);
+        if (itemDate < fifteenDaysAgo) return false;
+      } else if (dateFilter === 'month' || dateFilter === '30days') {
         const monthAgo = new Date();
         monthAgo.setDate(monthAgo.getDate() - 30);
+        monthAgo.setHours(0, 0, 0, 0);
         if (itemDate < monthAgo) return false;
       }
     }
@@ -271,26 +385,26 @@ export default function StaffActivitySingleView({ staffId, onBack }) {
             <div className="bg-slate-50 border border-slate-100 rounded-xl p-3">
               <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Total Portal Time</span>
               <div className="flex items-baseline gap-1 mt-1">
-                <span className="text-xl font-black text-amber-600">{stats.totalTimeFormatted || '0m'}</span>
+                <span className="text-xl font-black text-amber-600">{displayTotalTime}</span>
               </div>
-              <span className="text-[10px] text-slate-400 font-semibold block mt-0.5">Across all sessions</span>
+              <span className="text-[10px] text-slate-400 font-semibold block mt-0.5">{metricSubtitle}</span>
             </div>
 
             <div className="bg-slate-50 border border-slate-100 rounded-xl p-3">
               <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Total Sessions</span>
               <div className="flex items-baseline gap-1 mt-1">
-                <span className="text-xl font-black text-slate-900">{stats.totalSessions || 0}</span>
+                <span className="text-xl font-black text-slate-900">{displayTotalSessions}</span>
                 <span className="text-[11px] text-slate-400 font-semibold">logins</span>
               </div>
-              <span className="text-[10px] text-slate-400 font-semibold block mt-0.5">Portal access count</span>
+              <span className="text-[10px] text-slate-400 font-semibold block mt-0.5">{metricSubtitle}</span>
             </div>
 
             <div className="bg-slate-50 border border-slate-100 rounded-xl p-3">
               <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Avg Session Time</span>
               <div className="flex items-baseline gap-1 mt-1">
-                <span className="text-xl font-black text-indigo-600">{stats.avgSessionFormatted || '0m'}</span>
+                <span className="text-xl font-black text-indigo-600">{displayAvgSessionTime}</span>
               </div>
-              <span className="text-[10px] text-slate-400 font-semibold block mt-0.5">Per portal visit</span>
+              <span className="text-[10px] text-slate-400 font-semibold block mt-0.5">{metricSubtitle}</span>
             </div>
 
             <div className="bg-slate-50 border border-slate-100 rounded-xl p-3">
@@ -343,7 +457,9 @@ export default function StaffActivitySingleView({ staffId, onBack }) {
           >
             <option value="All">All Time</option>
             <option value="today">Today Only</option>
+            <option value="yesterday">Yesterday</option>
             <option value="week">Past 7 Days</option>
+            <option value="15days">Past 15 Days</option>
             <option value="month">Past 30 Days</option>
           </select>
         </div>

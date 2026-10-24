@@ -4,7 +4,59 @@ import { useAuth } from '../context/AuthContext';
 import API, { API_BASE_URL } from '../api/axios';
 import { useToast } from '../context/ToastContext';
 
-export default function ApplicationChatDrawer({ app, onClose }) {
+// Error Boundary to prevent crashes in Chat Drawer from taking down the main application
+class DrawerErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+
+  static getDerivedStateFromError(error) {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error, errorInfo) {
+    console.error('Drawer Error Boundary caught an error:', error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return typeof document !== 'undefined' ? createPortal(
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-[9999] flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl p-6 max-w-sm w-full shadow-2xl border border-slate-200 text-center space-y-4 animate-in fade-in">
+            <div className="w-12 h-12 rounded-full bg-amber-50 text-amber-600 flex items-center justify-center mx-auto text-xl font-bold">
+              ⚠️
+            </div>
+            <div className="space-y-1">
+              <h3 className="text-sm font-black text-slate-900 uppercase tracking-wide">Workspace View Notice</h3>
+              <p className="text-xs text-slate-500 font-semibold">
+                An unexpected display issue occurred in this drawer. Your main application session is intact and safe.
+              </p>
+              {this.state.error?.message && (
+                <p className="text-[10px] font-mono bg-slate-50 text-red-500 p-2 rounded-lg mt-2 text-left break-words">
+                  {this.state.error.message}
+                </p>
+              )}
+            </div>
+            <button
+              onClick={() => {
+                this.setState({ hasError: false, error: null });
+                if (this.props.onClose) this.props.onClose();
+              }}
+              className="w-full bg-[#D99A1C] hover:bg-[#b88214] text-white font-bold py-2.5 px-4 rounded-xl text-xs transition-colors cursor-pointer shadow-sm"
+            >
+              Close Drawer
+            </button>
+          </div>
+        </div>,
+        document.body
+      ) : null;
+    }
+    return this.props.children;
+  }
+}
+
+function ApplicationChatDrawerContent({ app, onClose }) {
   const toast = useToast();
   const { currentUser } = useAuth();
   const [messages, setMessages] = useState([]);
@@ -15,14 +67,31 @@ export default function ApplicationChatDrawer({ app, onClose }) {
   const [errorMsg, setErrorMsg] = useState('');
   const [activeTab, setActiveTab] = useState('chat'); // 'chat' or 'details'
 
-  const [localDocuments, setLocalDocuments] = useState([]);
+  const [localDocuments, setLocalDocuments] = useState(() => Array.isArray(app?.documents) ? app.documents : []);
   const [isUploadingDoc, setIsUploadingDoc] = useState(false);
   const [uploadDocError, setUploadDocError] = useState('');
   const [uploadComment, setUploadComment] = useState('');
 
+  const onCloseRef = useRef(onClose);
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  });
+
+  // Intercept browser back button to smoothly close drawer instead of exiting site
+  useEffect(() => {
+    window.history.pushState({ drawer: 'chat' }, '');
+    const handlePopState = () => {
+      onCloseRef.current?.();
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+    };
+  }, []);
+
   useEffect(() => {
     if (app) {
-      setLocalDocuments(app.documents || []);
+      setLocalDocuments(Array.isArray(app?.documents) ? app.documents : []);
       setUploadComment('');
     }
   }, [app]);
@@ -40,7 +109,7 @@ export default function ApplicationChatDrawer({ app, onClose }) {
       setIsLoading(true);
       setErrorMsg('');
       try {
-        const targetAppId = app.id || app._id;
+        const targetAppId = app?.id || app?._id || app?.camsId;
         const response = await fetch(`${API_BASE_URL}/applications/${targetAppId}/chat`, {
           headers: {
             'Authorization': `Bearer ${token}`
@@ -160,7 +229,7 @@ export default function ApplicationChatDrawer({ app, onClose }) {
     });
 
     try {
-      const targetAppId = app.id || app._id;
+      const targetAppId = app?.id || app?._id || app?.camsId;
       const response = await fetch(`${API_BASE_URL}/applications/${targetAppId}/chat`, {
         method: 'POST',
         headers: {
@@ -506,11 +575,11 @@ export default function ApplicationChatDrawer({ app, onClose }) {
                 <button 
                   type="submit"
                   disabled={isSending || (!messageText.trim() && selectedFiles.length === 0)}
-                  className="p-2.5 rounded-xl bg-slate-800 hover:bg-[#D99A1C] text-white hover:scale-[1.03] transition-all disabled:opacity-40 disabled:pointer-events-none shrink-0 shadow-md flex items-center justify-center gap-1.5"
+                  className="p-2.5 rounded-xl bg-slate-800 hover:bg-[#D99A1C] text-white hover:scale-[1.03] transition-all disabled:opacity-40 disabled:cursor-not-allowed inline-flex items-center justify-center gap-1.5 shrink-0 shadow-md"
                   title="Send Message"
                 >
                   {isSending ? (
-                    <svg className="animate-spin w-4 h-4 text-white" fill="none" viewBox="0 0 24 24">
+                    <svg className="animate-spin w-4 h-4 text-current shrink-0" fill="none" viewBox="0 0 24 24">
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                     </svg>
@@ -647,7 +716,8 @@ export default function ApplicationChatDrawer({ app, onClose }) {
               <div className="border-2 border-dashed border-slate-200 hover:border-[#D99A1C] transition-colors rounded-xl p-3 text-center cursor-pointer relative bg-slate-50">
                 <input
                   type="file"
-                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                  disabled={isUploadingDoc}
+                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer disabled:cursor-not-allowed"
                   onChange={async (e) => {
                     const file = e.target.files?.[0];
                     if (!file) return;
@@ -663,28 +733,52 @@ export default function ApplicationChatDrawer({ app, onClose }) {
                         },
                         body: formData
                       });
-                      const resData = await response.json();
-                      if (resData.success) {
-                        const newDoc = { 
-                          name: file.name, 
-                          url: resData.url,
-                          comment: uploadComment.trim()
-                        };
-                        const updatedDocs = [...localDocuments, newDoc];
-                        
-                        const targetAppId = app.id || app._id;
-                        await API.put(`/applications/${targetAppId}`, { documents: updatedDocs });
-                        setLocalDocuments(updatedDocs);
 
-                        setUploadComment('');
-                      } else {
-                        throw new Error(resData.message || 'Upload failed');
+                      let resData;
+                      try {
+                        resData = await response.json();
+                      } catch (parseErr) {
+                        throw new Error(`Upload server responded with status ${response.status}`);
+                      }
+
+                      if (!response.ok || !resData?.success) {
+                        throw new Error(resData?.message || `Upload failed with status ${response.status}`);
+                      }
+
+                      const newDoc = { 
+                        name: file.name, 
+                        url: resData.url,
+                        comment: uploadComment.trim(),
+                        uploadedAt: new Date().toISOString()
+                      };
+                      const currentDocs = Array.isArray(localDocuments) ? localDocuments : [];
+                      const updatedDocs = [...currentDocs, newDoc];
+                      
+                      const targetAppId = app?.id || app?._id || app?.camsId;
+                      if (targetAppId) {
+                        try {
+                          await API.put(`/applications/${targetAppId}`, { documents: updatedDocs });
+                        } catch (putErr) {
+                          console.warn('API update documents warning:', putErr);
+                        }
+                      }
+                      setLocalDocuments(updatedDocs);
+                      setUploadComment('');
+                      if (toast?.success) {
+                        toast.success('Document uploaded successfully!');
                       }
                     } catch (err) {
                       console.error('File upload failed:', err);
-                      setUploadDocError('Failed to upload document.');
+                      const errMessage = err?.message || 'Failed to upload document.';
+                      setUploadDocError(errMessage);
+                      if (toast?.error) {
+                        toast.error(errMessage);
+                      }
                     } finally {
                       setIsUploadingDoc(false);
+                      if (e.target) {
+                        e.target.value = '';
+                      }
                     }
                   }}
                 />
@@ -721,7 +815,7 @@ export default function ApplicationChatDrawer({ app, onClose }) {
                 />
               </div>
 
-              {isUploadingDoc && !selectedUploadFile && (
+              {isUploadingDoc && (
                 <p className="text-[10px] text-[#D99A1C] font-semibold animate-pulse">⏳ Uploading file, please wait...</p>
               )}
               {uploadDocError && (
@@ -731,40 +825,49 @@ export default function ApplicationChatDrawer({ app, onClose }) {
               {/* List */}
               <div className="divide-y divide-slate-100 bg-white border border-slate-100 rounded-xl overflow-hidden shadow-3xs max-h-56 overflow-y-auto">
                 {localDocuments.length > 0 ? (
-                  localDocuments.map((doc, idx) => (
-                    <div key={idx} className="p-2.5 flex items-center justify-between hover:bg-slate-50 transition-colors border-b last:border-b-0 border-slate-105/50">
-                      <div className="flex items-center gap-2 truncate pr-2">
-                        <span className="text-xs text-amber-500">📄</span>
-                        <div className="truncate">
-                          <p className="text-xs font-bold text-slate-800 truncate" title={doc.name}>{doc.name}</p>
-                          {doc.comment && (
-                            <div className="bg-slate-50 border border-slate-200/85 rounded-xl p-2.5 mt-2 space-y-1 max-w-[200px] whitespace-normal">
-                              <h6 className="text-[9px] font-black text-slate-400 uppercase tracking-wider flex items-center gap-1">
-                                <span>💬</span> Comments / Notes
-                              </h6>
-                              <p className="text-[10.5px] font-semibold text-slate-805 whitespace-pre-wrap leading-normal">
-                                {doc.comment}
-                              </p>
-                            </div>
-                          )}
-                          <p className="text-[9px] text-slate-450 font-semibold mt-1">
-                            {doc.uploadedAt ? new Date(doc.uploadedAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : 'Just Now'}
-                          </p>
+                  localDocuments.map((doc, idx) => {
+                    const docTitle = typeof doc === 'string' ? doc : (doc?.name || doc?.fileName || doc?.title || 'Document');
+                    const docUrl = typeof doc === 'string' ? doc : (doc?.url || doc?.previewUrl || doc?.fileUrl || '#');
+                    const docDate = (doc && typeof doc === 'object' && doc.uploadedAt) ? new Date(doc.uploadedAt) : null;
+                    const formattedDate = docDate && !isNaN(docDate.getTime()) 
+                      ? docDate.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) 
+                      : 'Uploaded';
+
+                    return (
+                      <div key={idx} className="p-2.5 flex items-center justify-between hover:bg-slate-50 transition-colors border-b last:border-b-0 border-slate-105/50">
+                        <div className="flex items-center gap-2 truncate pr-2">
+                          <span className="text-xs text-amber-500">📄</span>
+                          <div className="truncate">
+                            <p className="text-xs font-bold text-slate-800 truncate" title={docTitle}>{docTitle}</p>
+                            {typeof doc === 'object' && doc?.comment && (
+                              <div className="bg-slate-50 border border-slate-200/85 rounded-xl p-2.5 mt-2 space-y-1 max-w-[200px] whitespace-normal">
+                                <h6 className="text-[9px] font-black text-slate-400 uppercase tracking-wider flex items-center gap-1">
+                                  <span>💬</span> Comments / Notes
+                                </h6>
+                                <p className="text-[10.5px] font-semibold text-slate-805 whitespace-pre-wrap leading-normal">
+                                  {doc.comment}
+                                </p>
+                              </div>
+                            )}
+                            <p className="text-[9px] text-slate-450 font-semibold mt-1">
+                              {formattedDate}
+                            </p>
+                          </div>
                         </div>
+                        <a
+                          href={docUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="bg-[#D99A1C] hover:bg-[#F5B025] text-white font-extrabold text-[9px] px-2.5 py-1.5 rounded-lg transition-all shadow-3xs shrink-0 flex items-center gap-1 cursor-pointer"
+                        >
+                          <span>View</span>
+                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                          </svg>
+                        </a>
                       </div>
-                      <a
-                        href={doc.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="bg-[#D99A1C] hover:bg-[#F5B025] text-white font-extrabold text-[9px] px-2.5 py-1.5 rounded-lg transition-all shadow-3xs shrink-0 flex items-center gap-1 cursor-pointer"
-                      >
-                        <span>View</span>
-                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                        </svg>
-                      </a>
-                    </div>
-                  ))
+                    );
+                  })
                 ) : (
                   <div className="p-4 text-center text-slate-400 text-xs font-semibold">
                     ⚠️ No documents uploaded yet.
@@ -778,4 +881,13 @@ export default function ApplicationChatDrawer({ app, onClose }) {
     </>,
     document.body
   ) : null;
+}
+
+export default function ApplicationChatDrawer(props) {
+  if (!props?.app) return null;
+  return (
+    <DrawerErrorBoundary onClose={props.onClose}>
+      <ApplicationChatDrawerContent {...props} />
+    </DrawerErrorBoundary>
+  );
 }
