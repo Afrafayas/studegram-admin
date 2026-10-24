@@ -9,16 +9,19 @@ export default function TodoList({ todoList, setTodoList }) {
     if (!newTask.trim()) return;
 
     setIsAdding(true);
-    await new Promise(r => setTimeout(r, 400));
-    const taskItem = {
-      id: Date.now(),
-      task: newTask.trim(),
-      completed: false
-    };
+    try {
+      await new Promise(r => setTimeout(r, 400));
+      const taskItem = {
+        id: Date.now(),
+        task: newTask.trim(),
+        completed: false
+      };
 
-    setTodoList(prev => [taskItem, ...prev]);
-    setNewTask('');
-    setIsAdding(false);
+      setTodoList(prev => [taskItem, ...prev]);
+      setNewTask('');
+    } finally {
+      setIsAdding(false);
+    }
   };
 
   const toggleTask = (id) => {
@@ -65,10 +68,10 @@ export default function TodoList({ todoList, setTodoList }) {
           <button
             type="submit"
             disabled={isAdding}
-            className="bg-[#D99A1C] hover:bg-[#F5B025] disabled:opacity-50 text-white font-extrabold text-xs px-5 py-2.5 rounded-xl transition-all shadow-md shrink-0 uppercase tracking-wider flex items-center gap-1.5"
+            className="bg-[#D99A1C] hover:bg-[#F5B025] disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center justify-center gap-1.5 text-white font-extrabold text-xs px-5 py-2.5 rounded-xl transition-all shadow-md shrink-0 uppercase tracking-wider"
           >
             {isAdding && (
-              <svg className="animate-spin h-3.5 w-3.5 text-white" fill="none" viewBox="0 0 24 24">
+              <svg className="animate-spin h-3.5 w-3.5 text-current shrink-0" fill="none" viewBox="0 0 24 24">
                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
               </svg>

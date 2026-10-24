@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import API from '../api/axios';
 import { useToast } from '../context/ToastContext';
@@ -78,6 +78,21 @@ const handleDownloadDocument = (docUrl, fileName) => {
 export default function BecomePartner({ clients = [], setClients, applications = [], onPartnerOnboarded, onBack, initialSelectedPartnerId }) {
   const toast = useToast();
   const { addAuditLog } = useAuth();
+  const dismissedTargetRef = useRef(false);
+
+  const handleBackToDirectory = () => {
+    dismissedTargetRef.current = true;
+    setSingleViewPartner(null);
+    setSubView('directory');
+    localStorage.removeItem('studegram_admin_single_view_partner_id');
+    localStorage.removeItem('studegram_admin_single_view_partner');
+    try {
+      const url = new URL(window.location.href);
+      url.searchParams.delete('agentId');
+      url.searchParams.delete('partnerId');
+      window.history.replaceState({}, '', url.pathname + (url.search ? url.search : ''));
+    } catch (e) {}
+  };
 
   // Sub-view mode: 'directory' | 'onboard'
   const [subView, setSubView] = useState(() => {
@@ -128,6 +143,11 @@ export default function BecomePartner({ clients = [], setClients, applications =
 
   // Auto-navigate to Partner Single View Dossier when initialSelectedPartnerId is passed from notifications or saved ID
   useEffect(() => {
+    if (dismissedTargetRef.current && !initialSelectedPartnerId) return;
+    if (initialSelectedPartnerId) {
+      dismissedTargetRef.current = false;
+    }
+
     const params = new URLSearchParams(window.location.search);
     const urlPartnerId = params.get('agentId') || params.get('partnerId');
     const savedPartnerId = urlPartnerId || localStorage.getItem('studegram_admin_single_view_partner_id');
@@ -245,6 +265,7 @@ export default function BecomePartner({ clients = [], setClients, applications =
   // Listen for clear events (e.g. from sidebar clicks or navigation away)
   useEffect(() => {
     const handleClearSingleViewPartner = () => {
+      dismissedTargetRef.current = true;
       setSingleViewPartner(null);
       localStorage.removeItem('studegram_admin_single_view_partner_id');
       localStorage.removeItem('studegram_admin_single_view_partner');
@@ -252,7 +273,7 @@ export default function BecomePartner({ clients = [], setClients, applications =
         const url = new URL(window.location.href);
         url.searchParams.delete('agentId');
         url.searchParams.delete('partnerId');
-        window.history.replaceState({}, '', url.toString());
+        window.history.replaceState({}, '', url.pathname + (url.search ? url.search : ''));
       } catch (e) {}
     };
 
@@ -779,10 +800,7 @@ export default function BecomePartner({ clients = [], setClients, applications =
           {/* Premium Sub-Tab Switcher */}
           <div className="flex items-center bg-slate-800/90 border border-slate-700/80 p-1.5 rounded-2xl gap-1.5 shrink-0 shadow-inner backdrop-blur-md">
             <button
-              onClick={() => {
-                setSubView('directory');
-                setSingleViewPartner(null);
-              }}
+              onClick={handleBackToDirectory}
               className={`px-5 py-2.5 text-xs font-black rounded-xl transition-all cursor-pointer flex items-center gap-2 ${
                 subView === 'directory'
                   ? 'bg-gradient-to-r from-[#D99A1C] to-[#F5B025] text-slate-950 shadow-lg shadow-[#D99A1C]/25'
@@ -940,6 +958,7 @@ export default function BecomePartner({ clients = [], setClients, applications =
                                 className="flex items-center gap-3 cursor-pointer group"
                                 onClick={(e) => {
                                   e.stopPropagation();
+                                  dismissedTargetRef.current = false;
                                   setSingleViewPartner(partner);
                                 }}
                               >
@@ -990,6 +1009,7 @@ export default function BecomePartner({ clients = [], setClients, applications =
                                   type="button"
                                   onClick={(e) => {
                                     e.stopPropagation();
+                                    dismissedTargetRef.current = false;
                                     setSingleViewPartner(partner);
                                   }}
                                   className="px-3 py-1.5 bg-[#D99A1C]/10 hover:bg-[#D99A1C]/20 text-[#D99A1C] border border-[#D99A1C]/30 rounded-xl text-[10px] font-black transition-all cursor-pointer flex items-center gap-1 shadow-2xs"
@@ -1020,6 +1040,7 @@ export default function BecomePartner({ clients = [], setClients, applications =
                                   <button
                                     onClick={(e) => {
                                       e.stopPropagation();
+                                      dismissedTargetRef.current = false;
                                       setSingleViewPartner(partner);
                                       window.scrollTo({ top: 0, behavior: 'smooth' });
                                     }}
@@ -1032,6 +1053,7 @@ export default function BecomePartner({ clients = [], setClients, applications =
                                   <button
                                     onClick={(e) => {
                                       e.stopPropagation();
+                                      dismissedTargetRef.current = false;
                                       setSingleViewPartner(partner);
                                       window.scrollTo({ top: 0, behavior: 'smooth' });
                                     }}
@@ -1044,6 +1066,7 @@ export default function BecomePartner({ clients = [], setClients, applications =
                                   <button
                                     onClick={(e) => {
                                       e.stopPropagation();
+                                      dismissedTargetRef.current = false;
                                       setSingleViewPartner(partner);
                                       window.scrollTo({ top: 0, behavior: 'smooth' });
                                     }}
@@ -1385,7 +1408,7 @@ export default function BecomePartner({ clients = [], setClients, applications =
           <div className="bg-white border border-slate-200/90 rounded-3xl p-6 shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div className="flex items-center gap-4">
               <button
-                onClick={() => setSingleViewPartner(null)}
+                onClick={handleBackToDirectory}
                 className="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-extrabold text-xs rounded-xl transition-all flex items-center gap-1.5 cursor-pointer border border-slate-200 shadow-2xs"
               >
                 <span>← Back to Directory</span>
@@ -1882,7 +1905,7 @@ export default function BecomePartner({ clients = [], setClients, applications =
                 <button type="button" onClick={() => setSubView('directory')} className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-extrabold text-xs rounded-xl cursor-pointer">
                   Cancel
                 </button>
-                <button type="submit" disabled={isSubmitting} className="px-6 py-2.5 bg-[#D99A1C] hover:bg-[#F5B025] text-white font-black text-xs rounded-xl shadow-md cursor-pointer flex items-center gap-2 disabled:opacity-50">
+                <button type="submit" disabled={isSubmitting} className="px-6 py-2.5 bg-[#D99A1C] hover:bg-[#F5B025] text-white font-black text-xs rounded-xl shadow-md cursor-pointer inline-flex items-center justify-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed">
                   {isSubmitting && (
                     <svg className="animate-spin h-3.5 w-3.5 text-white" fill="none" viewBox="0 0 24 24">
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
@@ -2170,7 +2193,7 @@ export default function BecomePartner({ clients = [], setClients, applications =
                 <button
                   type="submit"
                   disabled={isSavingPartner}
-                  className="px-5 py-2 bg-[#D99A1C] hover:bg-[#F5B025] disabled:opacity-50 text-white font-extrabold text-xs rounded-xl shadow-md cursor-pointer flex items-center gap-1.5"
+                  className="px-5 py-2 bg-[#D99A1C] hover:bg-[#F5B025] disabled:opacity-50 disabled:cursor-not-allowed text-white font-extrabold text-xs rounded-xl shadow-md cursor-pointer inline-flex items-center justify-center gap-1.5"
                 >
                   {isSavingPartner && (
                     <svg className="animate-spin h-3.5 w-3.5 text-white" fill="none" viewBox="0 0 24 24">

@@ -20,7 +20,15 @@ export default function SalesOrderStudy({
   const [phoneCode, setPhoneCode] = useState('+91');
   const [phoneNumber, setPhoneNumber] = useState('');
   const [dob, setDob] = useState('');
-  const [assignedTo, setAssignedTo] = useState(staffList[0]?.name || 'Super Admin');
+  const [assignedTo, setAssignedTo] = useState(() => {
+    return staffList[0]?.id || staffList[0]?._id || staffList[0]?.name || 'Super Admin';
+  });
+
+  React.useEffect(() => {
+    if (!assignedTo && staffList && staffList.length > 0) {
+      setAssignedTo(staffList[0].id || staffList[0]._id || staffList[0].name);
+    }
+  }, [staffList]);
 
   const [uploadedFiles, setUploadedFiles] = useState([]);
   const [isUploading, setIsUploading] = useState(false);
@@ -108,6 +116,20 @@ export default function SalesOrderStudy({
     const cName = typeof selectedCourse === 'object' ? selectedCourse.title : selectedCourse;
     const iName = typeof selectedIntake === 'object' ? selectedIntake.title : selectedIntake;
 
+    const selectedStaffMember = (staffList || []).find(s => 
+      (s.id && String(s.id) === String(assignedTo)) || 
+      (s._id && String(s._id) === String(assignedTo)) || 
+      s.name === assignedTo
+    );
+
+    const pickedByObj = selectedStaffMember ? {
+      id: selectedStaffMember.id || selectedStaffMember._id,
+      name: selectedStaffMember.name,
+      email: selectedStaffMember.email || '',
+      role: selectedStaffMember.role || 'Operations Staff',
+      pickedAt: new Date().toISOString()
+    } : null;
+
     setIsSubmitting(true);
     await new Promise(r => setTimeout(r, 500));
     let newApp;
@@ -119,7 +141,8 @@ export default function SalesOrderStudy({
         studentEmail: studentObj?.email || '',
         phone: studentObj?.phone || '',
         dob: studentObj?.dob || '',
-        assignedTo,
+        assignedTo: selectedStaffMember?.name || assignedTo,
+        pickedBy: pickedByObj,
         universityId: university,
         universityName: uName,
         courseId: course,
@@ -140,7 +163,8 @@ export default function SalesOrderStudy({
         studentEmail: `${fullName.toLowerCase().replace(/\s+/g, '')}@gmail.com`,
         phone: `${phoneCode} ${phoneNumber}`,
         dob,
-        assignedTo,
+        assignedTo: selectedStaffMember?.name || assignedTo,
+        pickedBy: pickedByObj,
         universityId: university,
         universityName: uName,
         courseId: course,
@@ -496,7 +520,9 @@ export default function SalesOrderStudy({
               >
                 {staffList && staffList.length > 0 ? (
                   staffList.map(s => (
-                    <option key={s.id} value={s.name}>{s.name} ({s.role})</option>
+                    <option key={s.id || s._id || s.name} value={s.id || s._id || s.name}>
+                      {s.name} ({s.role || 'Staff'})
+                    </option>
                   ))
                 ) : (
                   <>
@@ -613,7 +639,7 @@ export default function SalesOrderStudy({
           <button
             type="submit"
             disabled={isSubmitting || isUploading || uploadedFiles.length === 0}
-            className="px-6 py-2.5 bg-gradient-to-r from-[#D99A1C] to-[#F5B025] hover:scale-[1.01] hover:shadow-lg text-white font-extrabold text-xs rounded-xl transition-all duration-150 shadow-md uppercase tracking-wider disabled:opacity-50 disabled:pointer-events-none flex items-center gap-2"
+            className="px-6 py-2.5 bg-gradient-to-r from-[#D99A1C] to-[#F5B025] hover:scale-[1.01] hover:shadow-lg text-white font-extrabold text-xs rounded-xl transition-all duration-150 shadow-md uppercase tracking-wider disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center justify-center gap-1.5"
           >
             {isSubmitting && (
               <svg className="animate-spin h-3.5 w-3.5 text-white" fill="none" viewBox="0 0 24 24">

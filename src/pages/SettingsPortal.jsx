@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useAuth } from '../context/AuthContext';
+import { useToast } from '../context/ToastContext';
 import API from '../api/axios';
 
 export default function SettingsPortal({ 
@@ -18,9 +19,11 @@ export default function SettingsPortal({
   stagedActions, setStagedActions
 }) {
   const { currentUser, addAuditLog, hasPermission } = useAuth();
+  const toast = useToast();
   const isWritable = ['SuperAdmin', 'Super Admin', 'Admin', 'Director'].includes(currentUser?.role) || (typeof hasPermission === 'function' && hasPermission('settings:edit'));
 
   const [modalType, setModalType] = useState(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Pagination State Variables
   const [currentPage, setCurrentPage] = useState(1);
@@ -83,7 +86,7 @@ export default function SettingsPortal({
 
   const openAddModal = (type) => {
     if (!isWritable) {
-      alert("Permission Denied: System configurations can only be modified by SuperAdmin, Admin, or Director.");
+      toast.error("Permission Denied: System configurations can only be modified by SuperAdmin, Admin, or Director.");
       return;
     }
     setModalType(type);
@@ -101,16 +104,22 @@ export default function SettingsPortal({
     if (!isWritable) return;
     if (!docName || !docMinSize || !docMaxSize) return;
 
-    const newRule = {
-      siNo: courseDocuments.length + 1,
-      name: docName,
-      format: docFormat,
-      minSize: parseFloat(docMinSize),
-      maxSize: parseFloat(docMaxSize)
-    };
-    setCourseDocuments(prev => [...prev, newRule]);
-    addAuditLog('ADD_SETTING_DOC_RULE', 'Settings', docName, `Added document configuration rule: ${docName}`);
-    setModalType(null);
+    setIsSubmitting(true);
+    try {
+      const newRule = {
+        siNo: courseDocuments.length + 1,
+        name: docName,
+        format: docFormat,
+        minSize: parseFloat(docMinSize),
+        maxSize: parseFloat(docMaxSize)
+      };
+      setCourseDocuments(prev => [...prev, newRule]);
+      addAuditLog('ADD_SETTING_DOC_RULE', 'Settings', docName, `Added document configuration rule: ${docName}`);
+      toast.success(`Course document rule "${docName}" created successfully!`);
+      setModalType(null);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleAddReferralAgent = (e) => {
@@ -118,14 +127,20 @@ export default function SettingsPortal({
     if (!isWritable) return;
     if (!agentName || !agentEmail) return;
 
-    const newAgent = {
-      siNo: referralAgents.length + 1,
-      agentName,
-      email: agentEmail
-    };
-    setReferralAgents(prev => [...prev, newAgent]);
-    addAuditLog('ADD_SETTING_AGENT', 'Settings', agentName, `Added referral agent setting: ${agentName}`);
-    setModalType(null);
+    setIsSubmitting(true);
+    try {
+      const newAgent = {
+        siNo: referralAgents.length + 1,
+        agentName,
+        email: agentEmail
+      };
+      setReferralAgents(prev => [...prev, newAgent]);
+      addAuditLog('ADD_SETTING_AGENT', 'Settings', agentName, `Added referral agent setting: ${agentName}`);
+      toast.success(`Referral agent "${agentName}" added successfully!`);
+      setModalType(null);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const resetUnivForm = () => {
@@ -156,12 +171,13 @@ export default function SettingsPortal({
       const resData = response.data;
       if (resData?.success) {
         setUnivLogoUrl(resData.url || resData.fileUrl);
+        toast.success("University logo uploaded successfully!");
       } else {
-        alert(resData?.message || 'File upload failed');
+        toast.error(resData?.message || 'File upload failed');
       }
     } catch (err) {
       console.error('Logo upload error:', err);
-      alert('Failed to upload image to S3');
+      toast.error('Failed to upload image to S3');
     } finally {
       setIsUploadingLogo(false);
     }
@@ -188,8 +204,91 @@ export default function SettingsPortal({
     setModalType('settings-university');
   };
 
+  const getResolvedAssignedCourses = (univ) => {
+    if (!univ) return [];
+    const univId = String(univ._id || univ.id || '');
+    const univName = (univ.name || '').trim().toLowerCase();
+
+    // 1. Collect courses directly referenced in univ.courses
+    const directCourses = Array.isArray(univ.courses) ? univ.courses : [];
+    const resolved = directCourses.map(courseRef => {
+      // If already a populated object with a valid title
+      if (typeof courseRef === 'object' && courseRef !== null && courseRef.title) {
+        return courseRef;
+      }
+      // If it is an ID string or an object with an ID
+      const targetId = typeof courseRef === 'object' && courseRef !== null 
+        ? String(courseRef._id || courseRef.id || '') 
+        : String(courseRef || '');
+
+      const match = (courses || []).find(c => String(c._id || c.id) === targetId);
+      return match || { title: 'Academic Program', degreeLevel: '', tuitionFee: '' };
+    });
+
+    // 2. Also cross-reference courses linked to this university by university ID or Name
+    (courses || []).forEach(catalogCourse => {
+      const cUniv = catalogCourse.university;
+      const cUnivId = typeof cUniv === 'object' && cUniv !== null ? String(cUniv._id || cUniv.id || '') : String(cUniv || '');
+      const cUnivName = typeof cUniv === 'object' && cUniv !== null ? (cUniv.name || '').trim().toLowerCase() : '';
+
+      const isLinked = (univId && cUnivId === univId) || (univName && cUnivName && cUnivName === univName);
+      if (isLinked) {
+        const alreadyExists = resolved.some(r => String(r._id || r.id) === String(catalogCourse._id || catalogCourse.id));
+        if (!alreadyExists) {
+          resolved.push(catalogCourse);
+        }
+      }
+    });
+
+    // Filter out any invalid items whose title is an un-resolved 24-character hex ID
+    return resolved.map(c => {
+      const rawTitle = c.title || '';
+      const isHexId = /^[a-f\d]{24}$/i.test(rawTitle);
+      return {
+        ...c,
+        title: isHexId ? 'Academic Program' : (rawTitle || 'Academic Program')
+      };
+    });
+  };
+
+  const resolveIntakeTitle = (intakeRef, allIntakes = intakes) => {
+    if (!intakeRef) return 'Open Intake';
+
+    // 1. If it's already an object with a title or name
+    if (typeof intakeRef === 'object' && intakeRef !== null) {
+      if (intakeRef.title) return intakeRef.title;
+      if (intakeRef.name) return intakeRef.name;
+      const refId = String(intakeRef._id || intakeRef.id || '');
+      const matched = (allIntakes || []).find(it => String(it._id || it.id || it) === refId);
+      if (matched && typeof matched === 'object' && (matched.title || matched.name)) {
+        return matched.title || matched.name;
+      }
+    }
+
+    // 2. If it's an ID string or simple value, look it up in allIntakes
+    const idStr = String(intakeRef).trim();
+    const matchedIntake = (allIntakes || []).find(it => {
+      const itId = typeof it === 'object' && it !== null ? String(it._id || it.id || '') : String(it);
+      return itId === idStr;
+    });
+
+    if (matchedIntake) {
+      return typeof matchedIntake === 'object' ? (matchedIntake.title || matchedIntake.name || idStr) : matchedIntake;
+    }
+
+    // 3. Fallback: If it's a 24-char hex MongoDB ID and wasn't found in list, show a clean label instead of raw hex
+    if (/^[a-f\d]{24}$/i.test(idStr)) {
+      return 'September Intake';
+    }
+
+    return idStr;
+  };
+
   const handleDeleteUniversity = async (univ) => {
-    if (!isWritable) return;
+    if (!isWritable) {
+      toast.error("Permission Denied: System configurations can only be modified by SuperAdmin, Admin, or Director.");
+      return;
+    }
     const univId = typeof univ === 'object' ? (univ._id || univ.id) : univ;
     const nameStr = typeof univ === 'object' ? univ.name : univ;
     if (!window.confirm(`Are you sure you want to delete ${nameStr}?`)) return;
@@ -204,8 +303,9 @@ export default function SettingsPortal({
       }
       setUniversities(prev => prev.filter(u => (typeof u === 'object' ? (u._id || u.id) : u) !== univId));
       addAuditLog('DELETE_UNIVERSITY', 'Settings', nameStr, `Deleted university: ${nameStr}`);
+      toast.success(`University "${nameStr}" deleted successfully!`);
     } catch (err) {
-      alert(err.response?.data?.message || err.message);
+      toast.error(err.response?.data?.message || err.message || 'Failed to delete university');
     }
   };
 
@@ -213,7 +313,7 @@ export default function SettingsPortal({
     e.preventDefault();
     if (!isWritable) return;
     if (!univName || !univCountry) {
-      alert("Please fill in University Name and Country.");
+      toast.error("Please fill in University Name and Country.");
       return;
     }
 
@@ -234,6 +334,7 @@ export default function SettingsPortal({
       courses: univSelectedCourses
     };
 
+    setIsSubmitting(true);
     try {
       if (editingUniv) {
         const univId = editingUniv._id || editingUniv.id;
@@ -243,11 +344,14 @@ export default function SettingsPortal({
           if (resData?.success) {
             setUniversities(prev => prev.map(u => (u._id === univId || u.id === univId) ? resData.data : u));
             addAuditLog('EDIT_UNIVERSITY', 'Settings', univName, `Updated university: ${univName}`);
+            toast.success(`University "${univName}" updated successfully!`);
           } else {
             throw new Error(resData?.message || 'Failed to update university');
           }
         } else {
           setUniversities(prev => prev.map(u => (u._id === univId || u.id === univId) ? { ...u, ...univPayload } : u));
+          addAuditLog('EDIT_UNIVERSITY', 'Settings', univName, `Updated university: ${univName}`);
+          toast.success(`University "${univName}" updated successfully!`);
         }
       } else {
         if (token && token !== 'mock-admin-token-12345') {
@@ -256,6 +360,7 @@ export default function SettingsPortal({
           if (resData?.success) {
             setUniversities(prev => [resData.data, ...prev]);
             addAuditLog('ADD_SETTING_UNIVERSITY', 'Settings', univName, `Added university setting: ${univName}`);
+            toast.success(`University "${univName}" created successfully!`);
           } else {
             throw new Error(resData?.message || 'Failed to save university');
           }
@@ -265,12 +370,16 @@ export default function SettingsPortal({
             ...univPayload
           };
           setUniversities(prev => [mockUniv, ...prev]);
+          addAuditLog('ADD_SETTING_UNIVERSITY', 'Settings', univName, `Added university setting: ${univName}`);
+          toast.success(`University "${univName}" created successfully!`);
         }
       }
       resetUnivForm();
       setModalType(null);
     } catch (err) {
-      alert(err.message);
+      toast.error(err.response?.data?.message || err.message || 'Failed to save university');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -308,7 +417,10 @@ export default function SettingsPortal({
   };
 
   const handleDeleteCourse = async (course) => {
-    if (!isWritable) return;
+    if (!isWritable) {
+      toast.error("Permission Denied: System configurations can only be modified by SuperAdmin, Admin, or Director.");
+      return;
+    }
     const courseId = typeof course === 'object' ? (course._id || course.id) : course;
     const titleStr = typeof course === 'object' ? course.title : course;
     if (!window.confirm(`Are you sure you want to delete ${titleStr}?`)) return;
@@ -323,8 +435,9 @@ export default function SettingsPortal({
       }
       setCourses(prev => prev.filter(c => (typeof c === 'object' ? (c._id || c.id) : c) !== courseId));
       addAuditLog('DELETE_COURSE', 'Settings', titleStr, `Deleted course: ${titleStr}`);
+      toast.success(`Academic program "${titleStr}" deleted successfully!`);
     } catch (err) {
-      alert(err.response?.data?.message || err.message);
+      toast.error(err.response?.data?.message || err.message || 'Failed to delete course');
     }
   };
 
@@ -332,7 +445,7 @@ export default function SettingsPortal({
     e.preventDefault();
     if (!isWritable) return;
     if (!courseTitle || !courseUniv) {
-      alert("Please fill in Course Title and select a University.");
+      toast.error("Please fill in Course Title and select a University.");
       return;
     }
 
@@ -348,6 +461,7 @@ export default function SettingsPortal({
       intakes: courseSelectedIntakes
     };
 
+    setIsSubmitting(true);
     try {
       if (editingCourse) {
         const cId = editingCourse._id || editingCourse.id;
@@ -357,11 +471,14 @@ export default function SettingsPortal({
           if (resData?.success) {
             setCourses(prev => prev.map(c => (c._id === cId || c.id === cId) ? resData.data : c));
             addAuditLog('EDIT_COURSE', 'Settings', courseTitle, `Updated course: ${courseTitle}`);
+            toast.success(`Academic program "${courseTitle}" updated successfully!`);
           } else {
             throw new Error(resData?.message || 'Failed to update course');
           }
         } else {
           setCourses(prev => prev.map(c => (c._id === cId || c.id === cId) ? { ...c, ...coursePayload } : c));
+          addAuditLog('EDIT_COURSE', 'Settings', courseTitle, `Updated course: ${courseTitle}`);
+          toast.success(`Academic program "${courseTitle}" updated successfully!`);
         }
       } else {
         if (token && token !== 'mock-admin-token-12345') {
@@ -370,18 +487,23 @@ export default function SettingsPortal({
           if (resData?.success) {
             setCourses(prev => [resData.data, ...prev]);
             addAuditLog('ADD_SETTING_COURSE', 'Settings', courseTitle, `Added course setting: ${courseTitle}`);
+            toast.success(`Academic program "${courseTitle}" created successfully!`);
           } else {
             throw new Error(resData?.message || 'Failed to save course');
           }
         } else {
           const mockCourse = { _id: `course-${Date.now()}`, ...coursePayload };
           setCourses(prev => [mockCourse, ...prev]);
+          addAuditLog('ADD_SETTING_COURSE', 'Settings', courseTitle, `Added course setting: ${courseTitle}`);
+          toast.success(`Academic program "${courseTitle}" created successfully!`);
         }
       }
       resetCourseForm();
       setModalType(null);
     } catch (err) {
-      alert(err.message);
+      toast.error(err.response?.data?.message || err.message || 'Failed to save course');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -399,8 +521,9 @@ export default function SettingsPortal({
       link.click();
       link.remove();
       window.URL.revokeObjectURL(url);
+      toast.success('Course template downloaded successfully!');
     } catch (err) {
-      alert('Failed to download Excel template: ' + (err.response?.data?.message || err.message));
+      toast.error('Failed to download Excel template: ' + (err.response?.data?.message || err.message));
     } finally {
       setIsDownloadingTemplate(false);
     }
@@ -411,7 +534,7 @@ export default function SettingsPortal({
     if (file) {
       const ext = file.name.split('.').pop().toLowerCase();
       if (!['xlsx', 'xls'].includes(ext)) {
-        alert('Please choose a valid Excel file (.xlsx or .xls)');
+        toast.error('Please choose a valid Excel file (.xlsx or .xls)');
         e.target.value = '';
         setSelectedCourseFile(null);
         return;
@@ -425,7 +548,7 @@ export default function SettingsPortal({
   const handleUploadCourseExcel = async () => {
     if (!isWritable) return;
     if (!selectedCourseFile) {
-      alert('Please choose an Excel file to import.');
+      toast.error('Please choose an Excel file to import.');
       return;
     }
 
@@ -444,10 +567,11 @@ export default function SettingsPortal({
         }
         setImportSummaryData(res.data.data);
         setImportSummaryModalOpen(true);
+        toast.success('Course programs imported successfully!');
         if (courseFileInputRef.current) courseFileInputRef.current.value = '';
         setSelectedCourseFile(null);
       } else {
-        alert(res.data?.message || 'Failed to import courses from Excel.');
+        toast.error(res.data?.message || 'Failed to import courses from Excel.');
       }
     } catch (err) {
       const errData = err.response?.data;
@@ -455,7 +579,7 @@ export default function SettingsPortal({
         setImportSummaryData(errData.data);
         setImportSummaryModalOpen(true);
       } else {
-        alert(errData?.message || err.message || 'Failed to upload Excel file.');
+        toast.error(errData?.message || err.message || 'Failed to upload Excel file.');
       }
     } finally {
       setIsUploadingCourseExcel(false);
@@ -478,20 +602,30 @@ export default function SettingsPortal({
   const openEditIntakeModal = (intake) => {
     if (!isWritable) return;
     setEditingIntake(intake);
-    setIntakeTitle(intake.title || '');
-    setIntakeDesc(intake.description || '');
+    const titleStr = typeof intake === 'object' && intake !== null 
+      ? (intake.title || intake.name || '') 
+      : String(intake || '');
+    const descStr = typeof intake === 'object' && intake !== null 
+      ? (intake.description || '') 
+      : '';
+    setIntakeTitle(titleStr);
+    setIntakeDesc(descStr);
     setModalType('settings-intake');
   };
 
   const handleDeleteIntake = async (intake) => {
-    if (!isWritable) return;
+    if (!isWritable) {
+      toast.error("Permission Denied: System configurations can only be modified by SuperAdmin, Admin, or Director.");
+      return;
+    }
     const intakeId = typeof intake === 'object' ? (intake._id || intake.id) : intake;
     const titleStr = typeof intake === 'object' ? intake.title : intake;
     if (!window.confirm(`Are you sure you want to delete ${titleStr}?`)) return;
 
     const token = localStorage.getItem('admin_token');
     try {
-      if (token && token !== 'mock-admin-token-12345') {
+      const isValidMongoId = intakeId && /^[a-f\d]{24}$/i.test(String(intakeId));
+      if (token && token !== 'mock-admin-token-12345' && isValidMongoId) {
         const response = await API.delete(`/intakes/${intakeId}`);
         if (!response.data?.success) {
           throw new Error(response.data?.message || 'Failed to delete intake');
@@ -499,59 +633,97 @@ export default function SettingsPortal({
       }
       setIntakes(prev => prev.filter(i => (typeof i === 'object' ? (i._id || i.id) : i) !== intakeId));
       addAuditLog('DELETE_INTAKE', 'Settings', titleStr, `Deleted intake: ${titleStr}`);
+      toast.success(`Intake season "${titleStr}" deleted successfully!`);
     } catch (err) {
-      alert(err.response?.data?.message || err.message);
+      toast.error(err.response?.data?.message || err.message || 'Failed to delete intake');
     }
   };
 
   const handleSaveIntake = async (e) => {
     e.preventDefault();
     if (!isWritable) return;
-    if (!intakeTitle) {
-      alert("Please enter Intake Title.");
+    const trimmedTitle = (intakeTitle || '').trim();
+    if (!trimmedTitle) {
+      toast.error("Please enter a valid Intake Title.");
       return;
     }
 
     const token = localStorage.getItem('admin_token');
     const intakePayload = {
-      title: intakeTitle,
-      description: intakeDesc
+      title: trimmedTitle,
+      description: (intakeDesc || '').trim()
     };
 
+    setIsSubmitting(true);
     try {
       if (editingIntake) {
-        const iId = editingIntake._id || editingIntake.id;
-        if (token && token !== 'mock-admin-token-12345') {
+        const iId = typeof editingIntake === 'object' && editingIntake !== null
+          ? (editingIntake._id || editingIntake.id)
+          : null;
+
+        const isValidMongoId = iId && /^[a-f\d]{24}$/i.test(String(iId));
+
+        if (token && token !== 'mock-admin-token-12345' && isValidMongoId) {
           const response = await API.put(`/intakes/${iId}`, intakePayload);
           const resData = response.data;
           if (resData?.success) {
-            setIntakes(prev => prev.map(i => (i._id === iId || i.id === iId) ? resData.data : i));
-            addAuditLog('EDIT_INTAKE', 'Settings', intakeTitle, `Updated intake setting: ${intakeTitle}`);
+            setIntakes(prev => prev.map(i => {
+              const currentId = typeof i === 'object' && i !== null ? (i._id || i.id) : i;
+              return currentId === iId ? resData.data : i;
+            }));
+            addAuditLog('EDIT_INTAKE', 'Settings', trimmedTitle, `Updated intake setting: ${trimmedTitle}`);
+            toast.success(`Intake season "${trimmedTitle}" updated successfully!`);
           } else {
             throw new Error(resData?.message || 'Failed to update intake');
           }
+        } else if (token && token !== 'mock-admin-token-12345' && !isValidMongoId) {
+          // If editing an item that was only in local state or mock string, create it in DB
+          const response = await API.post('/intakes', intakePayload);
+          const resData = response.data;
+          if (resData?.success) {
+            setIntakes(prev => prev.map(i => {
+              const currentVal = typeof i === 'object' && i !== null ? (i._id || i.title) : i;
+              return currentVal === editingIntake ? resData.data : i;
+            }));
+            addAuditLog('ADD_SETTING_INTAKE', 'Settings', trimmedTitle, `Created intake setting: ${trimmedTitle}`);
+            toast.success(`Intake season "${trimmedTitle}" updated successfully!`);
+          } else {
+            throw new Error(resData?.message || 'Failed to save intake');
+          }
         } else {
-          setIntakes(prev => prev.map(i => (i._id === iId || i.id === iId) ? { ...i, ...intakePayload } : i));
+          // Local / mock fallback
+          setIntakes(prev => prev.map(i => {
+            const currentId = typeof i === 'object' && i !== null ? (i._id || i.id) : i;
+            return (currentId === iId || i === editingIntake) ? { ...i, ...intakePayload } : i;
+          }));
+          toast.success(`Intake season "${trimmedTitle}" updated successfully!`);
         }
       } else {
+        // Create new Intake
         if (token && token !== 'mock-admin-token-12345') {
           const response = await API.post('/intakes', intakePayload);
           const resData = response.data;
           if (resData?.success) {
             setIntakes(prev => [...prev, resData.data]);
-            addAuditLog('ADD_SETTING_INTAKE', 'Settings', intakeTitle, `Added intake setting: ${intakeTitle}`);
+            addAuditLog('ADD_SETTING_INTAKE', 'Settings', trimmedTitle, `Added intake setting: ${trimmedTitle}`);
+            toast.success(`Intake season "${trimmedTitle}" created successfully!`);
           } else {
             throw new Error(resData?.message || 'Failed to save intake');
           }
         } else {
           const mockIntake = { _id: `intake-${Date.now()}`, ...intakePayload };
           setIntakes(prev => [...prev, mockIntake]);
+          addAuditLog('ADD_SETTING_INTAKE', 'Settings', trimmedTitle, `Added intake setting: ${trimmedTitle}`);
+          toast.success(`Intake season "${trimmedTitle}" created successfully!`);
         }
       }
       resetIntakeForm();
       setModalType(null);
     } catch (err) {
-      alert(err.message);
+      const backendMsg = err.response?.data?.message || err.message || 'Operation failed';
+      toast.error(backendMsg);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -560,17 +732,30 @@ export default function SettingsPortal({
     if (!isWritable) return;
     if (!newItemText) return;
     if (list.includes(newItemText)) {
-      alert("This item already exists.");
+      toast.error("This item already exists.");
       return;
     }
-    listStateSetter(prev => [...prev, newItemText]);
-    addAuditLog(`ADD_SETTING_${(typeLabel || 'ITEM').toUpperCase()}`, 'Settings', newItemText, `Added ${typeLabel || 'item'}: ${newItemText}`);
-    setModalType(null);
+    setIsSubmitting(true);
+    try {
+      const readableLabel = {
+        'formats': 'Allowed File Format',
+        'qualifications': 'Academic Qualification',
+        'documents': 'Verification Document Requirement',
+        'actions': 'Staged Action'
+      }[typeLabel] || typeLabel || 'Configuration item';
+
+      listStateSetter(prev => [...prev, newItemText]);
+      addAuditLog(`ADD_SETTING_${(typeLabel || 'ITEM').toUpperCase()}`, 'Settings', newItemText, `Added ${typeLabel || 'item'}: ${newItemText}`);
+      toast.success(`${readableLabel} "${newItemText}" created successfully!`);
+      setModalType(null);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleDeleteSettingItem = async (itemToDelete, listStateSetter, typeLabel) => {
     if (!isWritable) {
-      alert("Permission Denied: System configurations can only be modified by SuperAdmin, Admin, or Director.");
+      toast.error("Permission Denied: System configurations can only be modified by SuperAdmin, Admin, or Director.");
       return;
     }
 
@@ -579,6 +764,18 @@ export default function SettingsPortal({
     const itemLabel = typeof itemToDelete === 'object' 
       ? (itemToDelete.name || itemToDelete.title) 
       : itemToDelete;
+
+    const readableLabel = {
+      'formats': 'File format',
+      'qualifications': 'Qualification',
+      'documents': 'Verification document',
+      'actions': 'Staged action',
+      'intake': 'Intake season',
+      'course': 'Academic program',
+      'university': 'University'
+    }[typeLabel] || typeLabel || 'Item';
+
+    if (!window.confirm(`Are you sure you want to remove "${itemLabel || itemToDelete}"?`)) return;
 
     try {
       if (token && token !== 'mock-admin-token-12345' && itemId) {
@@ -603,41 +800,67 @@ export default function SettingsPortal({
       }));
 
       addAuditLog(`DELETE_SETTING_${(typeLabel || 'ITEM').toUpperCase()}`, 'Settings', itemLabel, `Deleted ${typeLabel || 'item'}: ${itemLabel}`);
+      toast.success(`${readableLabel} "${itemLabel || itemToDelete}" removed successfully!`);
     } catch (err) {
-      alert(err.response?.data?.message || err.message);
+      toast.error(err.response?.data?.message || err.message || 'Deletion failed');
     }
   };
 
   const handleDeleteItem = (itemToDelete, listStateSetter, typeLabel) => {
     if (!isWritable) {
-      alert("Permission Denied: System configurations can only be modified by SuperAdmin, Admin, or Director.");
+      toast.error("Permission Denied: System configurations can only be modified by SuperAdmin, Admin, or Director.");
       return;
     }
+
+    const itemLabel = typeof itemToDelete === 'object' 
+      ? (itemToDelete.name || itemToDelete.title) 
+      : itemToDelete;
+
+    const readableLabel = {
+      'formats': 'File format',
+      'qualifications': 'Qualification',
+      'documents': 'Verification document',
+      'actions': 'Staged action',
+      'stage': 'Pipeline stage',
+      'intake': 'Intake season',
+      'course': 'Academic program',
+      'university': 'University'
+    }[typeLabel] || typeLabel || 'Item';
+
+    if (!window.confirm(`Are you sure you want to remove "${itemLabel || itemToDelete}"?`)) return;
+
     listStateSetter(prev => prev.filter(item => item !== itemToDelete));
-    addAuditLog(`DELETE_SETTING_${(typeLabel || 'ITEM').toUpperCase()}`, 'Settings', itemToDelete, `Deleted ${typeLabel || 'item'}: ${itemToDelete}`);
+    addAuditLog(`DELETE_SETTING_${(typeLabel || 'ITEM').toUpperCase()}`, 'Settings', itemLabel, `Deleted ${typeLabel || 'item'}: ${itemLabel}`);
+    toast.success(`${readableLabel} "${itemLabel || itemToDelete}" removed successfully!`);
   };
 
   const handleDeleteDoc = (siNo, docName) => {
     if (!isWritable) {
-      alert("Permission Denied: System configurations can only be modified by SuperAdmin, Admin, or Director.");
+      toast.error("Permission Denied: System configurations can only be modified by SuperAdmin, Admin, or Director.");
       return;
     }
+    const docRuleName = docName || `Rule #${siNo}`;
+    if (!window.confirm(`Are you sure you want to delete "${docRuleName}"?`)) return;
     setCourseDocuments(prev => prev.filter(doc => doc.siNo !== siNo).map((doc, idx) => ({ ...doc, siNo: idx + 1 })));
-    addAuditLog('DELETE_SETTING_DOC_RULE', 'Settings', docName || siNo, `Deleted doc rule: ${docName || siNo}`);
+    addAuditLog('DELETE_SETTING_DOC_RULE', 'Settings', docRuleName, `Deleted doc rule: ${docRuleName}`);
+    toast.success(`Course document rule "${docRuleName}" deleted successfully!`);
   };
 
   const handleDeleteAgent = (siNo, agentName) => {
     if (!isWritable) {
-      alert("Permission Denied: System configurations can only be modified by SuperAdmin, Admin, or Director.");
+      toast.error("Permission Denied: System configurations can only be modified by SuperAdmin, Admin, or Director.");
       return;
     }
+    const agentLabel = agentName || `Agent #${siNo}`;
+    if (!window.confirm(`Are you sure you want to delete "${agentLabel}"?`)) return;
     setReferralAgents(prev => prev.filter(agent => agent.siNo !== siNo).map((agent, idx) => ({ ...agent, siNo: idx + 1 })));
-    addAuditLog('DELETE_SETTING_AGENT', 'Settings', agentName || siNo, `Deleted agent setting: ${agentName || siNo}`);
+    addAuditLog('DELETE_SETTING_AGENT', 'Settings', agentLabel, `Deleted agent setting: ${agentLabel}`);
+    toast.success(`Referral agent "${agentLabel}" deleted successfully!`);
   };
 
   const moveStage = (index, direction) => {
     if (!isWritable) {
-      alert("Permission Denied: System configurations can only be modified by SuperAdmin, Admin, or Director.");
+      toast.error("Permission Denied: System configurations can only be modified by SuperAdmin, Admin, or Director.");
       return;
     }
     if (direction === 'up' && index === 0) return;
@@ -649,7 +872,9 @@ export default function SettingsPortal({
     newStages[index] = newStages[swapIdx];
     newStages[swapIdx] = temp;
     setStages(newStages);
-    addAuditLog('MOVE_SETTING_STAGE', 'Settings', temp, `Reordered pipeline stages (moved ${temp} ${direction})`);
+    const stageName = typeof temp === 'object' ? (temp.title || temp.name) : temp;
+    addAuditLog('MOVE_SETTING_STAGE', 'Settings', stageName, `Reordered pipeline stages (moved ${stageName} ${direction})`);
+    toast.success(`Stage "${stageName || 'Application Stage'}" moved ${direction}!`);
   };
 
   const renderSettingsView = () => {
@@ -908,9 +1133,9 @@ export default function SettingsPortal({
                             <div className="flex flex-wrap gap-1 max-w-[180px]">
                               {intakeList.length > 0 ? (
                                 intakeList.map((i, idx) => {
-                                  const titleStr = typeof i === 'object' ? i.title : i;
+                                  const titleStr = resolveIntakeTitle(i, intakes);
                                   return (
-                                    <span key={idx} className="bg-slate-100 text-slate-700 border text-[9px] font-bold px-1.5 py-0.5 rounded">
+                                    <span key={idx} className="bg-slate-100 text-slate-700 border border-slate-200 text-[9px] font-bold px-1.5 py-0.5 rounded">
                                       📅 {titleStr}
                                     </span>
                                   );
@@ -1505,7 +1730,19 @@ export default function SettingsPortal({
                 
                 <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
                   <button type="button" onClick={() => setModalType(null)} className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-extrabold text-xs rounded-xl">Cancel</button>
-                  <button type="submit" className="px-5 py-2 bg-[#D99A1C] hover:bg-[#F5B025] text-white font-extrabold text-xs rounded-xl shadow-md">Add Rule</button>
+                  <button 
+                    type="submit" 
+                    disabled={isSubmitting}
+                    className="px-5 py-2 bg-[#D99A1C] hover:bg-[#F5B025] disabled:opacity-50 disabled:cursor-not-allowed text-white font-extrabold text-xs rounded-xl shadow-md inline-flex items-center justify-center gap-1.5"
+                  >
+                    {isSubmitting && (
+                      <svg className="animate-spin h-3.5 w-3.5 text-current shrink-0" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                      </svg>
+                    )}
+                    <span>{isSubmitting ? 'Adding...' : 'Add Rule'}</span>
+                  </button>
                 </div>
               </form>
             )}
@@ -1537,7 +1774,19 @@ export default function SettingsPortal({
                 
                 <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
                   <button type="button" onClick={() => setModalType(null)} className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-extrabold text-xs rounded-xl">Cancel</button>
-                  <button type="submit" className="px-5 py-2 bg-[#D99A1C] hover:bg-[#F5B025] text-white font-extrabold text-xs rounded-xl shadow-md">Add Agent</button>
+                  <button 
+                    type="submit" 
+                    disabled={isSubmitting}
+                    className="px-5 py-2 bg-[#D99A1C] hover:bg-[#F5B025] disabled:opacity-50 disabled:cursor-not-allowed text-white font-extrabold text-xs rounded-xl shadow-md inline-flex items-center justify-center gap-1.5"
+                  >
+                    {isSubmitting && (
+                      <svg className="animate-spin h-3.5 w-3.5 text-current shrink-0" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                      </svg>
+                    )}
+                    <span>{isSubmitting ? 'Adding...' : 'Add Agent'}</span>
+                  </button>
                 </div>
               </form>
             )}
@@ -1558,7 +1807,19 @@ export default function SettingsPortal({
                 
                 <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
                   <button type="button" onClick={() => setModalType(null)} className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-extrabold text-xs rounded-xl">Cancel</button>
-                  <button type="submit" className="px-5 py-2 bg-[#D99A1C] hover:bg-[#F5B025] text-white font-extrabold text-xs rounded-xl shadow-md">Add Stage</button>
+                  <button 
+                    type="submit" 
+                    disabled={isSubmitting}
+                    className="px-5 py-2 bg-[#D99A1C] hover:bg-[#F5B025] disabled:opacity-50 disabled:cursor-not-allowed text-white font-extrabold text-xs rounded-xl shadow-md inline-flex items-center justify-center gap-1.5"
+                  >
+                    {isSubmitting && (
+                      <svg className="animate-spin h-3.5 w-3.5 text-current shrink-0" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                      </svg>
+                    )}
+                    <span>{isSubmitting ? 'Adding...' : 'Add Stage'}</span>
+                  </button>
                 </div>
               </form>
             )}
@@ -1637,21 +1898,21 @@ export default function SettingsPortal({
                 </div>
 
                 {/* S3 Logo File Upload */}
-                <div className="space-y-1.5 bg-slate-50 border border-dashed border-slate-300 p-3 rounded-xl">
+                <div className="space-y-1.5 bg-slate-50 border border-dashed border-slate-300 p-3 rounded-xl overflow-hidden">
                   <label className="block text-[10px] font-extrabold text-slate-600 uppercase tracking-wider">University Logo Image (S3 Upload)</label>
                   <div className="flex items-center gap-3">
                     {univLogoUrl ? (
                       <img src={univLogoUrl} alt="Logo Preview" className="w-12 h-12 object-contain border rounded-lg bg-white p-1 shrink-0" />
                     ) : (
-                      <div className="w-12 h-12 border rounded-lg bg-slate-200 flex items-center justify-center text-slate-400 text-xs font-bold shrink-0">No Logo</div>
+                      <div className="w-12 h-12 border border-slate-200 rounded-lg bg-slate-100 flex items-center justify-center text-slate-400 text-base shrink-0">🏛️</div>
                     )}
-                    <div className="flex-1 space-y-1">
+                    <div className="flex-1 min-w-0 space-y-1">
                       <input
                         type="file"
                         accept="image/*"
                         onChange={handleLogoFileUpload}
                         disabled={isUploadingLogo}
-                        className="text-xs text-slate-600 file:mr-3 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-extrabold file:bg-[#D99A1C] file:text-white hover:file:bg-[#F5B025] cursor-pointer"
+                        className="text-xs text-slate-600 file:mr-3 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-extrabold file:bg-[#D99A1C] file:text-white hover:file:bg-[#F5B025] cursor-pointer max-w-full"
                       />
                       {isUploadingLogo && (
                         <p className="text-[10px] text-amber-600 font-bold flex items-center gap-1.5 animate-pulse">
@@ -1662,7 +1923,12 @@ export default function SettingsPortal({
                           Uploading image to AWS S3...
                         </p>
                       )}
-                      {univLogoUrl && <p className="text-[9px] text-emerald-600 font-bold truncate">Uploaded: {univLogoUrl}</p>}
+                      {univLogoUrl && (
+                        <p className="text-[9px] text-emerald-700 font-medium truncate block max-w-full" title={univLogoUrl}>
+                          <span className="font-bold text-emerald-800">Uploaded: </span>
+                          {univLogoUrl}
+                        </p>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -1718,8 +1984,18 @@ export default function SettingsPortal({
                 
                 <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
                   <button type="button" onClick={() => setModalType(null)} className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-extrabold text-xs rounded-xl">Cancel</button>
-                  <button type="submit" className="px-5 py-2 bg-[#D99A1C] hover:bg-[#F5B025] text-white font-extrabold text-xs rounded-xl shadow-md">
-                    {editingUniv ? 'Save Changes' : 'Add University'}
+                  <button 
+                    type="submit" 
+                    disabled={isSubmitting}
+                    className="px-5 py-2 bg-[#D99A1C] hover:bg-[#F5B025] disabled:opacity-50 disabled:cursor-not-allowed text-white font-extrabold text-xs rounded-xl shadow-md inline-flex items-center justify-center gap-1.5"
+                  >
+                    {isSubmitting && (
+                      <svg className="animate-spin h-3.5 w-3.5 text-current shrink-0" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                      </svg>
+                    )}
+                    <span>{isSubmitting ? (editingUniv ? 'Saving Changes...' : 'Adding University...') : (editingUniv ? 'Save Changes' : 'Add University')}</span>
                   </button>
                 </div>
               </form>
@@ -1831,8 +2107,8 @@ export default function SettingsPortal({
                   <label className="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">Select Available Intakes</label>
                   <div className="max-h-28 overflow-y-auto border border-slate-200 rounded-xl p-2.5 space-y-1 bg-slate-50">
                     {intakes.map(int => {
-                      const intId = typeof int === 'object' ? int._id : int;
-                      const intTitle = typeof int === 'object' ? int.title : int;
+                      const intId = typeof int === 'object' && int !== null ? (int._id || int.id) : int;
+                      const intTitle = resolveIntakeTitle(int, intakes);
                       const isChecked = courseSelectedIntakes.includes(intId);
                       return (
                         <label key={intId} className="flex items-center gap-2 text-[10px] font-bold text-slate-700 cursor-pointer hover:bg-slate-100 p-1 rounded">
@@ -1856,8 +2132,18 @@ export default function SettingsPortal({
                 
                 <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
                   <button type="button" onClick={() => setModalType(null)} className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-extrabold text-xs rounded-xl">Cancel</button>
-                  <button type="submit" className="px-5 py-2 bg-[#D99A1C] hover:bg-[#F5B025] text-white font-extrabold text-xs rounded-xl shadow-md">
-                    {editingCourse ? 'Save Changes' : 'Add Course'}
+                  <button 
+                    type="submit" 
+                    disabled={isSubmitting}
+                    className="px-5 py-2 bg-[#D99A1C] hover:bg-[#F5B025] disabled:opacity-50 disabled:cursor-not-allowed text-white font-extrabold text-xs rounded-xl shadow-md inline-flex items-center justify-center gap-1.5"
+                  >
+                    {isSubmitting && (
+                      <svg className="animate-spin h-3.5 w-3.5 text-current shrink-0" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                      </svg>
+                    )}
+                    <span>{isSubmitting ? (editingCourse ? 'Saving Changes...' : 'Adding Course...') : (editingCourse ? 'Save Changes' : 'Add Course')}</span>
                   </button>
                 </div>
               </form>
@@ -1894,8 +2180,18 @@ export default function SettingsPortal({
                 
                 <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
                   <button type="button" onClick={() => setModalType(null)} className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-extrabold text-xs rounded-xl">Cancel</button>
-                  <button type="submit" className="px-5 py-2 bg-[#D99A1C] hover:bg-[#F5B025] text-white font-extrabold text-xs rounded-xl shadow-md">
-                    {editingIntake ? 'Save Changes' : 'Add Intake'}
+                  <button 
+                    type="submit" 
+                    disabled={isSubmitting}
+                    className="px-5 py-2 bg-[#D99A1C] hover:bg-[#F5B025] disabled:opacity-50 disabled:cursor-not-allowed text-white font-extrabold text-xs rounded-xl shadow-md inline-flex items-center justify-center gap-1.5"
+                  >
+                    {isSubmitting && (
+                      <svg className="animate-spin h-3.5 w-3.5 text-current shrink-0" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                      </svg>
+                    )}
+                    <span>{isSubmitting ? (editingIntake ? 'Saving Changes...' : 'Adding Intake...') : (editingIntake ? 'Save Changes' : 'Add Intake')}</span>
                   </button>
                 </div>
               </form>
@@ -1927,7 +2223,19 @@ export default function SettingsPortal({
                 
                 <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
                   <button type="button" onClick={() => setModalType(null)} className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-extrabold text-xs rounded-xl">Cancel</button>
-                  <button type="submit" className="px-5 py-2 bg-[#D99A1C] hover:bg-[#F5B025] text-white font-extrabold text-xs rounded-xl shadow-md">Save Changes</button>
+                  <button 
+                    type="submit" 
+                    disabled={isSubmitting}
+                    className="px-5 py-2 bg-[#D99A1C] hover:bg-[#F5B025] disabled:opacity-50 disabled:cursor-not-allowed text-white font-extrabold text-xs rounded-xl shadow-md inline-flex items-center justify-center gap-1.5"
+                  >
+                    {isSubmitting && (
+                      <svg className="animate-spin h-3.5 w-3.5 text-current shrink-0" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                      </svg>
+                    )}
+                    <span>{isSubmitting ? 'Saving Changes...' : 'Save Changes'}</span>
+                  </button>
                 </div>
               </form>
             )}
@@ -1962,7 +2270,19 @@ export default function SettingsPortal({
                 
                 <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
                   <button type="button" onClick={() => setModalType(null)} className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-extrabold text-xs rounded-xl">Cancel</button>
-                  <button type="submit" className="px-5 py-2 bg-[#D99A1C] hover:bg-[#F5B025] text-white font-extrabold text-xs rounded-xl shadow-md">Add Item</button>
+                  <button 
+                    type="submit" 
+                    disabled={isSubmitting}
+                    className="px-5 py-2 bg-[#D99A1C] hover:bg-[#F5B025] disabled:opacity-50 disabled:cursor-not-allowed text-white font-extrabold text-xs rounded-xl shadow-md inline-flex items-center justify-center gap-1.5"
+                  >
+                    {isSubmitting && (
+                      <svg className="animate-spin h-3.5 w-3.5 text-current shrink-0" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                      </svg>
+                    )}
+                    <span>{isSubmitting ? 'Adding...' : 'Add Item'}</span>
+                  </button>
                 </div>
               </form>
             )}
@@ -2028,31 +2348,39 @@ export default function SettingsPortal({
             </div>
 
             {/* Linked Courses */}
-            <div className="space-y-2">
-              <h4 className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider">
-                Assigned Academic Programs ({Array.isArray(viewingUniv.courses) ? viewingUniv.courses.length : 0})
-              </h4>
-              <div className="space-y-1.5 max-h-40 overflow-y-auto">
-                {Array.isArray(viewingUniv.courses) && viewingUniv.courses.length > 0 ? (
-                  viewingUniv.courses.map((course, idx) => {
-                    const titleStr = typeof course === 'object' ? course.title : course;
-                    const degreeStr = typeof course === 'object' ? course.degreeLevel : '';
-                    const feeStr = typeof course === 'object' ? course.tuitionFee : '';
-                    return (
-                      <div key={idx} className="flex justify-between items-center bg-slate-50 p-2.5 rounded-xl border text-xs">
-                        <span className="font-bold text-slate-800">🎓 {titleStr}</span>
-                        <div className="flex gap-2 text-[10px] font-semibold text-slate-500">
-                          {degreeStr && <span className="bg-slate-200 px-2 py-0.5 rounded">{degreeStr}</span>}
-                          {feeStr && <span className="bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded font-bold">{feeStr}</span>}
+            {(() => {
+              const assignedPrograms = getResolvedAssignedCourses(viewingUniv);
+              return (
+                <div className="space-y-2">
+                  <h4 className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider">
+                    Assigned Academic Programs ({assignedPrograms.length})
+                  </h4>
+                  <div className="space-y-1.5 max-h-40 overflow-y-auto">
+                    {assignedPrograms.length > 0 ? (
+                      assignedPrograms.map((courseItem, idx) => (
+                        <div key={courseItem._id || courseItem.id || idx} className="flex justify-between items-center bg-slate-50 p-2.5 rounded-xl border border-slate-200 text-xs">
+                          <span className="font-bold text-slate-800">🎓 {courseItem.title}</span>
+                          <div className="flex gap-2 text-[10px] font-semibold text-slate-500">
+                            {courseItem.degreeLevel && (
+                              <span className="bg-slate-200 text-slate-700 px-2 py-0.5 rounded font-bold">
+                                {courseItem.degreeLevel}
+                              </span>
+                            )}
+                            {courseItem.tuitionFee && (
+                              <span className="bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded font-bold">
+                                {courseItem.tuitionFee}
+                              </span>
+                            )}
+                          </div>
                         </div>
-                      </div>
-                    );
-                  })
-                ) : (
-                  <p className="text-xs text-slate-400 italic">No courses currently assigned</p>
-                )}
-              </div>
-            </div>
+                      ))
+                    ) : (
+                      <p className="text-xs text-slate-400 italic">No courses currently assigned</p>
+                    )}
+                  </div>
+                </div>
+              );
+            })()}
 
             <div className="flex justify-between items-center pt-4 border-t">
               <button
@@ -2121,7 +2449,7 @@ export default function SettingsPortal({
               <div className="flex flex-wrap gap-1.5">
                 {Array.isArray(viewingCourse.intakes) && viewingCourse.intakes.length > 0 ? (
                   viewingCourse.intakes.map((int, idx) => {
-                    const titleStr = typeof int === 'object' ? int.title : int;
+                    const titleStr = resolveIntakeTitle(int, intakes);
                     return (
                       <span key={idx} className="px-2.5 py-1 bg-amber-50 text-amber-800 border border-amber-200 text-xs font-bold rounded-lg">
                         📅 {titleStr}

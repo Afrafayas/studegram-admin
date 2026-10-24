@@ -272,18 +272,26 @@ export function AuthProvider({ children }) {
 
   // Periodic heartbeat every 45 seconds to keep portal time spent updated accurately in DB
   useEffect(() => {
-    if (!currentUser || !currentSessionId) return;
+    if (!currentUser) return;
 
-    const intervalId = setInterval(async () => {
+    const sendHeartbeat = async () => {
       try {
-        await API.post('/activity-logs/heartbeat', {
-          sessionId: currentSessionId,
-          userId: currentUser.id
+        const sessId = currentSessionId || localStorage.getItem('admin_session_id');
+        const res = await API.post('/activity-logs/heartbeat', {
+          sessionId: sessId || undefined,
+          userId: currentUser.id || currentUser._id
         });
+        if (res.data?.sessionId && (!currentSessionId || currentSessionId !== res.data.sessionId)) {
+          setCurrentSessionId(res.data.sessionId);
+          localStorage.setItem('admin_session_id', res.data.sessionId);
+        }
       } catch (err) {
         // Silently catch heartbeat error
       }
-    }, 45000);
+    };
+
+    sendHeartbeat();
+    const intervalId = setInterval(sendHeartbeat, 45000);
 
     return () => clearInterval(intervalId);
   }, [currentUser, currentSessionId]);

@@ -160,6 +160,7 @@ export default function Applications({ applications, referralAgents = [], intake
   const [previewModalDoc, setPreviewModalDoc] = useState(null);
   const [commentsList, setCommentsList] = useState([]);
   const [newCommentInput, setNewCommentInput] = useState('');
+  const [isPostingComment, setIsPostingComment] = useState(false);
   const [appEditNotes, setAppEditNotes] = useState('');
 
   // Edit Application Modal State
@@ -673,6 +674,7 @@ export default function Applications({ applications, referralAgents = [], intake
     setCommentsList(prev => [newCommentObj, ...prev]);
     setNewCommentInput('');
 
+    setIsPostingComment(true);
     try {
       const appId = singleViewApp.id || singleViewApp._id;
       const res = await API.post(`/applications/${appId}/comments`, {
@@ -691,6 +693,8 @@ export default function Applications({ applications, referralAgents = [], intake
       if (onRefresh) onRefresh();
     } catch (err) {
       toast.success('Comment posted locally.');
+    } finally {
+      setIsPostingComment(false);
     }
   };
 
@@ -1384,11 +1388,28 @@ export default function Applications({ applications, referralAgents = [], intake
                 <span>← Back to Applications List</span>
               </button>
               <div>
-                <span className="text-[10px] font-extrabold text-[#D99A1C] uppercase tracking-wider block">Application Detailed Dossier</span>
-                <h2 className="text-xl font-black text-slate-900 flex items-center gap-2">
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] font-extrabold text-[#D99A1C] uppercase tracking-wider">Application Detailed Dossier</span>
+                  <span className="text-[10px] text-slate-400 font-bold">•</span>
+                  <span className="text-[10px] text-slate-500 font-bold">
+                    Date Created: {singleViewApp.dateAdded || (singleViewApp.createdAt ? new Date(singleViewApp.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : 'Recent')}
+                  </span>
+                </div>
+                <h2 className="text-xl font-black text-slate-900 flex items-center gap-2 flex-wrap mt-0.5">
                   <span>{singleViewApp.studentName}</span>
                   <span className="text-xs font-mono font-bold bg-blue-50 text-blue-700 px-2.5 py-0.5 rounded-md border border-blue-200">
                     {singleViewApp.camsId && singleViewApp.camsId.startsWith('CAMS') ? singleViewApp.camsId : `CAMS${(singleViewApp.camsId || '').substring((singleViewApp.camsId || '').length - 6).toUpperCase()}`}
+                  </span>
+                  <span className={`px-2.5 py-0.5 border rounded-full text-[10px] font-extrabold ${
+                    (singleViewApp.secondaryStatus || singleViewApp.status || 'Submitted').includes('Closed') || (singleViewApp.secondaryStatus || singleViewApp.status) === 'Enrolled / Closed' || (singleViewApp.secondaryStatus || singleViewApp.status) === 'Visa Approved' || (singleViewApp.secondaryStatus || singleViewApp.status) === 'Paid Students'
+                      ? 'bg-emerald-50 text-emerald-700 border-emerald-200 font-black' 
+                      : (singleViewApp.secondaryStatus || singleViewApp.status || '').includes('Offer') || (singleViewApp.secondaryStatus || singleViewApp.status || '').includes('CAS')
+                        ? 'bg-blue-50 text-blue-700 border-blue-200'
+                        : (singleViewApp.secondaryStatus || singleViewApp.status || '').includes('Rejected')
+                          ? 'bg-rose-50 text-rose-700 border-rose-200'
+                          : 'bg-amber-50 text-amber-700 border-amber-200'
+                  }`}>
+                    {singleViewApp.secondaryStatus || singleViewApp.status || 'Submitted'}
                   </span>
                 </h2>
               </div>
@@ -1442,8 +1463,14 @@ export default function Applications({ applications, referralAgents = [], intake
               <button
                 onClick={handleSaveApplicationData}
                 disabled={isSavingApp}
-                className="px-4 py-2 bg-[#0A0A0F] hover:bg-slate-800 text-white font-black text-xs rounded-xl shadow-md transition-all cursor-pointer flex items-center gap-1.5 uppercase tracking-wider disabled:opacity-50"
+                className="px-4 py-2 bg-[#0A0A0F] hover:bg-slate-800 text-white font-black text-xs rounded-xl shadow-md transition-all cursor-pointer inline-flex items-center justify-center gap-1.5 uppercase tracking-wider disabled:opacity-50 disabled:cursor-not-allowed"
               >
+                {isSavingApp && (
+                  <svg className="animate-spin h-3.5 w-3.5 text-current shrink-0" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                  </svg>
+                )}
                 <span>💾 {isSavingApp ? 'Saving...' : 'Save All Data'}</span>
               </button>
             </div>
@@ -1542,6 +1569,10 @@ export default function Applications({ applications, referralAgents = [], intake
 
                 <div className="space-y-3 text-xs">
                   <div className="flex justify-between py-1 border-b border-slate-100">
+                    <span className="text-slate-400 font-bold">Destination Country:</span>
+                    <span className="font-bold text-slate-800">📍 {singleViewApp.country || singleViewApp.destinationCountry || singleViewApp.university?.country || 'United Kingdom'}</span>
+                  </div>
+                  <div className="flex justify-between py-1 border-b border-slate-100">
                     <span className="text-slate-400 font-bold">Level of Study:</span>
                     <span className="font-bold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded border border-indigo-200">{singleViewApp.level || 'Undergraduate (UG)'}</span>
                   </div>
@@ -1550,8 +1581,16 @@ export default function Applications({ applications, referralAgents = [], intake
                     <span className="font-bold text-slate-900 bg-amber-50 px-2 py-0.5 rounded border border-amber-200">{singleViewApp.intake}</span>
                   </div>
                   <div className="flex justify-between py-1 border-b border-slate-100">
-                    <span className="text-slate-400 font-bold">Assigned BDM / Channel:</span>
-                    <span className="font-bold text-slate-800">{singleViewApp.assignedBdm || 'Direct'}</span>
+                    <span className="text-slate-400 font-bold">Tuition Fees:</span>
+                    <span className="font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                      {singleViewApp.tuitionFee || singleViewApp.courseFee || singleViewApp.fee || singleViewApp.course?.tuitionFee || '₹15,400 / year'}
+                    </span>
+                  </div>
+                  <div className="flex justify-between py-1 border-b border-slate-100">
+                    <span className="text-slate-400 font-bold">Referral Partner / Source:</span>
+                    <span className="font-bold text-indigo-600">
+                      {singleViewApp.referredBy || singleViewApp.partnerName || singleViewApp.partner?.name || singleViewApp.assignedBdm || 'Direct Applicant'}
+                    </span>
                   </div>
                   <div className="flex justify-between py-1 border-b border-slate-100">
                     <span className="text-slate-400 font-bold">Assigned Executive:</span>
@@ -1670,6 +1709,44 @@ export default function Applications({ applications, referralAgents = [], intake
                 })()}
               </div>
 
+              {/* Counselor Remarks & Application Notes */}
+              <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm space-y-4">
+                <div className="flex justify-between items-center pb-3 border-b border-slate-100">
+                  <div>
+                    <span className="text-[10px] font-extrabold text-[#D99A1C] uppercase tracking-wider block">Official Counselor Remarks</span>
+                    <h3 className="text-sm font-black text-slate-900 uppercase tracking-wider">
+                      Application Notes &amp; Counselor Remarks
+                    </h3>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleSaveApplicationData}
+                    disabled={isSavingApp}
+                    className="px-3.5 py-1.5 bg-[#0A0A0F] hover:bg-slate-800 text-white font-black text-xs rounded-xl shadow-xs transition-all cursor-pointer inline-flex items-center justify-center gap-1.5 uppercase tracking-wider disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {isSavingApp && (
+                      <svg className="animate-spin h-3.5 w-3.5 text-current shrink-0" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                      </svg>
+                    )}
+                    <span>💾 {isSavingApp ? 'Saving...' : 'Save Notes'}</span>
+                  </button>
+                </div>
+                <div className="space-y-2">
+                  <textarea
+                    rows="3"
+                    value={appEditNotes}
+                    onChange={(e) => setAppEditNotes(e.target.value)}
+                    placeholder="Enter counselor remarks, special instructions, eligibility notes, or document follow-ups for this application..."
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3.5 text-xs text-slate-900 focus:outline-none focus:bg-white focus:border-[#D99A1C] focus:ring-1 focus:ring-[#D99A1C] transition-all font-medium resize-y"
+                  />
+                  <p className="text-[10px] text-slate-400 font-semibold italic">
+                    Counselor notes are saved directly to this application record and visible to all staff handling this case.
+                  </p>
+                </div>
+              </div>
+
               {/* Comments & Related Notes Thread Section */}
               <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm space-y-5">
                 <div className="flex justify-between items-center pb-3 border-b border-slate-100">
@@ -1698,10 +1775,16 @@ export default function Applications({ applications, referralAgents = [], intake
                     <span className="text-[10px] text-slate-400 font-semibold">Visible to internal admin & staff members</span>
                     <button
                       type="submit"
-                      disabled={!newCommentInput.trim()}
-                      className="px-4 py-2 bg-gradient-to-r from-[#D99A1C] to-[#F5B025] hover:from-[#c28815] hover:to-[#e09e1d] text-white font-black text-xs rounded-xl shadow-md transition-all cursor-pointer disabled:opacity-50"
+                      disabled={!newCommentInput.trim() || isPostingComment}
+                      className="px-4 py-2 bg-gradient-to-r from-[#D99A1C] to-[#F5B025] hover:from-[#c28815] hover:to-[#e09e1d] text-white font-black text-xs rounded-xl shadow-md transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center justify-center gap-1.5"
                     >
-                      <span>💬 Post Comment</span>
+                      {isPostingComment && (
+                        <svg className="animate-spin h-3.5 w-3.5 text-current shrink-0" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                        </svg>
+                      )}
+                      <span>{isPostingComment ? 'Posting...' : '💬 Post Comment'}</span>
                     </button>
                   </div>
                 </form>
@@ -1941,9 +2024,15 @@ export default function Applications({ applications, referralAgents = [], intake
                 <button
                   type="submit"
                   disabled={isSavingEdit}
-                  className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-[#D99A1C] to-[#F5B025] hover:scale-[1.01] text-white font-extrabold text-xs shadow-md transition-all uppercase tracking-wider disabled:opacity-50 cursor-pointer"
+                  className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-[#D99A1C] to-[#F5B025] hover:scale-[1.01] text-white font-extrabold text-xs shadow-md transition-all uppercase tracking-wider disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer inline-flex items-center justify-center gap-1.5"
                 >
-                  {isSavingEdit ? 'Saving...' : 'Save Changes'}
+                  {isSavingEdit && (
+                    <svg className="animate-spin h-3.5 w-3.5 text-current shrink-0" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                    </svg>
+                  )}
+                  <span>{isSavingEdit ? 'Saving...' : 'Save Changes'}</span>
                 </button>
               </div>
             </form>
