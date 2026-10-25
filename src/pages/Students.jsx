@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { useAuth } from '../context/AuthContext';
 import ApplicationChatDrawer from '../components/ApplicationChatDrawer';
 import { useToast } from '../context/ToastContext';
+import API from '../api/axios';
 
 const getDocumentBlobUrl = (urlOrBase64, mimeType = 'application/pdf') => {
   if (!urlOrBase64) return '';
@@ -127,6 +128,128 @@ export default function Students({ clients = [], setClients, applications = [], 
 
   const [previewModalDoc, setPreviewModalDoc] = useState(null);
 
+  // Find linked applications for a specific student
+  const getStudentApplications = (student) => {
+    if (!student) return [];
+    const sName = typeof student === 'string' ? student : student.name;
+    const sId = typeof student === 'object' ? String(student.id || student._id || '') : '';
+    const cleanName = (sName || '').trim().toLowerCase();
+
+    return (applications || []).filter(app => {
+      if (sId) {
+        const appStudentId = String(app.student?._id || app.student || '');
+        if (appStudentId && appStudentId === sId) return true;
+      }
+      if (cleanName) {
+        const aName = (app.studentName || app.student?.name || '').trim().toLowerCase();
+        if (aName === cleanName) return true;
+      }
+      return false;
+    });
+  };
+
+  // Email Student Modal State
+  const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
+  const [emailTargetStudent, setEmailTargetStudent] = useState(null);
+  const [emailSubject, setEmailSubject] = useState('');
+  const [emailMessage, setEmailMessage] = useState('');
+  const [emailErrorNotice, setEmailErrorNotice] = useState('');
+  const [isSendingEmail, setIsSendingEmail] = useState(false);
+
+  // Close modal on Escape key press
+  useEffect(() => {
+    if (!isEmailModalOpen) return;
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape' && !isSendingEmail) {
+        setIsEmailModalOpen(false);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isEmailModalOpen, isSendingEmail]);
+
+  const handleOpenEmailModal = (student) => {
+    const target = student || singleViewStudent;
+    if (!target) return;
+
+    const apps = getStudentApplications(target);
+    const primaryApp = apps[0];
+    const stdCode = target.studentCode || (target.id ? `STD-${String(target.id).slice(-5).toUpperCase()}` : '');
+
+    setEmailTargetStudent(target);
+    setEmailErrorNotice('');
+
+    let subject = `Application & Admission Update - Unigather`;
+    if (primaryApp && (primaryApp.universityName || primaryApp.university)) {
+      const uName = primaryApp.universityName || primaryApp.university;
+      subject = `Admission Update: ${uName} (${stdCode || target.name})`;
+    } else if (stdCode) {
+      subject = `Unigather Admission Portfolio Update [${stdCode}]`;
+    }
+    setEmailSubject(subject);
+
+    let messageBody = `Dear ${target.name || 'Student'},
+
+We are contacting you from the Unigather Admissions & Operations team regarding your documentation and university application portfolio.`;
+
+    if (primaryApp) {
+      const uName = primaryApp.universityName || primaryApp.university || 'Target University';
+      const cName = primaryApp.courseName || primaryApp.course || 'Academic Program';
+      const cams = primaryApp.camsId ? ` (CAMS ID: ${primaryApp.camsId})` : '';
+      const intake = primaryApp.intake ? ` for ${primaryApp.intake}` : '';
+      messageBody += `
+
+Regarding your application to ${uName} — ${cName}${cams}${intake}:
+• Current Status: ${primaryApp.status || 'Under Review'}
+• Portfolio Reference: ${stdCode || 'Registered Student'}`;
+    }
+
+    messageBody += `
+
+Please let us know if you have any questions or require guidance with your admissions dossier.
+
+Best regards,
+Unigather Administration Team
+support@unigather.app`;
+
+    setEmailMessage(messageBody);
+    setIsEmailModalOpen(true);
+  };
+
+  const handleSendEmail = async (e) => {
+    e?.preventDefault();
+    if (!emailTargetStudent?.email) {
+      toast.error('Recipient email address is missing.');
+      return;
+    }
+    if (!emailSubject.trim() || !emailMessage.trim()) {
+      toast.error('Subject and message body cannot be empty.');
+      return;
+    }
+
+    setIsSendingEmail(true);
+    setEmailErrorNotice('');
+    try {
+      const res = await API.post('/mail/send', {
+        name: emailTargetStudent.name || 'Student',
+        email: emailTargetStudent.email.trim(),
+        subject: emailSubject.trim(),
+        message: emailMessage.trim()
+      });
+
+      addAuditLog?.('EMAIL_STUDENT', 'Student', emailTargetStudent.id || emailTargetStudent._id, `Sent email to ${emailTargetStudent.name} (${emailTargetStudent.email})`);
+      toast.success(res.data?.message || `Email successfully dispatched to ${emailTargetStudent.email}!`);
+      setIsEmailModalOpen(false);
+    } catch (err) {
+      console.warn('Backend mail API failed:', err);
+      const errMsg = err.response?.data?.message || err.message || 'Direct mail service unavailable';
+      setEmailErrorNotice(errMsg);
+      toast.error(`Direct dispatch could not complete: ${errMsg}. You can click 'Open in Gmail' or 'Default Mail App' below to send immediately.`);
+    } finally {
+      setIsSendingEmail(false);
+    }
+  };
+
   // Keep singleViewStudent in sync with live clients prop
   useEffect(() => {
     if (!singleViewStudent || !clients || clients.length === 0) return;
@@ -155,22 +278,20 @@ export default function Students({ clients = [], setClients, applications = [], 
         const url = new URL(window.location.href);
         if (url.searchParams.get('studentId') !== String(studentId)) {
           url.searchParams.set('studentId', String(studentId));
-          window.history.replaceState({}, '', url.toString());
+          window.history.pushState({ studentView: String(studentId) }, '', url.toString());
         }
       } catch (e) {}
     } else {
       localStorage.removeItem('studegram_admin_single_view_student_id');
       localStorage.removeItem('studegram_admin_single_view_student');
-      if (!expandedId) {
-        localStorage.removeItem('studegram_admin_expanded_student_id');
-        try {
-          const url = new URL(window.location.href);
-          if (url.searchParams.has('studentId')) {
-            url.searchParams.delete('studentId');
-            window.history.replaceState({}, '', url.toString());
-          }
-        } catch (e) {}
-      }
+      localStorage.removeItem('studegram_admin_expanded_student_id');
+      try {
+        const url = new URL(window.location.href);
+        if (url.searchParams.has('studentId')) {
+          url.searchParams.delete('studentId');
+          window.history.replaceState({}, '', url.toString());
+        }
+      } catch (e) {}
     }
   }, [singleViewStudent, expandedId]);
 
@@ -297,15 +418,7 @@ export default function Students({ clients = [], setClients, applications = [], 
   const students = clients.filter(c => c.type === 'Student');
   const partners = clients.filter(c => c.type === 'Agent');
 
-  // Find linked applications for a specific student
-  const getStudentApplications = (studentName) => {
-    if (!studentName) return [];
-    const clean = studentName.trim().toLowerCase();
-    return (applications || []).filter(app => {
-      const aName = (app.studentName || app.student?.name || '').trim().toLowerCase();
-      return aName === clean;
-    });
-  };
+
 
   // Dynamically extract all unique intakes from master intakes and applications
   const masterIntakeTitles = (intakes || []).map(i => typeof i === 'object' ? i.title : i).filter(Boolean);
@@ -337,7 +450,7 @@ export default function Students({ clients = [], setClients, applications = [], 
                         phone.includes(searchTerm) ||
                         ref.toLowerCase().includes(searchTerm.toLowerCase());
                         
-    const studentApps = getStudentApplications(s.name);
+    const studentApps = getStudentApplications(s);
     const hasPaidApp = studentApps.some(app => app.secondaryStatus === 'Paid Students' || app.status === 'Paid Students' || app.paymentStatus === 'Paid');
     
     const statusMatch = statusFilter === 'All' ? true :
@@ -346,7 +459,54 @@ export default function Students({ clients = [], setClients, applications = [], 
 
     const hasIntakeApp = intakeFilter === 'All' || studentApps.some(app => app.intake && app.intake.toLowerCase().includes(intakeFilter.toLowerCase()));
 
-    const partnerMatch = partnerFilter === 'All' || s.referredBy === partnerFilter;
+    let partnerMatch = true;
+    if (partnerFilter !== 'All') {
+      if (partnerFilter === 'Direct') {
+        const isStudentDirect = (s.referredBy || '').toLowerCase() === 'direct';
+        const hasDirectApp = studentApps.length > 0 && studentApps.some(app => 
+          !app.partner || app.partnerName === 'Direct' || app.partnerCompanyName === 'Direct' || app.assignedBdm === 'Direct'
+        );
+        const hasNoAgentApp = studentApps.every(app => 
+          !app.partner || app.partnerName === 'Direct' || app.partnerCompanyName === 'Direct' || app.assignedBdm === 'Direct'
+        );
+        partnerMatch = isStudentDirect || (!s.partner && (s.referredBy || '').toLowerCase() !== 'agent' && hasNoAgentApp) || hasDirectApp;
+      } else {
+        const pf = partnerFilter.toLowerCase().trim();
+        const sRef = (s.referredBy || '').toLowerCase().trim();
+        const sPartnerId = String(s.partner?._id || s.partner?.id || s.partner || '').toLowerCase().trim();
+        const sPartnerName = (s.partner?.name || s.partnerName || '').toLowerCase().trim();
+        const sPartnerCompany = (s.partner?.companyName || s.partnerCompanyName || '').toLowerCase().trim();
+
+        const matchedP = partners.find(p => 
+          (p.name && p.name.toLowerCase().trim() === pf) ||
+          (p.companyName && p.companyName.toLowerCase().trim() === pf) ||
+          String(p.id || p._id || '').toLowerCase().trim() === pf
+        );
+
+        const targetIds = [pf, String(matchedP?.id || matchedP?._id || '').toLowerCase().trim()].filter(Boolean);
+        const targetNames = [
+          pf,
+          matchedP?.name?.toLowerCase()?.trim(),
+          matchedP?.companyName?.toLowerCase()?.trim()
+        ].filter(Boolean);
+
+        const studentDirectMatch = targetIds.includes(sPartnerId) ||
+          targetNames.includes(sRef) ||
+          targetNames.includes(sPartnerName) ||
+          targetNames.includes(sPartnerCompany);
+
+        const appPartnerMatch = studentApps.some(app => {
+          const appPId = String(app.partner?._id || app.partner?.id || (typeof app.partner === 'string' && app.partner.match(/^[0-9a-fA-F]{24}$/) ? app.partner : '')).toLowerCase().trim();
+          const appPName = (app.partnerName || app.partner?.name || (typeof app.partner === 'string' ? app.partner : '')).toLowerCase().trim();
+          const appPCompany = (app.partnerCompanyName || app.partner?.companyName || app.assignedBdm || '').toLowerCase().trim();
+
+          return targetIds.includes(appPId) ||
+            targetNames.some(tn => tn && (appPName === tn || appPCompany === tn || appPName.includes(tn) || appPCompany.includes(tn) || tn.includes(appPName) || tn.includes(appPCompany)));
+        });
+
+        partnerMatch = studentDirectMatch || appPartnerMatch;
+      }
+    }
     
     return searchMatch && statusMatch && partnerMatch && hasIntakeApp;
   });
@@ -527,9 +687,15 @@ export default function Students({ clients = [], setClients, applications = [], 
               >
                 <option value="All">All Partners / Channels</option>
                 <option value="Direct">Direct Applications</option>
-                {partners.map(p => (
-                  <option key={p.id} value={p.name}>{p.name}</option>
-                ))}
+                {partners.map(p => {
+                  const displayName = p.companyName && p.companyName !== p.name
+                    ? `${p.companyName} (${p.name})`
+                    : (p.companyName || p.name || 'Partner');
+                  const optionVal = p.companyName || p.name;
+                  return (
+                    <option key={p.id || p._id} value={optionVal}>{displayName}</option>
+                  );
+                })}
               </select>
 
               <div className="relative w-full sm:max-w-xs">
@@ -557,19 +723,22 @@ export default function Students({ clients = [], setClients, applications = [], 
                 )}
               </div>
 
-              {hasActiveFilters && (
-                <button
-                  type="button"
-                  onClick={handleResetFilters}
-                  className="bg-slate-100 hover:bg-rose-50 text-slate-600 hover:text-rose-600 border border-slate-200 hover:border-rose-200 px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shrink-0 cursor-pointer shadow-xs"
-                  title="Reset all filters"
-                >
-                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                  </svg>
-                  <span>Reset</span>
-                </button>
-              )}
+              <button
+                type="button"
+                onClick={handleResetFilters}
+                disabled={!hasActiveFilters}
+                className={`px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shrink-0 shadow-xs ${
+                  hasActiveFilters
+                    ? 'bg-rose-50 text-rose-600 border border-rose-200 hover:bg-rose-100 hover:border-rose-300 cursor-pointer'
+                    : 'bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed opacity-60'
+                }`}
+                title={hasActiveFilters ? "Reset all active filters" : "No filters applied"}
+              >
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+                <span>Reset Filters</span>
+              </button>
             </div>
           </div>
 
@@ -586,7 +755,6 @@ export default function Students({ clients = [], setClients, applications = [], 
                 <table className="w-full text-left border-collapse">
                   <thead>
                     <tr className="bg-slate-50 border-b border-[#E2E8F0]">
-                      <th className="px-6 py-3 text-slate-400 text-[10px] font-extrabold uppercase tracking-wider w-[50px]"></th>
                       <th className="px-6 py-3 text-slate-400 text-[10px] font-extrabold uppercase tracking-wider w-[60px]">SI.NO.</th>
                       <th className="px-6 py-3 text-slate-400 text-[10px] font-extrabold uppercase tracking-wider">Student Profile</th>
                       <th className="px-6 py-3 text-slate-400 text-[10px] font-extrabold uppercase tracking-wider">Passport Number</th>
@@ -599,183 +767,70 @@ export default function Students({ clients = [], setClients, applications = [], 
                   </thead>
                   <tbody className="divide-y divide-slate-100 text-xs font-semibold text-slate-700">
                     {paginatedStudents.map((student, idx) => {
-                      const isExpanded = expandedId === student.id;
-                      const studentApps = getStudentApplications(student.name);
-                      const activeAppsCount = studentApps.length || student.activeApps || 0;
-                      
                       return (
-                        <React.Fragment key={student.id}>
-                          <tr className="hover:bg-slate-50/50 transition-colors cursor-pointer" onClick={() => toggleExpand(student.id)}>
-                            <td className="pl-6 py-4 w-[40px]">
-                              <svg className={`w-4 h-4 text-slate-400 transition-transform ${isExpanded ? 'rotate-90 text-indigo-500' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M9 5l7 7-7 7" />
-                              </svg>
-                            </td>
-                            <td className="px-6 py-4 font-bold text-slate-400">{startIndex + idx + 1}</td>
-                            <td className="px-6 py-4 flex items-center gap-3">
-                              <div className="w-8 h-8 rounded-full flex items-center justify-center font-bold text-white text-xs bg-gradient-to-tr from-[#D99A1C] to-[#F5B025] shadow-xs">
-                                {student.name ? student.name.split(' ').map(n=>n[0]).join('').slice(0, 2) : 'ST'}
-                              </div>
-                              <div>
-                                <p className="text-slate-950 font-black">{student.name}</p>
-                                <p className="text-[10px] text-slate-400 font-semibold">Verification Verified</p>
-                              </div>
-                            </td>
-                            <td className="px-6 py-4 text-slate-500 font-mono font-bold uppercase">{student.passportNo || 'Pending'}</td>
-                            <td className="px-6 py-4 text-slate-500 font-bold">{student.email}</td>
-                            <td className="px-6 py-4 text-slate-500 font-semibold">{student.phone}</td>
-                            <td className="px-6 py-4">
-                              <span className={`px-2.5 py-0.5 rounded-full text-[9px] font-extrabold border ${
-                                student.referredBy === 'Direct'
-                                  ? 'bg-purple-50 text-purple-700 border-purple-100'
-                                  : 'bg-cyan-50 text-cyan-700 border-cyan-100'
-                              }`}>
-                                {student.referredBy === 'Direct' ? 'Direct applicant' : `Referred by: ${student.referredBy}`}
-                              </span>
-                            </td>
-                            <td className="px-6 py-4 text-center">
-                              <span className={`px-2 py-0.5 border rounded-full text-[9px] font-extrabold ${
-                                student.status === 'Active' 
-                                  ? 'bg-emerald-50 text-emerald-700 border-emerald-100' 
-                                  : 'bg-rose-50 text-rose-700 border-rose-100'
-                              }`}>
-                                {student.status}
-                              </span>
-                            </td>
-                            <td className="px-6 py-4 text-right pr-6" onClick={(e) => e.stopPropagation()}>
-                              <div className="flex items-center justify-end gap-1.5">
-                                <button
-                                  type="button"
-                                  onClick={() => handleOpenSingleView(student)}
-                                  className="bg-slate-800 hover:bg-slate-900 text-white font-extrabold text-[9px] px-2.5 py-1.5 rounded-xl transition-all shadow-3xs inline-flex items-center gap-1 cursor-pointer uppercase tracking-wider"
-                                  title="View Full Student Profile Dossier"
-                                >
-                                  <span>👁️ View</span>
-                                </button>
-                              </div>
-                            </td>
-                          </tr>
+                        <tr 
+                          key={student.id} 
+                          className="hover:bg-amber-50/40 transition-colors cursor-pointer group" 
+                          onClick={() => handleOpenSingleView(student)}
+                        >
+                          <td className="px-6 py-4 font-bold text-slate-400">{startIndex + idx + 1}</td>
+                          <td className="px-6 py-4 flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-full flex items-center justify-center font-bold text-white text-xs bg-gradient-to-tr from-[#D99A1C] to-[#F5B025] shadow-xs">
+                              {student.name ? student.name.split(' ').map(n=>n[0]).join('').slice(0, 2) : 'ST'}
+                            </div>
+                            <div>
+                              <p className="text-slate-950 font-black group-hover:text-[#D99A1C] transition-colors">{student.name}</p>
+                              <p className="text-[10px] text-slate-400 font-semibold">Verification Verified</p>
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 text-slate-500 font-mono font-bold uppercase">{student.passportNo || 'Pending'}</td>
+                          <td className="px-6 py-4 text-slate-500 font-bold">{student.email}</td>
+                          <td className="px-6 py-4 text-slate-500 font-semibold">{student.phone}</td>
+                          <td className="px-6 py-4">
+                            {(() => {
+                              const sApps = getStudentApplications(student);
+                              const linkedPartnerApp = sApps.find(a => a.partnerCompanyName || a.partner?.companyName || a.partnerName || a.partner?.name);
+                              const partnerLabel = linkedPartnerApp?.partnerCompanyName ||
+                                linkedPartnerApp?.partner?.companyName ||
+                                linkedPartnerApp?.partnerName ||
+                                linkedPartnerApp?.partner?.name ||
+                                (partners.find(p => String(p.id || p._id) === String(student.partner))?.companyName) ||
+                                (student.referredBy && student.referredBy !== 'Agent' ? student.referredBy : 'Partner Agency');
+                              const isDirect = (student.referredBy === 'Direct' && !linkedPartnerApp?.partner);
 
-                          {/* Expandable details panel */}
-                          {isExpanded && (
-                            <tr>
-                              <td colSpan="9" className="bg-slate-50/50 p-6 border-t border-b border-slate-100">
-                                <div className="bg-white border border-[#E2E8F0] border-t-4 border-t-[#2563EB] rounded-xl p-5 shadow-sm space-y-4">
-                                  <div className="flex flex-col md:flex-row md:items-center justify-between border-b border-slate-100 pb-3 gap-2">
-                                    <div className="flex items-center gap-2">
-                                      <h3 className="text-xs font-black text-slate-900 uppercase tracking-wider">
-                                        Student Dossier Profile — {student.name}
-                                      </h3>
-                                      <span className="text-[10px] text-slate-400 font-semibold">• Onboarded: {student.dateAdded || 'N/A'}</span>
-                                    </div>
-                                    <button
-                                      type="button"
-                                      onClick={() => handleOpenSingleView(student)}
-                                      className="bg-slate-800 hover:bg-slate-900 text-white font-extrabold text-[10px] px-3 py-1.5 rounded-xl transition-all shadow-xs inline-flex items-center gap-1.5 cursor-pointer uppercase tracking-wider"
-                                      title="Open Dedicated Student Dossier View Page"
-                                    >
-                                      <span>👁️ View Full Profile Page →</span>
-                                    </button>
-                                  </div>
-
-                                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-[11px] font-semibold text-slate-600">
-                                    <div>
-                                      <span className="text-[9px] font-extrabold uppercase text-slate-400 block tracking-wider">Passport Number</span>
-                                      <span className="text-slate-900 font-mono font-bold text-xs uppercase">{student.passportNo || 'Pending'}</span>
-                                    </div>
-                                    <div>
-                                      <span className="text-[9px] font-extrabold uppercase text-slate-400 block tracking-wider">Date of Birth</span>
-                                      <span className="text-slate-900 font-medium text-xs">{student.dob || 'Not Provided'}</span>
-                                    </div>
-                                    <div>
-                                      <span className="text-[9px] font-extrabold uppercase text-slate-400 block tracking-wider">Contact Phone</span>
-                                      <span className="text-slate-900 font-medium text-xs">{student.phone}</span>
-                                    </div>
-                                    <div>
-                                      <span className="text-[9px] font-extrabold uppercase text-slate-400 block tracking-wider">Contact Email</span>
-                                      <span className="text-indigo-600 font-bold text-xs">{student.email}</span>
-                                    </div>
-                                  </div>
-
-                                  {/* Application files */}
-                                  <div className="space-y-2 pt-2">
-                                    <h4 className="text-[10px] font-black text-slate-500 uppercase tracking-wider">University Applications ({activeAppsCount})</h4>
-                                    {studentApps.length > 0 ? (
-                                      <div className="border border-slate-150 rounded-xl overflow-hidden">
-                                        <table className="w-full text-left border-collapse text-[11px]">
-                                          <thead>
-                                            <tr className="bg-slate-50 border-b border-slate-150">
-                                              <th className="px-4 py-2.5 text-slate-400 font-extrabold uppercase tracking-wider">CAMS ID</th>
-                                              <th className="px-4 py-2.5 text-slate-400 font-extrabold uppercase tracking-wider">University</th>
-                                              <th className="px-4 py-2.5 text-slate-400 font-extrabold uppercase tracking-wider">Program Course</th>
-                                              <th className="px-4 py-2.5 text-slate-400 font-extrabold uppercase tracking-wider">Intake Season</th>
-                                              <th className="px-4 py-2.5 text-slate-400 font-extrabold uppercase tracking-wider">Date Added</th>
-                                              <th className="px-4 py-2.5 text-slate-400 font-extrabold uppercase tracking-wider text-center">Workflow Status</th>
-                                              <th className="px-4 py-2.5 text-slate-400 font-extrabold uppercase tracking-wider text-right pr-4">Action</th>
-                                            </tr>
-                                          </thead>
-                                          <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
-                                            {studentApps.map(app => (
-                                              <tr key={app.camsId || app.id || app._id} className="hover:bg-slate-50/30">
-                                                <td className="px-4 py-3 font-mono font-bold text-[#2563EB]">
-                                                  {app.camsId && app.camsId.startsWith('CAMS') ? app.camsId : `CAMS${(app.camsId || '').substring((app.camsId || '').length - 6).toUpperCase()}`}
-                                                </td>
-                                                <td className="px-4 py-3 text-slate-900 font-bold">{app.universityName}</td>
-                                                <td className="px-4 py-3 text-slate-500 font-semibold">{app.courseName}</td>
-                                                <td className="px-4 py-3 text-slate-500">{app.intake}</td>
-                                                <td className="px-4 py-3 text-slate-400">{app.dateAdded}</td>
-                                                <td className="px-4 py-3 text-center">
-                                                  <span className={`px-2 py-0.5 border rounded-full text-[9px] font-extrabold ${
-                                                    app.secondaryStatus === 'Offer Issued'
-                                                      ? 'bg-emerald-50 text-emerald-700 border-emerald-100'
-                                                      : app.secondaryStatus === 'Pending'
-                                                      ? 'bg-amber-50 text-amber-700 border-amber-100'
-                                                      : 'bg-indigo-50 text-indigo-700 border-indigo-100'
-                                                  }`}>
-                                                    {app.secondaryStatus || app.status || 'Submitted'}
-                                                  </span>
-                                                </td>
-                                                <td className="px-4 py-3 text-right pr-4" onClick={(e) => e.stopPropagation()}>
-                                                  <div className="flex items-center justify-end gap-1.5">
-                                                    <button
-                                                      type="button"
-                                                      onClick={() => handleViewApplication(app)}
-                                                      className="bg-slate-800 hover:bg-slate-900 text-white font-extrabold text-[9px] px-2 py-1 rounded-lg transition-all shadow-3xs inline-flex items-center gap-1 cursor-pointer"
-                                                      title="View Application Details"
-                                                    >
-                                                      <span>👁️ View App</span>
-                                                    </button>
-                                                    <button 
-                                                      type="button"
-                                                      onClick={() => {
-                                                        setSelectedChatApp({
-                                                          ...app,
-                                                          referredBy: student.referredBy
-                                                        });
-                                                      }}
-                                                      className="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-extrabold text-[9px] px-2 py-1 rounded-lg transition-all border border-indigo-200 inline-flex items-center gap-1 shadow-xs cursor-pointer"
-                                                    >
-                                                      <span>💬 Chat</span>
-                                                    </button>
-                                                  </div>
-                                                </td>
-                                              </tr>
-                                            ))}
-                                          </tbody>
-                                        </table>
-                                      </div>
-                                    ) : (
-                                      <div className="bg-slate-50 p-4 border border-slate-200 rounded-xl text-center">
-                                        <p className="text-[10px] text-slate-400 font-semibold italic">No university applications have been logged for this student yet.</p>
-                                        <p className="text-[9px] text-slate-400 mt-0.5">Use the Sales Order intake form to add course files for this student.</p>
-                                      </div>
-                                    )}
-                                  </div>
-                                </div>
-                              </td>
-                            </tr>
-                          )}
-                        </React.Fragment>
+                              return (
+                                <span className={`px-2.5 py-0.5 rounded-full text-[9px] font-extrabold border ${
+                                  isDirect
+                                    ? 'bg-purple-50 text-purple-700 border-purple-100'
+                                    : 'bg-cyan-50 text-cyan-700 border-cyan-100'
+                                }`}>
+                                  {isDirect ? 'Direct applicant' : `Referred by: ${partnerLabel}`}
+                                </span>
+                              );
+                            })()}
+                          </td>
+                          <td className="px-6 py-4 text-center">
+                            <span className={`px-2 py-0.5 border rounded-full text-[9px] font-extrabold ${
+                              student.status === 'Active' 
+                                ? 'bg-emerald-50 text-emerald-700 border-emerald-100' 
+                                : 'bg-rose-50 text-rose-700 border-rose-100'
+                            }`}>
+                              {student.status}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 text-right pr-6" onClick={(e) => e.stopPropagation()}>
+                            <div className="flex items-center justify-end gap-1.5">
+                              <button
+                                type="button"
+                                onClick={() => handleOpenSingleView(student)}
+                                className="bg-slate-800 hover:bg-slate-900 text-white font-extrabold text-[9px] px-2.5 py-1.5 rounded-xl transition-all shadow-3xs inline-flex items-center gap-1 cursor-pointer uppercase tracking-wider"
+                                title="View Full Student Profile Dossier"
+                              >
+                                <span>👁️ View</span>
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
                       );
                     })}
                   </tbody>
@@ -868,7 +923,7 @@ export default function Students({ clients = [], setClients, applications = [], 
         /* 2. DEDICATED STUDENT PROFILE DOSSIER VIEW PAGE */
         <div className="space-y-6 animate-fade-in">
           {(() => {
-            const studentApps = getStudentApplications(singleViewStudent.name);
+            const studentApps = getStudentApplications(singleViewStudent);
             const activeAppsCount = studentApps.length || singleViewStudent.activeApps || 0;
             const studentCode = singleViewStudent.studentCode || (singleViewStudent.id ? `STD-${String(singleViewStudent.id).slice(-5)}` : 'STD-10001');
 
@@ -938,13 +993,14 @@ export default function Students({ clients = [], setClients, applications = [], 
                       </button>
                     )}
                     {singleViewStudent.email && (
-                      <a
-                        href={`mailto:${singleViewStudent.email}`}
-                        className="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 font-extrabold text-xs rounded-xl transition-all border border-slate-200 shadow-2xs flex items-center gap-1"
-                        title="Send Email"
+                      <button
+                        type="button"
+                        onClick={() => handleOpenEmailModal(singleViewStudent)}
+                        className="px-3.5 py-2 bg-gradient-to-r from-amber-500 to-[#D99A1C] hover:from-amber-600 hover:to-[#b88214] text-white font-extrabold text-xs rounded-xl transition-all shadow-md flex items-center gap-1.5 cursor-pointer"
+                        title={`Send Email to ${singleViewStudent.email}`}
                       >
                         <span>✉️ Email Student</span>
-                      </a>
+                      </button>
                     )}
                     {singleViewStudent.phone && (
                       <a
@@ -1445,6 +1501,154 @@ export default function Students({ clients = [], setClients, applications = [], 
           app={selectedChatApp} 
           onClose={() => setSelectedChatApp(null)} 
         />
+      )}
+
+      {/* Email Student Modal Portal */}
+      {isEmailModalOpen && emailTargetStudent && createPortal(
+        <div 
+          className="fixed inset-0 z-[9999] bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in"
+          onClick={(e) => {
+            if (e.target === e.currentTarget && !isSendingEmail) {
+              setIsEmailModalOpen(false);
+            }
+          }}
+        >
+          <div className="bg-white border border-slate-200 border-t-4 border-t-[#D99A1C] rounded-3xl p-6 w-full max-w-lg shadow-2xl space-y-4 animate-in zoom-in-95">
+            {/* Header */}
+            <div className="flex justify-between items-start pb-3 border-b border-slate-100">
+              <div className="space-y-0.5">
+                <span className="text-[10px] font-extrabold text-[#D99A1C] uppercase tracking-wider block">Student Communications</span>
+                <h3 className="text-sm font-black text-slate-900 uppercase tracking-wide">Compose Email to Student</h3>
+                <p className="text-[10.5px] text-slate-400 font-semibold">Directly dispatch official updates to student's inbox</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsEmailModalOpen(false)}
+                className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 font-bold flex items-center justify-center transition-colors cursor-pointer"
+                title="Close modal (Esc)"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Recipient Details Chip */}
+            <div className="bg-slate-50 border border-slate-200/80 rounded-2xl p-3 flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-slate-900 to-[#D99A1C] text-white flex items-center justify-center font-black text-xs shadow-xs">
+                  {emailTargetStudent.name ? emailTargetStudent.name.slice(0, 2).toUpperCase() : 'ST'}
+                </div>
+                <div>
+                  <p className="text-xs font-black text-slate-900">{emailTargetStudent.name}</p>
+                  <p className="text-[11px] font-mono font-bold text-indigo-600">{emailTargetStudent.email}</p>
+                </div>
+              </div>
+              {emailTargetStudent.phone && (
+                <span className="text-[10px] font-bold text-slate-400 bg-white border border-slate-200 px-2 py-0.5 rounded-md">
+                  {emailTargetStudent.phone}
+                </span>
+              )}
+            </div>
+
+            {/* Error / Fallback Banner if direct API had an issue */}
+            {emailErrorNotice && (
+              <div className="bg-amber-50 border border-amber-200/90 text-amber-900 rounded-2xl p-3 text-xs flex items-start gap-2.5">
+                <span className="text-base shrink-0">⚠️</span>
+                <div className="flex-1">
+                  <p className="font-extrabold text-[11px] text-amber-950 uppercase tracking-wide">Direct Delivery Issue</p>
+                  <p className="text-[11px] text-amber-800 mt-0.5">
+                    {emailErrorNotice}. You can click <strong>"↗ Open in Gmail"</strong> or <strong>"📬 Default Mail App"</strong> below to send directly with your customized message preserved.
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* Form */}
+            <form onSubmit={handleSendEmail} className="space-y-3.5">
+              <div className="space-y-1">
+                <label className="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">
+                  Subject Line <span className="text-rose-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={emailSubject}
+                  onChange={(e) => setEmailSubject(e.target.value)}
+                  placeholder="Enter email subject..."
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs font-semibold focus:outline-none focus:bg-white focus:border-[#D99A1C] focus:ring-1 focus:ring-[#D99A1C] text-slate-900 select-text"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">
+                  Email Message Body <span className="text-rose-500">*</span>
+                </label>
+                <textarea
+                  rows="7"
+                  required
+                  value={emailMessage}
+                  onChange={(e) => setEmailMessage(e.target.value)}
+                  placeholder="Type message content here..."
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs font-semibold focus:outline-none focus:bg-white focus:border-[#D99A1C] focus:ring-1 focus:ring-[#D99A1C] text-slate-900 resize-none font-sans leading-relaxed select-text"
+                />
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex flex-col sm:flex-row gap-2 pt-2 justify-between items-center">
+                <div className="flex gap-2 w-full sm:w-auto">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const gmailUrl = `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(emailTargetStudent.email)}&su=${encodeURIComponent(emailSubject)}&body=${encodeURIComponent(emailMessage)}`;
+                      window.open(gmailUrl, '_blank', 'noopener,noreferrer');
+                    }}
+                    className="flex-1 sm:flex-none px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 font-extrabold text-[11px] rounded-xl transition-all border border-slate-200 flex items-center justify-center gap-1.5 cursor-pointer shadow-2xs"
+                    title="Compose directly in Gmail web application"
+                  >
+                    <span>↗ Open in Gmail</span>
+                  </button>
+                  <a
+                    href={`mailto:${emailTargetStudent.email}?subject=${encodeURIComponent(emailSubject)}&body=${encodeURIComponent(emailMessage)}`}
+                    className="flex-1 sm:flex-none px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 font-extrabold text-[11px] rounded-xl transition-all border border-slate-200 flex items-center justify-center gap-1.5 shadow-2xs"
+                    title="Open default system mail client (Outlook, Apple Mail, etc.)"
+                  >
+                    <span>📬 Default Mail App</span>
+                  </a>
+                </div>
+
+                <div className="flex gap-2 w-full sm:w-auto justify-end">
+                  <button
+                    type="button"
+                    disabled={isSendingEmail}
+                    onClick={() => setIsEmailModalOpen(false)}
+                    className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 font-extrabold text-xs rounded-xl transition-all cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isSendingEmail}
+                    className="px-5 py-2 bg-gradient-to-r from-amber-500 to-[#D99A1C] hover:from-amber-600 hover:to-[#b88214] text-white font-extrabold text-xs rounded-xl shadow-md transition-all flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
+                  >
+                    {isSendingEmail ? (
+                      <>
+                        <svg className="animate-spin h-3.5 w-3.5 text-white" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                        </svg>
+                        <span>Dispatching...</span>
+                      </>
+                    ) : (
+                      <>
+                        <span>✉️ Send Email</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            </form>
+          </div>
+        </div>,
+        document.body
       )}
     </div>
   );

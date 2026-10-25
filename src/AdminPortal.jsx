@@ -801,6 +801,7 @@ export default function AdminPortal({ onLogout }) {
       window.dispatchEvent(new CustomEvent('clear_single_view_app'));
     }
     if (tabId === 'become-partner' || tabId === 'partners') {
+      fetchInitialData();
       setSelectedPartnerForSingleView(null);
       localStorage.removeItem('studegram_admin_single_view_partner_id');
       localStorage.removeItem('studegram_admin_single_view_partner');
@@ -852,6 +853,7 @@ export default function AdminPortal({ onLogout }) {
             setActiveSubTab(subTab || null);
             const payload = { targetId, notification, timestamp: Date.now() };
             if (tab === 'become-partner' || tab === 'partners') {
+              fetchInitialData();
               setSelectedPartnerForSingleView(payload);
             } else if (tab === 'applications') {
               setSelectedAppIdForSingleView(payload);

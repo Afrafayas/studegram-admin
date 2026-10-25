@@ -324,6 +324,8 @@ export default function Applications({ applications, referralAgents = [], intake
   const handleOpenSingleView = (app) => {
     dismissedTargetRef.current = false;
     setSingleViewApp(app);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    document.getElementById('admin-main-content')?.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   // Auto-open Single View when initialSelectedAppId or saved single view ID is provided
@@ -476,7 +478,7 @@ export default function Applications({ applications, referralAgents = [], intake
         const url = new URL(window.location.href);
         if (appId && url.searchParams.get('appId') !== String(appId)) {
           url.searchParams.set('appId', String(appId));
-          window.history.replaceState({}, '', url.toString());
+          window.history.pushState({ appView: String(appId) }, '', url.toString());
         }
       } catch (e) {}
     } else {
@@ -1171,14 +1173,12 @@ export default function Applications({ applications, referralAgents = [], intake
                   return (
                     <tr 
                       key={app.camsId || app.id || app._id} 
-                      className={`hover:bg-slate-50/50 transition-colors ${
+                      onClick={() => handleOpenSingleView(app)}
+                      className={`hover:bg-amber-50/40 transition-colors cursor-pointer group ${
                         app.hasUnrepliedMessage ? 'bg-[#1e3a8a]/5 font-bold border-l-4 border-l-[#1e3a8a]' : ''
                       }`}
                     >
-                      <td 
-                        className="px-6 py-4 font-extrabold text-[#D99A1C] pl-6 truncate max-w-[120px] cursor-pointer group"
-                        onClick={() => handleOpenSingleView(app)}
-                      >
+                      <td className="px-6 py-4 font-extrabold text-[#D99A1C] pl-6 truncate max-w-[120px]">
                         <div>
                           <span className="group-hover:underline group-hover:text-[#F5B025] transition-colors flex items-center gap-1">
                             <span>{app.camsId && app.camsId.startsWith('CAMS') ? app.camsId : `CAMS${(app.camsId || '').substring((app.camsId || '').length - 6).toUpperCase()}`}</span>
@@ -1192,7 +1192,7 @@ export default function Applications({ applications, referralAgents = [], intake
                         </div>
                       </td>
                       <td className="px-6 py-4">
-                        <p className="text-slate-950 font-black">{app.studentName}</p>
+                        <p className="text-slate-950 font-black group-hover:text-[#D99A1C] transition-colors">{app.studentName}</p>
                         <p className="text-[10px] text-slate-400 font-semibold">{app.passportNo || 'Pending Passport'}</p>
                         {app.submittedByStaff && (
                           <p className="text-[9px] text-slate-400 font-medium">By: {app.submittedByStaff.name}</p>
@@ -1379,7 +1379,7 @@ export default function Applications({ applications, referralAgents = [], intake
         /* SINGLE APPLICATION VIEW PAGE */
         <div className="space-y-6 animate-fade-in">
           {/* Top Header & Breadcrumbs Card */}
-          <div className="bg-white border border-slate-200 border-t-4 border-t-[#D99A1C] p-6 rounded-3xl shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div className="bg-white border border-slate-200 border-t-4 border-t-[#D99A1C] p-5 sm:p-6 rounded-3xl shadow-sm flex flex-col xl:flex-row items-start xl:items-center justify-between gap-4">
             <div className="flex items-center gap-4">
               <button
                 onClick={handleBackToList}
@@ -1415,14 +1415,14 @@ export default function Applications({ applications, referralAgents = [], intake
               </div>
             </div>
 
-            {/* Action Buttons Bar */}
-            <div className="flex items-center gap-2 flex-wrap justify-end">
+            {/* Action Buttons Bar - Strictly in One Row for all screens */}
+            <div className="flex items-center gap-1.5 sm:gap-2 flex-nowrap overflow-x-auto no-scrollbar py-1 shrink-0 w-full xl:w-auto justify-start xl:justify-end">
               {!isPicked(singleViewApp) && (
                 <button
                   onClick={() => {
                     handlePickApplication(singleViewApp);
                   }}
-                  className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs rounded-xl shadow-md transition-all cursor-pointer flex items-center gap-1.5 uppercase tracking-wider"
+                  className="px-2.5 sm:px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-[10px] sm:text-xs rounded-xl shadow-xs transition-all cursor-pointer flex items-center gap-1.5 uppercase tracking-wider whitespace-nowrap shrink-0"
                 >
                   <span>✋ Pick App</span>
                 </button>
@@ -1434,7 +1434,7 @@ export default function Applications({ applications, referralAgents = [], intake
                     setAssignModalApp(singleViewApp);
                     setSelectedStaffId('');
                   }}
-                  className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold text-xs rounded-xl shadow-md transition-all cursor-pointer flex items-center gap-1.5 uppercase tracking-wider"
+                  className="px-2.5 sm:px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold text-[10px] sm:text-xs rounded-xl shadow-xs transition-all cursor-pointer flex items-center gap-1.5 uppercase tracking-wider whitespace-nowrap shrink-0"
                 >
                   <span>👉 Assign Staff</span>
                 </button>
@@ -1442,20 +1442,20 @@ export default function Applications({ applications, referralAgents = [], intake
 
               <button
                 onClick={() => openEditModal(singleViewApp)}
-                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 font-extrabold text-xs rounded-xl shadow-md transition-all cursor-pointer flex items-center gap-1.5 uppercase tracking-wider"
+                className="px-2.5 sm:px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-800 font-extrabold text-[10px] sm:text-xs rounded-xl shadow-xs transition-all cursor-pointer flex items-center gap-1.5 uppercase tracking-wider whitespace-nowrap shrink-0 border border-slate-200"
               >
-                <span>✏️ Edit Application</span>
+                <span>✏️ Edit App</span>
               </button>
               <button
                 onClick={() => openStatusModal(singleViewApp)}
-                className="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white font-extrabold text-xs rounded-xl shadow-md transition-all cursor-pointer flex items-center gap-1.5 uppercase tracking-wider"
+                className="px-2.5 sm:px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-white font-extrabold text-[10px] sm:text-xs rounded-xl shadow-xs transition-all cursor-pointer flex items-center gap-1.5 uppercase tracking-wider whitespace-nowrap shrink-0"
               >
-                <span>✏️ Update Lifecycle Status</span>
+                <span>⚡ Update Status</span>
               </button>
 
               <button
                 onClick={() => setSelectedChatApp(singleViewApp)}
-                className="px-4 py-2 bg-[#2563EB] hover:bg-[#1D4ED8] text-white font-extrabold text-xs rounded-xl shadow-md transition-all cursor-pointer flex items-center gap-1.5 uppercase tracking-wider"
+                className="px-2.5 sm:px-3 py-1.5 bg-[#2563EB] hover:bg-[#1D4ED8] text-white font-extrabold text-[10px] sm:text-xs rounded-xl shadow-xs transition-all cursor-pointer flex items-center gap-1.5 uppercase tracking-wider whitespace-nowrap shrink-0"
               >
                 <span>💬 Open Chat</span>
               </button>
@@ -1463,7 +1463,7 @@ export default function Applications({ applications, referralAgents = [], intake
               <button
                 onClick={handleSaveApplicationData}
                 disabled={isSavingApp}
-                className="px-4 py-2 bg-[#0A0A0F] hover:bg-slate-800 text-white font-black text-xs rounded-xl shadow-md transition-all cursor-pointer inline-flex items-center justify-center gap-1.5 uppercase tracking-wider disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-2.5 sm:px-3 py-1.5 bg-[#0A0A0F] hover:bg-slate-800 text-white font-black text-[10px] sm:text-xs rounded-xl shadow-xs transition-all cursor-pointer inline-flex items-center justify-center gap-1.5 uppercase tracking-wider disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap shrink-0"
               >
                 {isSavingApp && (
                   <svg className="animate-spin h-3.5 w-3.5 text-current shrink-0" fill="none" viewBox="0 0 24 24">
@@ -1520,12 +1520,12 @@ export default function Applications({ applications, referralAgents = [], intake
             </div>
           </div>
 
-          {/* Dossier Grid Layout */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Left Column: Student & Academic Specs */}
-            <div className="space-y-6 lg:col-span-1">
+          {/* Dossier Grid Layout - Perfectly Balanced Bottom Level */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-stretch">
+            {/* Left Column: Student, Academic Specs & Counselor Remarks */}
+            <div className="space-y-5 lg:col-span-1 flex flex-col">
               {/* Student Profile Info */}
-              <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm space-y-4">
+              <div className="bg-white border border-slate-200 rounded-3xl p-5 sm:p-6 shadow-sm space-y-4">
                 <div className="flex items-center gap-4 pb-3 border-b border-slate-100">
                   <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-slate-900 via-slate-800 to-[#D99A1C] text-white flex items-center justify-center font-black text-base shadow-md">
                     {singleViewApp.studentName ? singleViewApp.studentName.split(' ').map(n => n[0]).join('').slice(0, 2) : 'ST'}
@@ -1560,7 +1560,7 @@ export default function Applications({ applications, referralAgents = [], intake
               </div>
 
               {/* Academic Program Info */}
-              <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm space-y-4">
+              <div className="bg-white border border-slate-200 rounded-3xl p-5 sm:p-6 shadow-sm space-y-4">
                 <div className="pb-3 border-b border-slate-100">
                   <span className="text-[10px] font-black uppercase tracking-widest text-[#D99A1C]">Target Academic Program</span>
                   <h4 className="font-black text-slate-900 text-base mt-0.5">{singleViewApp.universityName}</h4>
@@ -1613,12 +1613,52 @@ export default function Applications({ applications, referralAgents = [], intake
                   </div>
                 </div>
               </div>
+
+              {/* Counselor Remarks Card (Fills the space & perfectly aligns bottom with right column) */}
+              <div className="bg-white border border-slate-200 rounded-3xl p-5 sm:p-6 shadow-sm space-y-3.5 flex-1 flex flex-col justify-between">
+                <div>
+                  <div className="flex items-center justify-between pb-2.5 border-b border-slate-100 gap-2">
+                    <div className="flex items-center gap-1.5 min-w-0">
+                      <span className="text-xs">📝</span>
+                      <h3 className="text-[11px] font-black text-slate-900 uppercase tracking-wider whitespace-nowrap">
+                        Counselor Notes
+                      </h3>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleSaveApplicationData}
+                      disabled={isSavingApp}
+                      className="px-2.5 py-1 bg-[#0A0A0F] hover:bg-slate-800 text-white font-extrabold text-[10px] rounded-lg shadow-xs transition-all cursor-pointer inline-flex items-center justify-center gap-1 uppercase tracking-wider disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap shrink-0"
+                    >
+                      {isSavingApp && (
+                        <svg className="animate-spin h-3.5 w-3.5 text-current shrink-0" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                        </svg>
+                      )}
+                      <span>💾 {isSavingApp ? 'Saving...' : 'Save Notes'}</span>
+                    </button>
+                  </div>
+                  <div className="pt-2">
+                    <textarea
+                      rows="4"
+                      value={appEditNotes}
+                      onChange={(e) => setAppEditNotes(e.target.value)}
+                      placeholder="Enter counselor remarks, special instructions, eligibility notes, or document follow-ups for this application..."
+                      className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-3 text-xs text-slate-900 focus:outline-none focus:bg-white focus:border-[#D99A1C] focus:ring-1 focus:ring-[#D99A1C] transition-all font-medium resize-y"
+                    />
+                  </div>
+                </div>
+                <p className="text-[10px] text-slate-400 font-semibold italic pt-1">
+                  Saved directly to application record and visible to all staff handling this case.
+                </p>
+              </div>
             </div>
 
-            {/* Right Column: Uploaded Documents & Comments Thread */}
-            <div className="space-y-6 lg:col-span-2">
-              {/* Uploaded Documents Gallery with Inline Page Viewer */}
-              <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm space-y-5">
+            {/* Right Column: Uploaded Documents & Application Comments */}
+            <div className="space-y-5 lg:col-span-2 flex flex-col">
+              {/* Compact Uploaded Documents Gallery */}
+              <div className="bg-white border border-slate-200 rounded-3xl p-5 sm:p-6 shadow-sm space-y-4">
                 <div className="flex justify-between items-center pb-3 border-b border-slate-100">
                   <div>
                     <span className="text-[10px] font-extrabold text-[#D99A1C] uppercase tracking-wider block">Submitted File Proofs</span>
@@ -1627,11 +1667,11 @@ export default function Applications({ applications, referralAgents = [], intake
                     </h3>
                   </div>
                   <span className="text-[10px] font-black text-emerald-700 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200">
-                    ✓ Attached & Verified
+                    ✓ Attached &amp; Verified
                   </span>
                 </div>
 
-                {/* Inline Document Preview Grid */}
+                {/* Compact Document Cards Grid */}
                 {(() => {
                   const docsToDisplay = (singleViewApp.documents && singleViewApp.documents.length > 0)
                     ? singleViewApp.documents
@@ -1643,41 +1683,34 @@ export default function Applications({ applications, referralAgents = [], intake
                       ];
 
                   return (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3">
                       {docsToDisplay.map((doc, dIdx) => {
                         const rawUrl = typeof doc === 'object' ? (doc.previewUrl || doc.url || doc.path || doc.fileUrl || doc.dataUrl || doc.data || doc.src) : (typeof doc === 'string' ? doc : null);
                         const fallbackFileName = typeof rawUrl === 'string' ? rawUrl.split('/').pop().split('?')[0] : '';
-                        const docTitle = typeof doc === 'string' ? doc : (doc.name || doc.title || doc.comment || doc.fileName || `Document ${dIdx + 1}`);
+                        const docTitle = typeof doc === 'string' ? doc : (doc.name || doc.title || doc.comment || doc.fileName || ('Document ' + (dIdx + 1)));
                         const docFileName = typeof doc === 'string' ? doc : (doc.fileName || fallbackFileName || doc.name || doc.title || 'Attached Document');
                         const isImg = (typeof rawUrl === 'string' && (rawUrl.startsWith('data:image/') || docFileName.match(/\.(png|jpg|jpeg|gif|svg|webp)$/i)));
                         const docBlobUrl = getDocumentBlobUrl(rawUrl, isImg ? 'image/png' : 'application/pdf') || createSampleAppDocBlobUrl(docTitle, singleViewApp.studentName, singleViewApp.camsId);
 
                         return (
-                          <div key={dIdx} className="bg-slate-50 border border-slate-200 rounded-2xl p-4 space-y-3 flex flex-col justify-between shadow-2xs hover:border-[#D99A1C] transition-all">
-                            <div className="flex items-center justify-between">
-                              <div className="flex items-center gap-2 overflow-hidden">
-                                <span className="text-xl">📄</span>
+                          <div key={dIdx} className="bg-slate-50 border border-slate-200 rounded-2xl p-3 flex flex-col justify-between space-y-2.5 hover:border-[#D99A1C] hover:shadow-xs transition-all">
+                            <div className="flex items-start justify-between gap-1.5">
+                              <div className="flex items-center gap-2 overflow-hidden min-w-0">
+                                <div className="w-8 h-8 rounded-xl bg-amber-50 text-[#D99A1C] border border-amber-200/60 flex items-center justify-center shrink-0 text-sm font-bold shadow-2xs">
+                                  📄
+                                </div>
                                 <div className="truncate">
-                                  <p className="text-xs font-black text-slate-900 truncate">{docTitle}</p>
-                                  <p className="text-[10px] text-slate-400 font-semibold truncate">{docFileName}</p>
+                                  <p className="text-xs font-black text-slate-900 truncate" title={docTitle}>{docTitle}</p>
+                                  <p className="text-[10px] text-slate-400 font-medium truncate" title={docFileName}>{docFileName}</p>
                                 </div>
                               </div>
-                              <span className="text-[9px] font-extrabold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200 shrink-0">
+                              <span className="text-[8px] font-extrabold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200 shrink-0">
                                 Verified
                               </span>
                             </div>
 
-                            {/* Inline Document Box Canvas/Iframe Viewer */}
-                            <div className="h-48 bg-white border border-slate-200 rounded-xl overflow-hidden flex items-center justify-center p-2 shadow-inner">
-                              {isImg ? (
-                                <img src={docBlobUrl} alt={docTitle} className="max-h-full max-w-full object-contain rounded" />
-                              ) : (
-                                <iframe src={docBlobUrl} title={docTitle} className="w-full h-full rounded border-0 bg-white" />
-                              )}
-                            </div>
-
                             {/* Action Controls: Expand & Download */}
-                            <div className="flex items-center gap-2 pt-1">
+                            <div className="flex items-center gap-1.5 pt-1 border-t border-slate-200/60">
                               <button
                                 type="button"
                                 onClick={() => {
@@ -1689,14 +1722,14 @@ export default function Applications({ applications, referralAgents = [], intake
                                     type: isImg ? 'image' : 'pdf'
                                   });
                                 }}
-                                className="flex-1 py-2 bg-white hover:bg-slate-100 text-slate-800 border border-slate-200 rounded-xl font-bold text-xs transition-all cursor-pointer flex items-center justify-center gap-1.5 shadow-2xs"
+                                className="flex-1 py-1.5 bg-white hover:bg-slate-100 text-slate-800 border border-slate-200 rounded-lg font-bold text-[11px] transition-all cursor-pointer flex items-center justify-center gap-1 shadow-2xs"
                               >
                                 <span>🔍 Expand</span>
                               </button>
                               <button
                                 type="button"
-                                onClick={() => handleDownloadAppDocument(docBlobUrl, `${docTitle.replace(/\s+/g, '_')}.pdf`)}
-                                className="flex-1 py-2 bg-gradient-to-r from-[#D99A1C] to-[#F5B025] hover:from-[#c28815] hover:to-[#e09e1d] text-white rounded-xl font-bold text-xs transition-all cursor-pointer flex items-center justify-center gap-1.5 shadow-2xs"
+                                onClick={() => handleDownloadAppDocument(docBlobUrl, (docTitle.replace(/\s+/g, '_') + '.pdf'))}
+                                className="flex-1 py-1.5 bg-gradient-to-r from-[#D99A1C] to-[#F5B025] hover:from-[#c28815] hover:to-[#e09e1d] text-white rounded-lg font-bold text-[11px] transition-all cursor-pointer flex items-center justify-center gap-1 shadow-2xs"
                               >
                                 <span>📥 Download</span>
                               </button>
@@ -1709,52 +1742,14 @@ export default function Applications({ applications, referralAgents = [], intake
                 })()}
               </div>
 
-              {/* Counselor Remarks & Application Notes */}
-              <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm space-y-4">
-                <div className="flex justify-between items-center pb-3 border-b border-slate-100">
+              {/* Comments & Related Notes Thread Section (Flex-1 container: comments fill the space, bottom perfectly aligned) */}
+              <div className="bg-white border border-slate-200 rounded-3xl p-5 sm:p-6 shadow-sm flex-1 flex flex-col overflow-hidden">
+                <div className="flex justify-between items-center pb-3 border-b border-slate-100 shrink-0">
                   <div>
-                    <span className="text-[10px] font-extrabold text-[#D99A1C] uppercase tracking-wider block">Official Counselor Remarks</span>
-                    <h3 className="text-sm font-black text-slate-900 uppercase tracking-wider">
-                      Application Notes &amp; Counselor Remarks
-                    </h3>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={handleSaveApplicationData}
-                    disabled={isSavingApp}
-                    className="px-3.5 py-1.5 bg-[#0A0A0F] hover:bg-slate-800 text-white font-black text-xs rounded-xl shadow-xs transition-all cursor-pointer inline-flex items-center justify-center gap-1.5 uppercase tracking-wider disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    {isSavingApp && (
-                      <svg className="animate-spin h-3.5 w-3.5 text-current shrink-0" fill="none" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                      </svg>
-                    )}
-                    <span>💾 {isSavingApp ? 'Saving...' : 'Save Notes'}</span>
-                  </button>
-                </div>
-                <div className="space-y-2">
-                  <textarea
-                    rows="3"
-                    value={appEditNotes}
-                    onChange={(e) => setAppEditNotes(e.target.value)}
-                    placeholder="Enter counselor remarks, special instructions, eligibility notes, or document follow-ups for this application..."
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3.5 text-xs text-slate-900 focus:outline-none focus:bg-white focus:border-[#D99A1C] focus:ring-1 focus:ring-[#D99A1C] transition-all font-medium resize-y"
-                  />
-                  <p className="text-[10px] text-slate-400 font-semibold italic">
-                    Counselor notes are saved directly to this application record and visible to all staff handling this case.
-                  </p>
-                </div>
-              </div>
-
-              {/* Comments & Related Notes Thread Section */}
-              <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm space-y-5">
-                <div className="flex justify-between items-center pb-3 border-b border-slate-100">
-                  <div>
-                    <span className="text-[10px] font-extrabold text-[#D99A1C] uppercase tracking-wider block">Internal Discussion & Audit</span>
+                    <span className="text-[10px] font-extrabold text-[#D99A1C] uppercase tracking-wider block">Internal Discussion &amp; Audit</span>
                     <h3 className="text-sm font-black text-slate-900 uppercase tracking-wider flex items-center gap-2">
-                      <span>Application Comments & History</span>
-                      <span className="text-xs bg-slate-100 text-slate-700 px-2 py-0.5 rounded-full border border-slate-200">
+                      <span>Application Comments &amp; History</span>
+                      <span className="text-xs bg-slate-100 text-slate-700 px-2 py-0.5 rounded-full border border-slate-200 font-bold">
                         {commentsList.length}
                       </span>
                     </h3>
@@ -1762,21 +1757,21 @@ export default function Applications({ applications, referralAgents = [], intake
                 </div>
 
                 {/* Add Comment Input Form */}
-                <form onSubmit={handleAddComment} className="space-y-3 bg-slate-50 p-4 rounded-2xl border border-slate-200">
+                <form onSubmit={handleAddComment} className="space-y-2.5 bg-slate-50 p-3.5 rounded-2xl border border-slate-200 my-3 shrink-0">
                   <label className="text-xs font-black text-slate-800 block uppercase tracking-wider">Add Internal Note / Staff Comment</label>
                   <textarea
-                    rows="3"
+                    rows="2"
                     value={newCommentInput}
                     onChange={(e) => setNewCommentInput(e.target.value)}
                     placeholder="Write a comment or internal note regarding offer status, document verification, or university follow-up..."
                     className="w-full bg-white border border-slate-200 rounded-xl p-3 text-xs text-slate-900 focus:outline-none focus:border-[#D99A1C] focus:ring-1 focus:ring-[#D99A1C] transition-all font-medium resize-y"
                   ></textarea>
-                  <div className="flex justify-between items-center pt-1">
-                    <span className="text-[10px] text-slate-400 font-semibold">Visible to internal admin & staff members</span>
+                  <div className="flex justify-between items-center pt-0.5">
+                    <span className="text-[10px] text-slate-400 font-semibold">Visible to internal admin &amp; staff members</span>
                     <button
                       type="submit"
                       disabled={!newCommentInput.trim() || isPostingComment}
-                      className="px-4 py-2 bg-gradient-to-r from-[#D99A1C] to-[#F5B025] hover:from-[#c28815] hover:to-[#e09e1d] text-white font-black text-xs rounded-xl shadow-md transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center justify-center gap-1.5"
+                      className="px-4 py-1.5 bg-gradient-to-r from-[#D99A1C] to-[#F5B025] hover:from-[#c28815] hover:to-[#e09e1d] text-white font-black text-xs rounded-xl shadow-xs transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center justify-center gap-1.5"
                     >
                       {isPostingComment && (
                         <svg className="animate-spin h-3.5 w-3.5 text-current shrink-0" fill="none" viewBox="0 0 24 24">
@@ -1789,11 +1784,11 @@ export default function Applications({ applications, referralAgents = [], intake
                   </div>
                 </form>
 
-                {/* Comments List Feed */}
-                <div className="space-y-3.5 max-h-96 overflow-y-auto pr-1">
+                {/* Comments List Feed: Expands to fill the entire remaining card space! */}
+                <div className="space-y-3 flex-1 overflow-y-auto pr-1 min-h-[220px]">
                   {commentsList.length > 0 ? (
                     commentsList.map((c, cIdx) => (
-                      <div key={c.id || cIdx} className="bg-slate-50/80 border border-slate-200/80 p-4 rounded-2xl space-y-2">
+                      <div key={c.id || cIdx} className="bg-slate-50/80 border border-slate-200/80 p-3.5 rounded-2xl space-y-2">
                         <div className="flex justify-between items-center">
                           <div className="flex items-center gap-2">
                             <div className="w-7 h-7 rounded-full bg-[#0A0A0F] text-[#D99A1C] flex items-center justify-center font-bold text-[10px]">
@@ -1814,8 +1809,10 @@ export default function Applications({ applications, referralAgents = [], intake
                       </div>
                     ))
                   ) : (
-                    <div className="p-6 text-center text-slate-400 text-xs font-medium italic border border-dashed border-slate-200 rounded-2xl">
-                      No comments or internal notes recorded yet for this application. Use the form above to add the first comment.
+                    <div className="py-6 px-4 text-center space-y-1.5 border border-dashed border-slate-200 rounded-2xl bg-slate-50/60">
+                      <span className="text-xl block">💬</span>
+                      <p className="text-xs font-bold text-slate-700">No internal notes recorded yet</p>
+                      <p className="text-[10px] text-slate-400 font-medium">Use the form above to add internal notes regarding offer status, document verification, or university follow-up.</p>
                     </div>
                   )}
                 </div>

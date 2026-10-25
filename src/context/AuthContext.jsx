@@ -158,6 +158,7 @@ export function AuthProvider({ children }) {
 
   const addAuditLog = (action, targetType, targetId, details) => {
     if (!currentUser) return;
+    const detailStr = typeof details === 'object' ? JSON.stringify(details) : String(details || '');
     const newLog = {
       id: Date.now(),
       timestamp: new Date().toISOString(),
@@ -166,9 +167,15 @@ export function AuthProvider({ children }) {
       action,
       targetType,
       targetId: targetId || 'N/A',
-      details: typeof details === 'object' ? JSON.stringify(details) : details
+      details: detailStr
     };
     setAuditLogs(prev => [newLog, ...prev]);
+
+    // Automatically dispatch to live staff activity logs endpoint
+    const isApp = targetType === 'Application' || targetType === 'Student';
+    const category = isApp ? 'Application' : 'Other';
+    const title = String(action || 'Activity').replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+    logPortalActivity(action, title, category, detailStr, typeof window !== 'undefined' ? window.location.pathname : '');
   };
 
   const [dbRoles, setDbRoles] = useState([]);
@@ -298,16 +305,20 @@ export function AuthProvider({ children }) {
 
   // Log specific action to activity timeline
   const logPortalActivity = async (action, title, category = 'General', details = '', page = '') => {
-    if (!currentSessionId) return;
     try {
-      await API.post('/activity-logs/action', {
-        sessionId: currentSessionId,
+      const sessId = currentSessionId || localStorage.getItem('admin_session_id');
+      const res = await API.post('/activity-logs/action', {
+        sessionId: sessId || undefined,
         action,
         title,
         category,
-        details,
-        page
+        details: typeof details === 'object' ? JSON.stringify(details) : String(details || ''),
+        page: page || (typeof window !== 'undefined' ? window.location.pathname : '')
       });
+      if (res.data?.data?._id && (!currentSessionId || currentSessionId !== res.data.data._id)) {
+        setCurrentSessionId(res.data.data._id);
+        localStorage.setItem('admin_session_id', res.data.data._id);
+      }
     } catch (err) {
       // Ignore non-fatal action logging failure
     }

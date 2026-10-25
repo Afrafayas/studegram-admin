@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
+import * as XLSX from 'xlsx';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import API from '../api/axios';
@@ -67,6 +68,10 @@ export default function SettingsPortal({
   const [isDownloadingTemplate, setIsDownloadingTemplate] = useState(false);
   const [importSummaryModalOpen, setImportSummaryModalOpen] = useState(false);
   const [importSummaryData, setImportSummaryData] = useState(null);
+  const [isExcelImportModalOpen, setIsExcelImportModalOpen] = useState(false);
+  const [excelPreviewRows, setExcelPreviewRows] = useState([]);
+  const [excelStats, setExcelStats] = useState({ totalRows: 0, validRows: 0 });
+  const [isParsingPreview, setIsParsingPreview] = useState(false);
 
   // Intake Add/Edit/View State
   const [intakeTitle, setIntakeTitle] = useState('');
@@ -529,19 +534,67 @@ export default function SettingsPortal({
     }
   };
 
-  const handleCourseFileSelect = (e) => {
-    const file = e.target.files?.[0];
+  const handleCourseFileSelect = async (e) => {
+    const file = e.target?.files?.[0] || (e instanceof File ? e : null);
     if (file) {
       const ext = file.name.split('.').pop().toLowerCase();
       if (!['xlsx', 'xls'].includes(ext)) {
         toast.error('Please choose a valid Excel file (.xlsx or .xls)');
-        e.target.value = '';
+        if (e.target) e.target.value = '';
         setSelectedCourseFile(null);
+        setExcelPreviewRows([]);
+        setExcelStats({ totalRows: 0, validRows: 0 });
         return;
       }
       setSelectedCourseFile(file);
+      setIsParsingPreview(true);
+
+      try {
+        const buffer = await file.arrayBuffer();
+        const workbook = XLSX.read(buffer, { type: 'array' });
+        const sheetName = workbook.SheetNames.includes('Courses') ? 'Courses' : workbook.SheetNames[0];
+        const sheet = workbook.Sheets[sheetName];
+        const rows = XLSX.utils.sheet_to_json(sheet, { defval: '' });
+
+        if (Array.isArray(rows) && rows.length > 0) {
+          const mappedPreview = rows.map((r, i) => {
+            const title = r['Course Program Title *'] || r['Course Program Title'] || r['Course Title *'] || r['Course Title'] || r['Title'] || r['Course Name'] || `Course ${i + 1}`;
+            const univ = r['University Name *'] || r['University Name'] || r['University'] || r['Institution'] || 'N/A';
+            const level = r['Degree Level *'] || r['Degree Level'] || r['Level'] || 'Undergraduate';
+            const fee = r['Tuition Fee *'] || r['Tuition Fee'] || r['Course Fee'] || r['Fee'] || '—';
+            const duration = r['Duration'] || r['Duration (Years/Months)'] || '—';
+
+            return {
+              id: i + 1,
+              title: String(title).trim(),
+              university: String(univ).trim(),
+              level: String(level).trim(),
+              fee: String(fee).trim(),
+              duration: String(duration).trim(),
+              isValid: Boolean(title && univ && univ !== 'N/A')
+            };
+          });
+
+          setExcelStats({
+            totalRows: rows.length,
+            validRows: mappedPreview.filter(p => p.isValid).length
+          });
+          setExcelPreviewRows(mappedPreview);
+        } else {
+          setExcelPreviewRows([]);
+          setExcelStats({ totalRows: 0, validRows: 0 });
+        }
+      } catch (err) {
+        console.warn('Excel preview parse failed:', err);
+        setExcelPreviewRows([]);
+        setExcelStats({ totalRows: 0, validRows: 0 });
+      } finally {
+        setIsParsingPreview(false);
+      }
     } else {
       setSelectedCourseFile(null);
+      setExcelPreviewRows([]);
+      setExcelStats({ totalRows: 0, validRows: 0 });
     }
   };
 
@@ -562,12 +615,41 @@ export default function SettingsPortal({
       });
 
       if (res.data?.success) {
-        if (res.data.data?.coursesCreated && res.data.data.coursesCreated.length > 0) {
-          setCourses(prev => [...res.data.data.coursesCreated, ...prev]);
+        const createdCourses = res.data.data?.coursesCreated || [];
+        if (createdCourses.length > 0) {
+          setCourses(prevCourses => {
+            const existingIds = new Set((prevCourses || []).map(c => String(c._id || c.id || '')));
+            const existingKeys = new Set(
+              (prevCourses || []).map(c => {
+                const t = (c.title || '').trim().toLowerCase();
+                const u = String(c.university?._id || c.university?.name || c.university || '').trim().toLowerCase();
+                return `${t}__${u}`;
+              })
+            );
+
+            const strictlyNew = createdCourses.filter(c => {
+              const id = String(c._id || c.id || '');
+              const t = (c.title || '').trim().toLowerCase();
+              const u = String(c.university?._id || c.university?.name || c.university || '').trim().toLowerCase();
+              const key = `${t}__${u}`;
+
+              if (id && existingIds.has(id)) return false;
+              if (existingKeys.has(key)) return false;
+
+              if (id) existingIds.add(id);
+              existingKeys.add(key);
+              return true;
+            });
+
+            return [...strictlyNew, ...(prevCourses || [])];
+          });
         }
         setImportSummaryData(res.data.data);
         setImportSummaryModalOpen(true);
-        toast.success('Course programs imported successfully!');
+        setIsExcelImportModalOpen(false);
+        setExcelPreviewRows([]);
+        setExcelStats({ totalRows: 0, validRows: 0 });
+        toast.success('Course programs imported successfully without duplicates!');
         if (courseFileInputRef.current) courseFileInputRef.current.value = '';
         setSelectedCourseFile(null);
       } else {
@@ -578,6 +660,7 @@ export default function SettingsPortal({
       if (errData?.data) {
         setImportSummaryData(errData.data);
         setImportSummaryModalOpen(true);
+        setIsExcelImportModalOpen(false);
       } else {
         toast.error(errData?.message || err.message || 'Failed to upload Excel file.');
       }
@@ -1024,53 +1107,17 @@ export default function SettingsPortal({
                 <p className="text-[10px] text-slate-400 font-semibold mt-0.5">Manage degree programs, tuition fees, assigned universities, and intake calendar associations.</p>
               </div>
 
-              <div className="flex flex-wrap items-center gap-3">
-                {/* Excel Bulk Import & Template Controls */}
-                <div className="flex flex-col items-start md:items-end gap-1">
-                  <div className="flex items-center gap-1.5">
-                    <input
-                      type="file"
-                      ref={courseFileInputRef}
-                      accept=".xlsx, .xls"
-                      onChange={handleCourseFileSelect}
-                      disabled={!isWritable || isUploadingCourseExcel}
-                      className="text-[11px] text-slate-500 file:mr-2 file:py-1 file:px-2.5 file:rounded-lg file:border file:border-slate-300 file:text-[10px] file:font-bold file:bg-white file:text-slate-700 hover:file:bg-slate-50 cursor-pointer disabled:opacity-50"
-                    />
-                    <button
-                      type="button"
-                      onClick={handleUploadCourseExcel}
-                      disabled={!isWritable || !selectedCourseFile || isUploadingCourseExcel}
-                      className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all flex items-center gap-1 shrink-0 ${
-                        isWritable && selectedCourseFile && !isUploadingCourseExcel
-                          ? 'bg-[#10B981] hover:bg-[#059669] text-white shadow-xs cursor-pointer'
-                          : 'bg-slate-200 text-slate-400 cursor-not-allowed'
-                      }`}
-                      title={!isWritable ? "You don't have permission to import courses" : (!selectedCourseFile ? "Please choose an Excel file first" : "Upload and process Excel file")}
-                    >
-                      {isUploadingCourseExcel ? (
-                        <>
-                          <span className="w-2.5 h-2.5 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
-                          <span>Uploading...</span>
-                        </>
-                      ) : (
-                        <span>Upload</span>
-                      )}
-                    </button>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={handleDownloadCourseTemplate}
-                    disabled={isDownloadingTemplate}
-                    className="text-[10px] text-blue-600 hover:text-blue-700 font-bold hover:underline cursor-pointer flex items-center gap-1"
-                    title="Download pre-formatted Excel template with guidelines"
-                  >
-                    {isDownloadingTemplate ? (
-                      <span>Downloading template...</span>
-                    ) : (
-                      <span>Download the Excel Format</span>
-                    )}
-                  </button>
-                </div>
+              <div className="flex items-center gap-2">
+                {/* Single Import Excel Action */}
+                <button
+                  type="button"
+                  onClick={() => setIsExcelImportModalOpen(true)}
+                  disabled={!isWritable}
+                  className="bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 font-extrabold text-[10px] px-3.5 py-2 rounded-xl transition-all shadow-2xs uppercase tracking-wider cursor-pointer flex items-center gap-1.5 shrink-0 h-fit disabled:opacity-50"
+                  title="Import courses in bulk via Excel"
+                >
+                  <span>📊 Import Excel</span>
+                </button>
 
                 {/* + Add Course Program Action */}
                 <button
@@ -2561,6 +2608,233 @@ export default function SettingsPortal({
                 className="px-5 py-2 bg-[#D99A1C] hover:bg-[#F5B025] text-white text-xs font-extrabold rounded-xl shadow-md cursor-pointer"
               >
                 Close
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* Unified Excel Course Bulk Import Modal */}
+      {isExcelImportModalOpen && createPortal(
+        <div className="fixed inset-0 z-[9998] bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 animate-fade-in overflow-y-auto">
+          <div className="bg-white border border-slate-200 border-t-4 border-t-[#D99A1C] rounded-3xl max-w-2xl w-full p-6 shadow-2xl space-y-5 relative max-h-[90vh] flex flex-col my-auto">
+            {/* Modal Header */}
+            <div className="flex justify-between items-start pb-3 border-b border-slate-100 shrink-0">
+              <div>
+                <h3 className="text-sm font-black text-slate-900 uppercase tracking-wider flex items-center gap-2">
+                  <span>📊 Import Courses via Excel</span>
+                </h3>
+                <p className="text-[11px] text-slate-500 font-medium mt-0.5">
+                  Bulk upload academic programs, tuition fees, and degree structures without duplicates.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setIsExcelImportModalOpen(false);
+                  setSelectedCourseFile(null);
+                  setExcelPreviewRows([]);
+                  setExcelStats({ totalRows: 0, validRows: 0 });
+                }}
+                className="text-slate-400 hover:text-slate-700 text-lg font-bold p-1 rounded-lg transition-colors cursor-pointer"
+                title="Close"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="space-y-4 overflow-y-auto pr-1 flex-1">
+              {/* 1. Template Download Card */}
+              <div className="bg-slate-50 border border-slate-200/90 rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-3xs">
+                <div className="space-y-1">
+                  <h4 className="text-xs font-black text-slate-800 flex items-center gap-1.5">
+                    <span>1.</span> Download Official Excel Template
+                  </h4>
+                  <p className="text-[10px] text-slate-500 font-medium">
+                    Pre-formatted template with required columns: Course Title, University, Fee, Level.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleDownloadCourseTemplate}
+                  disabled={isDownloadingTemplate}
+                  className="bg-white hover:bg-slate-100 text-slate-800 border border-slate-300 font-bold text-xs px-3.5 py-2 rounded-xl transition-all shadow-3xs inline-flex items-center gap-1.5 shrink-0 cursor-pointer disabled:opacity-50"
+                >
+                  {isDownloadingTemplate ? (
+                    <>
+                      <span className="w-3 h-3 border-2 border-slate-600 border-t-transparent rounded-full animate-spin"></span>
+                      <span>Downloading...</span>
+                    </>
+                  ) : (
+                    <>
+                      <span>📥</span>
+                      <span>Download Template</span>
+                    </>
+                  )}
+                </button>
+              </div>
+
+              {/* 2. File Drop & Selection Zone */}
+              <div className="space-y-2">
+                <label className="block text-[11px] font-black text-slate-700">
+                  2. Upload Your Completed Excel File:
+                </label>
+
+                <input
+                  type="file"
+                  ref={courseFileInputRef}
+                  accept=".xlsx, .xls"
+                  onChange={handleCourseFileSelect}
+                  className="hidden"
+                />
+
+                {!selectedCourseFile ? (
+                  <div
+                    onClick={() => courseFileInputRef.current?.click()}
+                    className="border-2 border-dashed border-slate-250 hover:border-[#D99A1C] bg-slate-50/60 hover:bg-amber-50/20 transition-all rounded-2xl p-6 text-center cursor-pointer space-y-2"
+                  >
+                    <div className="w-10 h-10 rounded-full bg-amber-100 text-[#D99A1C] flex items-center justify-center mx-auto text-xl font-bold">
+                      📊
+                    </div>
+                    <div>
+                      <p className="text-xs font-black text-slate-800">
+                        Drop your Excel file here, or <span className="text-[#D99A1C] underline font-extrabold">Browse File</span>
+                      </p>
+                      <p className="text-[10px] text-slate-400 font-medium mt-0.5">
+                        Supports standard .xlsx or .xls files up to 25MB
+                      </p>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="bg-emerald-50/60 border border-emerald-200 rounded-2xl p-3.5 flex items-center justify-between gap-3 shadow-3xs">
+                    <div className="flex items-center gap-2.5 overflow-hidden">
+                      <div className="w-8 h-8 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold text-sm shrink-0">
+                        📄
+                      </div>
+                      <div className="truncate">
+                        <p className="text-xs font-black text-slate-800 truncate" title={selectedCourseFile.name}>
+                          {selectedCourseFile.name}
+                        </p>
+                        <p className="text-[10px] text-emerald-700 font-semibold">
+                          {(selectedCourseFile.size / 1024).toFixed(1)} KB • Ready for processing
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedCourseFile(null);
+                        setExcelPreviewRows([]);
+                        setExcelStats({ totalRows: 0, validRows: 0 });
+                        if (courseFileInputRef.current) courseFileInputRef.current.value = '';
+                      }}
+                      className="px-2.5 py-1 text-[10px] font-extrabold text-slate-500 hover:text-rose-600 bg-white border border-slate-200 hover:border-rose-200 rounded-lg transition-colors cursor-pointer shrink-0"
+                    >
+                      Change File
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {/* 3. Live Preview Table (Unveils when file is chosen) */}
+              {isParsingPreview && (
+                <div className="p-4 text-center text-xs font-bold text-slate-400 flex items-center justify-center gap-2">
+                  <span className="w-3.5 h-3.5 border-2 border-[#D99A1C] border-t-transparent rounded-full animate-spin"></span>
+                  <span>Reading Excel worksheet data...</span>
+                </div>
+              )}
+
+              {selectedCourseFile && !isParsingPreview && excelPreviewRows.length > 0 && (
+                <div className="space-y-2 border border-slate-200 bg-white rounded-2xl p-3.5 shadow-2xs">
+                  <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+                    <span className="text-[11px] font-black text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
+                      <span>🔍</span> Preview Courses ({excelStats.totalRows} detected)
+                    </span>
+                    <span className="text-[9.5px] font-black text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
+                      ✓ {excelStats.validRows} Valid
+                    </span>
+                  </div>
+
+                  <div className="max-h-48 overflow-y-auto border border-slate-100 rounded-xl overflow-hidden scrollbar-thin">
+                    <table className="w-full text-left text-xs border-collapse">
+                      <thead className="bg-slate-50 text-[9.5px] font-black uppercase text-slate-400 sticky top-0 border-b border-slate-100">
+                        <tr>
+                          <th className="px-3 py-2">Course Title</th>
+                          <th className="px-3 py-2">University</th>
+                          <th className="px-3 py-2">Level</th>
+                          <th className="px-3 py-2">Fee</th>
+                          <th className="px-3 py-2 text-right">Status</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100 text-[11px] font-semibold text-slate-700">
+                        {excelPreviewRows.slice(0, 20).map((row) => (
+                          <tr key={row.id} className="hover:bg-slate-50/60">
+                            <td className="px-3 py-2 font-bold text-slate-900 truncate max-w-[180px]" title={row.title}>
+                              {row.title}
+                            </td>
+                            <td className="px-3 py-2 text-slate-500 truncate max-w-[140px]" title={row.university}>
+                              {row.university}
+                            </td>
+                            <td className="px-3 py-2 text-slate-500">{row.level}</td>
+                            <td className="px-3 py-2 font-mono text-slate-700">{row.fee}</td>
+                            <td className="px-3 py-2 text-right">
+                              <span className={`px-1.5 py-0.5 rounded text-[9px] font-black ${
+                                row.isValid
+                                  ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                                  : 'bg-rose-50 text-rose-700 border border-rose-200'
+                              }`}>
+                                {row.isValid ? '✓ Ready' : 'Incomplete'}
+                              </span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {excelPreviewRows.length > 20 && (
+                    <p className="text-[10px] text-slate-400 text-center font-medium pt-1">
+                      Showing first 20 of {excelPreviewRows.length} courses. All valid rows will be imported.
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Modal Footer Actions */}
+            <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-slate-100 shrink-0">
+              <button
+                type="button"
+                onClick={() => {
+                  setIsExcelImportModalOpen(false);
+                  setSelectedCourseFile(null);
+                  setExcelPreviewRows([]);
+                  setExcelStats({ totalRows: 0, validRows: 0 });
+                }}
+                disabled={isUploadingCourseExcel}
+                className="px-4 py-2 rounded-xl text-xs font-extrabold text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer border border-slate-200"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleUploadCourseExcel}
+                disabled={!selectedCourseFile || isUploadingCourseExcel || !isWritable}
+                className="bg-[#D99A1C] hover:bg-[#F5B025] disabled:opacity-40 text-white font-extrabold text-xs px-5 py-2.5 rounded-xl transition-all shadow-md cursor-pointer inline-flex items-center gap-2"
+              >
+                {isUploadingCourseExcel ? (
+                  <>
+                    <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                    <span>Uploading &amp; Deduplicating...</span>
+                  </>
+                ) : (
+                  <>
+                    <span>🚀 Confirm &amp; Import Courses</span>
+                    {excelStats.totalRows > 0 && <span>({excelStats.totalRows})</span>}
+                  </>
+                )}
               </button>
             </div>
           </div>

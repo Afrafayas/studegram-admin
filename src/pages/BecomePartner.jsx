@@ -318,8 +318,6 @@ export default function BecomePartner({ clients = [], setClients, applications =
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
   const [locationFilter, setLocationFilter] = useState('All');
-  const [expandedId, setExpandedId] = useState(null);
-  const [partnerSubTabs, setPartnerSubTabs] = useState({});
 
   // Pagination State
   const [currentPage, setCurrentPage] = useState(1);
@@ -365,9 +363,6 @@ export default function BecomePartner({ clients = [], setClients, applications =
   const endIndex = Math.min(startIndex + itemsPerPage, totalItems);
   const paginatedPartners = filteredPartners.slice(startIndex, startIndex + itemsPerPage);
 
-  const toggleExpand = (id) => {
-    setExpandedId(expandedId === id ? null : id);
-  };
 
   const handleUpdateStatus = async (partnerId, newStatus) => {
     try {
@@ -921,8 +916,7 @@ export default function BecomePartner({ clients = [], setClients, applications =
                 <table className="w-full text-left border-collapse">
                   <thead>
                     <tr className="bg-slate-100/60 border-b border-slate-200/80">
-                      <th className="px-5 py-3.5 text-slate-400 text-[10px] font-black uppercase tracking-wider w-[45px]"></th>
-                      <th className="px-4 py-3.5 text-slate-400 text-[10px] font-black uppercase tracking-wider w-[50px]">#</th>
+                      <th className="px-6 py-3.5 text-slate-400 text-[10px] font-black uppercase tracking-wider w-[60px]">#</th>
                       <th className="px-6 py-3.5 text-slate-400 text-[10px] font-black uppercase tracking-wider">Partner Details</th>
                       <th className="px-5 py-3.5 text-slate-400 text-[10px] font-black uppercase tracking-wider">Agency Code</th>
                       <th className="px-6 py-3.5 text-slate-400 text-[10px] font-black uppercase tracking-wider">Contact Credentials</th>
@@ -932,399 +926,143 @@ export default function BecomePartner({ clients = [], setClients, applications =
                   </thead>
                   <tbody className="divide-y divide-slate-100 text-xs font-semibold text-slate-700">
                     {paginatedPartners.map((partner, idx) => {
-                      const isExpanded = expandedId === partner.id;
                       const referredStudents = getReferredStudents(partner.name);
 
                       return (
-                        <React.Fragment key={partner.id || idx}>
-                          <tr 
-                            className={`hover:bg-slate-50/80 transition-colors cursor-pointer ${
-                              isExpanded ? 'bg-amber-50/20' : ''
-                            }`} 
-                            onClick={() => toggleExpand(partner.id)}
-                          >
-                            <td className="pl-5 py-4 w-[45px]">
-                              <div className={`w-6 h-6 rounded-full flex items-center justify-center transition-all ${
-                                isExpanded ? 'bg-indigo-100 text-indigo-600 rotate-90' : 'bg-slate-100 text-slate-400'
-                              }`}>
-                                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M9 5l7 7-7 7" />
-                                </svg>
+                        <tr 
+                          key={partner.id || idx}
+                          className="hover:bg-slate-50/80 transition-colors cursor-pointer group" 
+                          onClick={() => {
+                            dismissedTargetRef.current = false;
+                            setSingleViewPartner(partner);
+                            window.scrollTo({ top: 0, behavior: 'smooth' });
+                            document.getElementById('admin-main-content')?.scrollTo({ top: 0, behavior: 'smooth' });
+                          }}
+                        >
+                          <td className="px-6 py-4 font-extrabold text-slate-400">{startIndex + idx + 1}</td>
+                          <td className="px-6 py-4">
+                            <div className="flex items-center gap-3">
+                              <div className="w-10 h-10 rounded-2xl flex items-center justify-center font-black text-white text-xs bg-gradient-to-tr from-slate-800 via-slate-700 to-[#D99A1C] shrink-0 shadow-md shadow-slate-900/10 group-hover:scale-105 transition-transform">
+                                {partner.name ? partner.name.split(' ').map(n => n[0]).join('').slice(0, 2) : 'PR'}
                               </div>
-                            </td>
-                            <td className="px-4 py-4 font-extrabold text-slate-400">{startIndex + idx + 1}</td>
-                            <td className="px-6 py-4">
-                              <div 
-                                className="flex items-center gap-3 cursor-pointer group"
+                              <div>
+                                <p className="text-slate-950 font-black text-xs tracking-tight group-hover:text-[#D99A1C] group-hover:underline transition-colors flex items-center gap-1.5">
+                                  <span>{partner.name}</span>
+                                  <span className="text-[10px] text-[#D99A1C] font-extrabold opacity-0 group-hover:opacity-100 transition-opacity">→ View Details</span>
+                                </p>
+                                <p className="text-[10px] text-slate-500 font-semibold">
+                                  {(partner.partnerType && partner.partnerType.toString().toLowerCase() === 'individual') ? 'Individual Counselor / Agent' : (partner.companyName || partner.name)}
+                                </p>
+                                <div className="flex items-center gap-1.5 mt-0.5">
+                                  <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold tracking-tight whitespace-nowrap mt-1 ${
+                                    (partner.partnerType && partner.partnerType.toString().toLowerCase() === 'individual')
+                                      ? 'bg-purple-50 text-purple-700 border border-purple-200/80'
+                                      : 'bg-blue-50 text-blue-700 border border-blue-200/80'
+                                  }`}>
+                                    <span>{(partner.partnerType && partner.partnerType.toString().toLowerCase() === 'individual') ? '👤 Individual Agent' : '🏢 Company Agent'}</span>
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="px-5 py-4">
+                            <span className="px-2.5 py-1 rounded-xl text-[10px] font-mono font-black border bg-slate-50 text-blue-700 border-blue-200 shadow-2xs">
+                              {partner.partnerCode}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4">
+                            <p className="text-indigo-600 font-black text-xs">{partner.email}</p>
+                            <p className="text-slate-500 text-[10px] font-medium flex items-center gap-1 mt-0.5">
+                              <span>📞 {partner.phone}</span>
+                              <span>•</span>
+                              <span className="font-bold text-slate-700">{partner.country || 'India'}</span>
+                            </p>
+                          </td>
+                          <td className="px-5 py-4">
+                            <div className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-indigo-50 text-indigo-700 rounded-xl border border-indigo-100 font-black text-[10px]">
+                              <span>🎓 {referredStudents.length} Students</span>
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 text-right" onClick={(e) => e.stopPropagation()}>
+                            <div className="flex items-center justify-end gap-2">
+                              <button
+                                type="button"
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   dismissedTargetRef.current = false;
                                   setSingleViewPartner(partner);
+                                  window.scrollTo({ top: 0, behavior: 'smooth' });
+                                  document.getElementById('admin-main-content')?.scrollTo({ top: 0, behavior: 'smooth' });
                                 }}
+                                className="px-3 py-1.5 bg-[#D99A1C]/10 hover:bg-[#D99A1C]/20 text-[#D99A1C] border border-[#D99A1C]/30 rounded-xl text-[10px] font-black transition-all cursor-pointer flex items-center gap-1 shadow-2xs"
+                                title="View Full Single Page Details"
                               >
-                                <div className="w-10 h-10 rounded-2xl flex items-center justify-center font-black text-white text-xs bg-gradient-to-tr from-slate-800 via-slate-700 to-[#D99A1C] shrink-0 shadow-md shadow-slate-900/10 group-hover:scale-105 transition-transform">
-                                  {partner.name ? partner.name.split(' ').map(n => n[0]).join('').slice(0, 2) : 'PR'}
-                                </div>
-                                <div>
-                                  <p className="text-slate-950 font-black text-xs tracking-tight group-hover:text-[#D99A1C] group-hover:underline transition-colors flex items-center gap-1.5">
-                                    <span>{partner.name}</span>
-                                    <span className="text-[10px] text-[#D99A1C] font-extrabold opacity-0 group-hover:opacity-100 transition-opacity">→ View Details</span>
-                                  </p>
-                                  <p className="text-[10px] text-slate-500 font-semibold">
-                                    {(partner.partnerType && partner.partnerType.toString().toLowerCase() === 'individual') ? 'Individual Counselor / Agent' : (partner.companyName || partner.name)}
-                                  </p>
-                                  <div className="flex items-center gap-1.5 mt-0.5">
-                                    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold tracking-tight whitespace-nowrap mt-1 ${
-                                      (partner.partnerType && partner.partnerType.toString().toLowerCase() === 'individual')
-                                        ? 'bg-purple-50 text-purple-700 border border-purple-200/80'
-                                        : 'bg-blue-50 text-blue-700 border border-blue-200/80'
-                                    }`}>
-                                      <span>{(partner.partnerType && partner.partnerType.toString().toLowerCase() === 'individual') ? '👤 Individual Agent' : '🏢 Company Agent'}</span>
-                                    </span>
-                                  </div>
-                                </div>
-                              </div>
-                            </td>
-                            <td className="px-5 py-4">
-                              <span className="px-2.5 py-1 rounded-xl text-[10px] font-mono font-black border bg-slate-50 text-blue-700 border-blue-200 shadow-2xs">
-                                {partner.partnerCode}
+                                <span>👁️ View Details</span>
+                              </button>
+                              <button
+                                type="button"
+                                onClick={(e) => handleOpenEditModal(partner, e)}
+                                className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200/80 rounded-xl text-[10px] font-black transition-all cursor-pointer flex items-center gap-1 shadow-2xs"
+                                title="Edit Partner Profile Details"
+                              >
+                                <span>✏️ Edit</span>
+                              </button>
+
+                              <span className={`px-2.5 py-1 border rounded-full text-[9px] font-black uppercase tracking-wider ${
+                                partner.status === 'Active' 
+                                  ? 'bg-emerald-50 text-emerald-700 border-emerald-200' 
+                                  : partner.status === 'Pending'
+                                    ? 'bg-amber-50 text-amber-700 border-amber-200'
+                                    : 'bg-rose-50 text-rose-700 border-rose-200'
+                              }`}>
+                                {partner.status}
                               </span>
-                            </td>
-                            <td className="px-6 py-4">
-                              <p className="text-indigo-600 font-black text-xs">{partner.email}</p>
-                              <p className="text-slate-500 text-[10px] font-medium flex items-center gap-1 mt-0.5">
-                                <span>📞 {partner.phone}</span>
-                                <span>•</span>
-                                <span className="font-bold text-slate-700">{partner.country || 'India'}</span>
-                              </p>
-                            </td>
-                            <td className="px-5 py-4">
-                              <div className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-indigo-50 text-indigo-700 rounded-xl border border-indigo-100 font-black text-[10px]">
-                                <span>🎓 {referredStudents.length} Students</span>
-                              </div>
-                            </td>
-                            <td className="px-6 py-4 text-right" onClick={(e) => e.stopPropagation()}>
-                              <div className="flex items-center justify-end gap-2">
+
+                              {partner.status === 'Pending' && (
                                 <button
-                                  type="button"
                                   onClick={(e) => {
                                     e.stopPropagation();
                                     dismissedTargetRef.current = false;
                                     setSingleViewPartner(partner);
+                                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                                    document.getElementById('admin-main-content')?.scrollTo({ top: 0, behavior: 'smooth' });
                                   }}
-                                  className="px-3 py-1.5 bg-[#D99A1C]/10 hover:bg-[#D99A1C]/20 text-[#D99A1C] border border-[#D99A1C]/30 rounded-xl text-[10px] font-black transition-all cursor-pointer flex items-center gap-1 shadow-2xs"
-                                  title="View Full Single Page Details"
+                                  className="bg-emerald-600 hover:bg-emerald-700 text-white font-black text-[9px] px-2.5 py-1.5 rounded-lg transition-all shadow-2xs cursor-pointer uppercase"
                                 >
-                                  <span>👁️ View Details</span>
+                                  Approve
                                 </button>
+                              )}
+                              {partner.status === 'Active' && (
                                 <button
-                                  type="button"
-                                  onClick={(e) => handleOpenEditModal(partner, e)}
-                                  className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200/80 rounded-xl text-[10px] font-black transition-all cursor-pointer flex items-center gap-1 shadow-2xs"
-                                  title="Edit Partner Profile Details"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    dismissedTargetRef.current = false;
+                                    setSingleViewPartner(partner);
+                                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                                    document.getElementById('admin-main-content')?.scrollTo({ top: 0, behavior: 'smooth' });
+                                  }}
+                                  className="bg-rose-500 hover:bg-rose-600 text-white font-black text-[9px] px-2.5 py-1.5 rounded-lg transition-all shadow-2xs cursor-pointer uppercase"
                                 >
-                                  <span>✏️ Edit</span>
+                                  Deactivate
                                 </button>
-
-                                <span className={`px-2.5 py-1 border rounded-full text-[9px] font-black uppercase tracking-wider ${
-                                  partner.status === 'Active' 
-                                    ? 'bg-emerald-50 text-emerald-700 border-emerald-200' 
-                                    : partner.status === 'Pending'
-                                      ? 'bg-amber-50 text-amber-700 border-amber-200'
-                                      : 'bg-rose-50 text-rose-700 border-rose-200'
-                                }`}>
-                                  {partner.status}
-                                </span>
-
-                                {partner.status === 'Pending' && (
-                                  <button
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      dismissedTargetRef.current = false;
-                                      setSingleViewPartner(partner);
-                                      window.scrollTo({ top: 0, behavior: 'smooth' });
-                                    }}
-                                    className="bg-emerald-600 hover:bg-emerald-700 text-white font-black text-[9px] px-2.5 py-1.5 rounded-lg transition-all shadow-2xs cursor-pointer uppercase"
-                                  >
-                                    Approve
-                                  </button>
-                                )}
-                                {partner.status === 'Active' && (
-                                  <button
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      dismissedTargetRef.current = false;
-                                      setSingleViewPartner(partner);
-                                      window.scrollTo({ top: 0, behavior: 'smooth' });
-                                    }}
-                                    className="bg-rose-500 hover:bg-rose-600 text-white font-black text-[9px] px-2.5 py-1.5 rounded-lg transition-all shadow-2xs cursor-pointer uppercase"
-                                  >
-                                    Deactivate
-                                  </button>
-                                )}
-                                {partner.status === 'Inactive' && (
-                                  <button
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      dismissedTargetRef.current = false;
-                                      setSingleViewPartner(partner);
-                                      window.scrollTo({ top: 0, behavior: 'smooth' });
-                                    }}
-                                    className="bg-emerald-600 hover:bg-emerald-700 text-white font-black text-[9px] px-2.5 py-1.5 rounded-lg transition-all shadow-2xs cursor-pointer uppercase"
-                                  >
-                                    Activate
-                                  </button>
-                                )}
-                              </div>
-                            </td>
-                          </tr>
-
-                          {/* Expanded Partner Detailed Profile Drawer */}
-                          {isExpanded && (() => {
-                            const currentSubTab = partnerSubTabs[partner.id] || 'overview';
-                            const setSubTab = (tab) => {
-                              setPartnerSubTabs(prev => ({ ...prev, [partner.id]: tab }));
-                            };
-
-                            return (
-                              <tr>
-                                <td colSpan="7" className="bg-slate-50/60 p-5 md:p-6 border-t border-b border-slate-200/80">
-                                  <div className="bg-white border border-slate-200/90 rounded-2xl p-6 shadow-sm space-y-5">
-                                    {/* Sub-tab drawer header */}
-                                    <div className="flex justify-between items-center border-b border-slate-100 pb-3">
-                                      <div className="flex gap-4">
-                                        <button 
-                                          onClick={() => setSubTab('overview')}
-                                          className={`pb-1.5 text-xs font-black uppercase tracking-wider transition-all border-b-2 cursor-pointer ${
-                                            currentSubTab === 'overview' 
-                                              ? 'border-[#D99A1C] text-[#D99A1C]' 
-                                              : 'border-transparent text-slate-400 hover:text-slate-700'
-                                          }`}
-                                        >
-                                          📋 Onboarding Profile & Document Proofs
-                                        </button>
-                                        <button 
-                                          onClick={() => setSubTab('applications')}
-                                          className={`pb-1.5 text-xs font-black uppercase tracking-wider transition-all border-b-2 cursor-pointer ${
-                                            currentSubTab === 'applications' 
-                                              ? 'border-[#D99A1C] text-[#D99A1C]' 
-                                              : 'border-transparent text-slate-400 hover:text-slate-700'
-                                          }`}
-                                        >
-                                          🎓 Referred Applications ({referredStudents.length})
-                                        </button>
-                                      </div>
-
-                                      <div className="flex items-center gap-3">
-                                        <button
-                                          type="button"
-                                          onClick={(e) => handleOpenEditModal(partner, e)}
-                                          className="px-3 py-1.5 bg-amber-50 text-[#D99A1C] border border-amber-200 rounded-xl text-[10px] font-black hover:bg-amber-100 cursor-pointer shadow-2xs transition-all flex items-center gap-1"
-                                        >
-                                          <span>✏️ Edit Profile Details</span>
-                                        </button>
-                                        <span className="text-[10px] text-slate-400 font-extrabold">
-                                          Registered: {partner.dateAdded || 'N/A'}
-                                        </span>
-                                      </div>
-                                    </div>
-
-                                    {/* SUB-TAB 1: Complete Onboarding Profile & Document Proofs */}
-                                    {currentSubTab === 'overview' && (
-                                      <div className="space-y-5 animate-fade-in">
-                                        <div className="flex justify-between items-center bg-slate-50 p-3.5 rounded-xl border border-slate-200/80">
-                                          <div>
-                                            <span className="text-[9px] font-extrabold text-[#D99A1C] uppercase tracking-wider block">Official Onboarding Record</span>
-                                            <h3 className="text-xs font-black text-slate-900 uppercase tracking-wider">
-                                              Partner Profile — {partner.name}
-                                            </h3>
-                                          </div>
-                                          <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wider ${
-                                            (partner.partnerType && partner.partnerType.toString().toLowerCase() === 'individual')
-                                              ? 'bg-purple-50 text-purple-700 border border-purple-200'
-                                              : 'bg-blue-50 text-blue-700 border border-blue-200'
-                                          }`}>
-                                            <span>{(partner.partnerType && partner.partnerType.toString().toLowerCase() === 'individual') ? '👤 Individual Agent' : '🏢 Company Agency'}</span>
-                                          </span>
-                                        </div>
-
-                                        {/* Grid Cards for All Onboarding Info */}
-                                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 text-[11px] font-semibold text-slate-600 bg-slate-50/80 p-5 rounded-2xl border border-slate-200/80">
-                                          <div className="space-y-1">
-                                            <span className="text-[9px] font-extrabold uppercase text-slate-400 tracking-wider block">Partner Reference Code</span>
-                                            <span className="text-blue-600 font-mono font-black text-xs bg-blue-50 px-2 py-0.5 rounded border border-blue-100 inline-block">{partner.partnerCode}</span>
-                                          </div>
-                                          <div className="space-y-1">
-                                            <span className="text-[9px] font-extrabold uppercase text-slate-400 tracking-wider block">Company / Entity Name</span>
-                                            <span className="text-slate-900 font-bold text-xs">{partner.companyName || partner.name}</span>
-                                          </div>
-                                          <div className="space-y-1">
-                                            <span className="text-[9px] font-extrabold uppercase text-slate-400 tracking-wider block">Tax ID / GSTIN</span>
-                                            <span className="text-slate-900 font-bold text-xs">{partner.taxId || 'N/A'}</span>
-                                          </div>
-                                          <div className="space-y-1">
-                                            <span className="text-[9px] font-extrabold uppercase text-slate-400 tracking-wider block">Operating Country</span>
-                                            <span className="text-slate-900 font-bold text-xs">📍 {partner.country || 'India'}</span>
-                                          </div>
-                                          <div className="space-y-1">
-                                            <span className="text-[9px] font-extrabold uppercase text-slate-400 tracking-wider block">Contact Person Name</span>
-                                            <span className="text-slate-900 font-bold text-xs">{partner.name}</span>
-                                          </div>
-                                          <div className="space-y-1">
-                                            <span className="text-[9px] font-extrabold uppercase text-slate-400 tracking-wider block">Official Email Address</span>
-                                            <span className="text-indigo-600 font-bold text-xs">{partner.email}</span>
-                                          </div>
-                                          <div className="space-y-1">
-                                            <span className="text-[9px] font-extrabold uppercase text-slate-400 tracking-wider block">Direct Phone Line</span>
-                                            <span className="text-slate-900 font-bold text-xs">{partner.phone}</span>
-                                          </div>
-                                          <div className="space-y-1">
-                                            <span className="text-[9px] font-extrabold uppercase text-slate-400 tracking-wider block">Account Status</span>
-                                            <span className="text-emerald-600 font-black text-xs uppercase">{partner.status || 'Active'}</span>
-                                          </div>
-                                        </div>
-
-                                        {/* Uploaded Compliance Verification Proofs */}
-                                        <div className="bg-slate-50/70 border border-slate-200/80 rounded-2xl p-5 space-y-4">
-                                          <div className="flex justify-between items-center border-b border-slate-200/60 pb-3">
-                                            <div>
-                                              <span className="text-[9px] font-extrabold text-[#D99A1C] uppercase tracking-wider block">Verification & Compliance Proofs</span>
-                                              <h4 className="text-xs font-black text-slate-900 uppercase tracking-wider">
-                                                Saved Onboarding Documents ({partner.documents ? partner.documents.length : 0})
-                                              </h4>
-                                            </div>
-                                            {partner.documents && partner.documents.length > 0 && (
-                                              <span className="text-[9px] font-extrabold text-emerald-700 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200 uppercase">
-                                                ✓ Verified & Onboarded
-                                              </span>
-                                            )}
-                                          </div>
-
-                                          {partner.documents && partner.documents.length > 0 ? (
-                                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
-                                              {partner.documents.map((doc, dIdx) => {
-                                                const docTitle = typeof doc === 'string' ? doc : (doc.name || doc.title || doc.fileName || `Document ${dIdx + 1}`);
-                                                const docFileName = typeof doc === 'string' ? doc : (doc.fileName || doc.title || 'Attached Proof');
-                                                const docUrl = typeof doc === 'object' ? doc.previewUrl : null;
-                                                const docType = typeof doc === 'object' ? doc.type : 'pdf';
-
-                                                return (
-                                                  <div key={dIdx} className="bg-white border border-slate-200 p-3.5 rounded-2xl flex flex-col justify-between space-y-3 text-xs shadow-2xs hover:border-[#D99A1C] hover:shadow-md transition-all">
-                                                    <div className="flex items-center gap-2 overflow-hidden">
-                                                      <div className="w-8 h-8 rounded-lg bg-amber-50 text-[#D99A1C] border border-amber-200/80 flex items-center justify-center font-bold text-base shrink-0">
-                                                        📄
-                                                      </div>
-                                                      <div className="truncate">
-                                                        <p className="text-[11px] font-bold text-slate-900 truncate">{docTitle}</p>
-                                                        <p className="text-[9px] text-slate-400 font-semibold truncate">{docFileName}</p>
-                                                      </div>
-                                                    </div>
-
-                                                    {/* Inline Document Box Viewer */}
-                                                    <div className="h-36 bg-slate-50 border border-slate-200 rounded-xl overflow-hidden flex items-center justify-center p-1.5 shadow-inner">
-                                                      {docType === 'image' || (typeof docUrl === 'string' && docUrl.startsWith('data:image/')) ? (
-                                                        <img src={docUrl} alt={docTitle} className="max-h-full max-w-full object-contain rounded" />
-                                                      ) : (
-                                                        <iframe src={getDocumentBlobUrl(docUrl, 'application/pdf') || createSampleDocBlobUrl(docTitle, partner.name)} title={docTitle} className="w-full h-full rounded border-0" />
-                                                      )}
-                                                    </div>
-
-                                                    <div className="flex items-center gap-2 pt-1">
-                                                      <button
-                                                        type="button"
-                                                        onClick={() => {
-                                                          const isImg = docType === 'image' || (typeof docUrl === 'string' && (docUrl.startsWith('data:image/') || docFileName.match(/\.(png|jpg|jpeg|gif|svg|webp)$/i)));
-                                                          const safeBlobUrl = getDocumentBlobUrl(docUrl, isImg ? 'image/png' : 'application/pdf') || createSampleDocBlobUrl(docTitle, partner.name);
-                                                          setPreviewModalDoc({
-                                                            title: docTitle,
-                                                            fileName: docFileName,
-                                                            previewUrl: safeBlobUrl,
-                                                            rawUrl: docUrl,
-                                                            type: isImg ? 'image' : 'pdf'
-                                                          });
-                                                        }}
-                                                        className="flex-1 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-200 rounded-xl font-bold text-[11px] transition-all cursor-pointer flex items-center justify-center gap-1 shadow-2xs"
-                                                      >
-                                                        <span>🔍 Expand</span>
-                                                      </button>
-                                                      <button
-                                                        type="button"
-                                                        onClick={() => {
-                                                          const safeBlobUrl = getDocumentBlobUrl(docUrl, 'application/pdf') || createSampleDocBlobUrl(docTitle, partner.name);
-                                                          handleDownloadDocument(safeBlobUrl, `${docTitle.replace(/\s+/g, '_')}.pdf`);
-                                                        }}
-                                                        className="flex-1 py-1.5 bg-gradient-to-r from-[#D99A1C] to-[#F5B025] hover:from-[#c28815] hover:to-[#e09e1d] text-white rounded-xl font-bold text-[11px] transition-all cursor-pointer flex items-center justify-center gap-1 shadow-2xs"
-                                                      >
-                                                        <span>📥 Download</span>
-                                                      </button>
-                                                    </div>
-                                                  </div>
-                                                );
-                                              })}
-                                            </div>
-                                          ) : (
-                                            <div className="bg-amber-50/70 border border-amber-200/90 rounded-xl p-4 flex flex-col sm:flex-row items-center justify-between gap-3 text-center sm:text-left">
-                                              <div>
-                                                <p className="text-xs font-bold text-amber-900">No verification document proofs attached to this partner profile yet.</p>
-                                                <p className="text-[10px] font-medium text-amber-700 mt-0.5">Upload required compliance documents (Incorporation Cert, Tax ID, Signatory ID) to verify account.</p>
-                                              </div>
-                                              <button
-                                                type="button"
-                                                onClick={(e) => handleOpenEditModal(partner, e)}
-                                                className="px-3.5 py-1.5 bg-[#D99A1C] hover:bg-[#F5B025] text-white rounded-xl text-xs font-extrabold cursor-pointer transition-all shadow-xs shrink-0 flex items-center gap-1.5"
-                                              >
-                                                <span>📎 Attach Documents Now</span>
-                                              </button>
-                                            </div>
-                                          )}
-                                        </div>
-                                      </div>
-                                    )}
-
-                                    {/* SUB-TAB 2: Referred Applications */}
-                                    {currentSubTab === 'applications' && (
-                                      <div className="space-y-3 animate-fade-in">
-                                        <div className="flex justify-between items-center pb-2">
-                                          <h4 className="text-xs font-black text-slate-900 uppercase tracking-wider">Referred Student Files ({referredStudents.length})</h4>
-                                        </div>
-                                        {referredStudents.length > 0 ? (
-                                          <div className="border border-slate-200 rounded-xl overflow-hidden shadow-2xs">
-                                            <table className="w-full text-left border-collapse text-[11px]">
-                                              <thead>
-                                                <tr className="bg-slate-50 border-b border-slate-200">
-                                                  <th className="px-4 py-2.5 text-slate-400 font-black uppercase tracking-wider">Student Name</th>
-                                                  <th className="px-4 py-2.5 text-slate-400 font-black uppercase tracking-wider">Email Address</th>
-                                                  <th className="px-4 py-2.5 text-slate-400 font-black uppercase tracking-wider">Phone</th>
-                                                  <th className="px-4 py-2.5 text-slate-400 font-black uppercase tracking-wider">Status</th>
-                                                </tr>
-                                              </thead>
-                                              <tbody className="divide-y divide-slate-100 font-semibold text-slate-700">
-                                                {referredStudents.map(student => (
-                                                  <tr key={student.id} className="hover:bg-slate-50/50">
-                                                    <td className="px-4 py-2.5 font-bold text-slate-900">{student.name}</td>
-                                                    <td className="px-4 py-2.5 text-slate-500">{student.email}</td>
-                                                    <td className="px-4 py-2.5 text-slate-500">{student.phone}</td>
-                                                    <td className="px-4 py-2.5">
-                                                      <span className="px-2 py-0.5 bg-indigo-50 text-indigo-700 rounded-md text-[9px] font-extrabold border border-indigo-100">
-                                                        Active Student
-                                                      </span>
-                                                    </td>
-                                                  </tr>
-                                                ))}
-                                              </tbody>
-                                            </table>
-                                          </div>
-                                        ) : (
-                                          <p className="text-xs text-slate-400 font-medium italic">No students have been referred by this partner yet.</p>
-                                        )}
-                                      </div>
-                                    )}
-                                  </div>
-                                </td>
-                              </tr>
-                            );
-                          })()}
-                        </React.Fragment>
+                              )}
+                              {partner.status === 'Inactive' && (
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    dismissedTargetRef.current = false;
+                                    setSingleViewPartner(partner);
+                                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                                    document.getElementById('admin-main-content')?.scrollTo({ top: 0, behavior: 'smooth' });
+                                  }}
+                                  className="bg-emerald-600 hover:bg-emerald-700 text-white font-black text-[9px] px-2.5 py-1.5 rounded-lg transition-all shadow-2xs cursor-pointer uppercase"
+                                >
+                                  Activate
+                                </button>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
                       );
                     })}
                   </tbody>
