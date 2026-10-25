@@ -145,15 +145,15 @@ export default function StaffActivitySingleView({ staffId, onBack }) {
     const cat = (item.category || '').toLowerCase().trim();
     const act = (item.action || '').toUpperCase().trim();
     if (['application', 'applications', 'student', 'students'].includes(cat)) return true;
-    if (
+    return (
       act.startsWith('APPLICATION_') ||
       act.startsWith('DOCUMENT_') ||
       act.startsWith('STATUS_') ||
-      act.startsWith('STAGE_')
-    ) {
-      return true;
-    }
-    return false;
+      act.startsWith('STAGE_') ||
+      act.startsWith('STUDENT_') ||
+      act.startsWith('ONBOARD_STUDENT') ||
+      act.startsWith('PICK_')
+    );
   };
 
   const isOtherActivity = (item) => {
@@ -508,7 +508,7 @@ export default function StaffActivitySingleView({ staffId, onBack }) {
                           ? 'bg-emerald-500 border-white text-white'
                           : isLogout
                           ? 'bg-rose-500 border-white text-white'
-                          : event.category === 'Application'
+                          : isApplicationActivity(event)
                           ? 'bg-blue-600 border-white text-white'
                           : 'bg-amber-500 border-white text-white'
                       }`}>
@@ -520,7 +520,7 @@ export default function StaffActivitySingleView({ staffId, onBack }) {
                           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
                           </svg>
-                        ) : event.category === 'Application' ? (
+                        ) : isApplicationActivity(event) ? (
                           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                           </svg>

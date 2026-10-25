@@ -123,7 +123,8 @@ export default function Staff({ staffList, setStaffList, applications }) {
       role.toLowerCase().includes(searchTerm.toLowerCase()) ||
       phone.includes(searchTerm);
 
-    const statusMatch = statusFilter === 'All' || s.status === statusFilter;
+    const statusMatch = statusFilter === 'All' || 
+      (s.status || '').toLowerCase() === statusFilter.toLowerCase();
     const staffCountries = getStaffCountries(s);
     const countryMatch = countryFilter === 'All' || staffCountries.some(c => c.toLowerCase() === countryFilter.toLowerCase());
 
@@ -298,30 +299,23 @@ export default function Staff({ staffList, setStaffList, applications }) {
     // Trigger network API call to register/onboard staff on backend server
     try {
       let res;
+      const buildStaffPayload = (statusVal) => ({
+        name: newStaffName,
+        email: newStaffEmail,
+        phone: newStaffPhone,
+        role: newStaffRole,
+        country: assignedCountry,
+        countries: assignedCountries,
+        status: statusVal,
+        accessLevel: `${newStaffRole} (${newStaffAccess})`,
+        password: passToSend
+      });
+
       try {
-        res = await API.post('/users', {
-          name: newStaffName,
-          email: newStaffEmail,
-          phone: newStaffPhone,
-          role: newStaffRole,
-          country: assignedCountry,
-          countries: assignedCountries,
-          status: newStaffStatus,
-          accessLevel: `${newStaffRole} (${newStaffAccess})`,
-          password: passToSend
-        });
+        res = await API.post('/users', buildStaffPayload(newStaffStatus));
       } catch (postErr) {
         if (postErr.response?.status === 404 || postErr.response?.status === 403) {
-          res = await API.post('/auth/register', {
-            name: newStaffName,
-            email: newStaffEmail,
-            phone: newStaffPhone,
-            role: newStaffRole,
-            country: assignedCountry,
-            countries: assignedCountries,
-            status: newStaffStatus,
-            password: passToSend
-          });
+          res = await API.post('/auth/register', buildStaffPayload(newStaffStatus));
         } else {
           throw postErr;
         }
@@ -499,9 +493,9 @@ export default function Staff({ staffList, setStaffList, applications }) {
                         </td>
                         <td className="px-6 py-4 font-black text-indigo-600">{assignedApps.length} Files</td>
                         <td className="px-6 py-4">
-                          <span className={`px-2 py-0.5 border rounded-full text-[9px] font-extrabold ${staff.status === 'Active'
+                          <span className={`px-2 py-0.5 border rounded-full text-[9px] font-extrabold ${(staff.status || '').toLowerCase() === 'active'
                               ? 'bg-emerald-50 text-emerald-700 border-emerald-100'
-                              : staff.status === 'Suspended'
+                              : (staff.status || '').toLowerCase() === 'suspended'
                                 ? 'bg-rose-50 text-rose-700 border-rose-100'
                                 : 'bg-amber-50 text-amber-700 border-amber-100'
                             }`}>
