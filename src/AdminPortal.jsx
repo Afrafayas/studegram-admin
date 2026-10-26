@@ -58,6 +58,8 @@ export default function AdminPortal({ onLogout }) {
           _id: u._id,
           name: u.name,
           email: u.email,
+          createdAt: u.createdAt,
+          updatedAt: u.updatedAt,
           phone: u.phone || '',
           role: u.role || 'Executive',
           status: u.status || 'Active',
@@ -798,10 +800,15 @@ export default function AdminPortal({ onLogout }) {
   }, []);
 
   const handleSelectTab = (tabId) => {
-    if (tabId === 'applications' && activeTab === 'applications') {
+    if (tabId === 'applications') {
       setSelectedAppIdForSingleView(null);
       localStorage.removeItem('studegram_admin_single_view_app_id');
       localStorage.removeItem('studegram_admin_single_view_app');
+      // Clear the URL before Applications mounts and restores a saved detail view.
+      const url = new URL(window.location.href);
+      url.searchParams.delete('appId');
+      url.searchParams.delete('applicationId');
+      window.history.replaceState(window.history.state, '', url.toString());
       window.dispatchEvent(new CustomEvent('clear_single_view_app'));
     }
     if (tabId === 'become-partner' || tabId === 'partners') {

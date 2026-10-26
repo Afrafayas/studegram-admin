@@ -1581,7 +1581,7 @@ export default function Applications({ applications, referralAgents = [], intake
                 </div>
               </div>
 
-              {/* Counselor Remarks Card (Fills the space & perfectly aligns bottom with right column) */}
+              {/* Counselor Notes section temporarily hidden.
               <div className="bg-white border border-slate-200 rounded-3xl p-5 sm:p-6 shadow-sm space-y-3.5 flex-1 flex flex-col justify-between">
                 <div>
                   <div className="flex items-center justify-between pb-2.5 border-b border-slate-100 gap-2">
@@ -1620,6 +1620,7 @@ export default function Applications({ applications, referralAgents = [], intake
                   Saved directly to application record and visible to all staff handling this case.
                 </p>
               </div>
+              */}
             </div>
 
             {/* Right Column: Uploaded Documents & Application Comments */}
