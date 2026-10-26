@@ -99,6 +99,10 @@ export default function Applications({ applications, referralAgents = [], intake
   });
   const [previewModalDoc, setPreviewModalDoc] = useState(null);
   const [commentsList, setCommentsList] = useState([]);
+  const [commentsExpanded, setCommentsExpanded] = useState(false);
+  useEffect(() => {
+    setCommentsExpanded(false);
+  }, [singleViewApp?.id, singleViewApp?._id]);
   const [newCommentInput, setNewCommentInput] = useState('');
   const [isPostingComment, setIsPostingComment] = useState(false);
   const [appEditNotes, setAppEditNotes] = useState('');
@@ -1700,8 +1704,8 @@ export default function Applications({ applications, referralAgents = [], intake
                 })()}
               </div>
 
-              {/* Comments & Related Notes Thread Section (Flex-1 container: comments fill the space, bottom perfectly aligned) */}
-              <div className="bg-white border border-slate-200 rounded-3xl p-5 sm:p-6 shadow-sm flex-1 flex flex-col overflow-hidden">
+              {/* Comments panel expands to show the full history on demand. */}
+              <div className="bg-white border border-slate-200 rounded-3xl p-5 sm:p-6 shadow-sm flex flex-col">
                 <div className="flex justify-between items-center pb-3 border-b border-slate-100 shrink-0">
                   <div>
                     <span className="text-[10px] font-extrabold text-[#D99A1C] uppercase tracking-wider block">Internal Discussion &amp; Audit</span>
@@ -1722,7 +1726,7 @@ export default function Applications({ applications, referralAgents = [], intake
                     value={newCommentInput}
                     onChange={(e) => setNewCommentInput(e.target.value)}
                     placeholder="Write a comment or internal note regarding offer status, document verification, or university follow-up..."
-                    className="w-full bg-white border border-slate-200 rounded-xl p-3 text-xs text-slate-900 focus:outline-none focus:border-[#D99A1C] focus:ring-1 focus:ring-[#D99A1C] transition-all font-medium resize-y"
+                    className="w-full bg-white border border-slate-200 rounded-xl p-3 text-xs text-slate-900 focus:outline-none focus:border-[#D99A1C] focus:ring-1 focus:ring-[#D99A1C] transition-all font-medium resize-none"
                   ></textarea>
                   <div className="flex justify-between items-center pt-0.5">
                     <span className="text-[10px] text-slate-400 font-semibold">Visible to internal admin &amp; staff members</span>
@@ -1742,10 +1746,10 @@ export default function Applications({ applications, referralAgents = [], intake
                   </div>
                 </ActionForm>
 
-                {/* Comments List Feed: Expands to fill the entire remaining card space! */}
-                <div className="space-y-3 flex-1 overflow-y-auto pr-1 min-h-[220px]">
+                {/* Show the latest three entries until the full history is expanded. */}
+                <div id="application-comments-history" className="space-y-3 break-words">
                   {commentsList.length > 0 ? (
-                    commentsList.map((c, cIdx) => (
+                    (commentsExpanded ? commentsList : commentsList.slice(0, 3)).map((c, cIdx) => (
                       <div key={c.id || cIdx} className="bg-slate-50/80 border border-slate-200/80 p-3.5 rounded-2xl space-y-2">
                         <div className="flex justify-between items-center">
                           <div className="flex items-center gap-2">
@@ -1774,6 +1778,17 @@ export default function Applications({ applications, referralAgents = [], intake
                     </div>
                   )}
                 </div>
+                {commentsList.length > 3 && (
+                  <ActionButton
+                    type="button"
+                    onClick={() => setCommentsExpanded(expanded => !expanded)}
+                    aria-expanded={commentsExpanded}
+                    aria-controls="application-comments-history"
+                    className="mt-4 self-center px-4 py-2 text-xs font-bold text-amber-700 bg-amber-50 border border-amber-200 rounded-xl hover:bg-amber-100 transition-colors cursor-pointer"
+                  >
+                    {commentsExpanded ? 'View less' : `View more (${commentsList.length - 3})`}
+                  </ActionButton>
+                )}
               </div>
             </div>
           </div>
