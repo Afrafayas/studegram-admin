@@ -1,3 +1,4 @@
+import { applicationFee } from '../utils/courseFee';
 import { getAssignedExecutiveName } from '../utils/applicationAssignment';
 import { ActionButton, ActionForm } from '../components/ActionControls';
 import React, { useState, useEffect, useRef } from 'react';
@@ -1543,7 +1544,7 @@ export default function Applications({ applications, referralAgents = [], intake
                   <div className="flex justify-between py-1 border-b border-slate-100">
                     <span className="text-slate-400 font-bold">Tuition Fees:</span>
                     <span className="font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
-                      {singleViewApp.tuitionFee || singleViewApp.courseFee || singleViewApp.fee || singleViewApp.course?.tuitionFee || '₹15,400 / year'}
+                      {applicationFee(singleViewApp)}
                     </span>
                   </div>
                   <div className="flex justify-between py-1 border-b border-slate-100">

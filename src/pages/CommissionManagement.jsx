@@ -1,3 +1,4 @@
+import { parseFee, formatFee } from '../utils/courseFee';
 import { ActionButton } from '../components/ActionControls';
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
@@ -35,7 +36,7 @@ export default function CommissionManagement({ clients = [], referralAgents = []
               ? c.id
               : (c._id || c.id);
 
-          const fee = Number(c.fee || c.tuitionFee || c.courseFee || 0);
+          const fee = (parseFee(c.fee || c.tuitionFee || c.courseFee) ?? 0);
           const rate = c.rate !== undefined && c.rate !== null ? Number(c.rate) : 0;
           const commType = c.commissionType || 'percentage';
           const fixedAmt = Number(c.fixedAmount || 0);
@@ -58,6 +59,8 @@ export default function CommissionManagement({ clients = [], referralAgents = []
             partnerName: c.partnerName || c.partner?.companyName || c.partner?.name || 'Partner Agency',
             country: c.country || '',
             fee: fee,
+            feePeriod: c.feePeriod ?? c.application?.feePeriod ?? c.application?.course?.feePeriod,
+            currency: c.currency || c.application?.currency || c.application?.course?.currency || c.course?.currency,
             rate: rate,
             commissionType: commType,
             fixedAmount: fixedAmt,
@@ -514,7 +517,7 @@ export default function CommissionManagement({ clients = [], referralAgents = []
                         </div>
                       </td>
                       <td className="px-5 py-4 text-slate-950 font-bold">{comm.partnerName || 'Partner Agency'}</td>
-                      <td className="px-5 py-4 text-slate-600 font-semibold">₹{(comm.fee || 0).toLocaleString()}</td>
+                      <td className="px-5 py-4 text-slate-600 font-semibold">{formatFee(comm.fee, comm.currency, comm.feePeriod)}</td>
                       <td className="px-5 py-4 text-slate-500">
                         {comm.commissionType === 'fixed' ? (
                           <span className="px-2 py-0.5 rounded bg-purple-50 text-purple-700 border border-purple-200 text-[10px] font-bold">
@@ -735,7 +738,7 @@ export default function CommissionManagement({ clients = [], referralAgents = []
               </div>
               <div>
                 <span className="text-slate-400 text-[10px] font-bold block">COURSE TUITION FEE</span>
-                <span className="font-black text-slate-900 text-sm">₹{modalCommission.fee.toLocaleString()}</span>
+                <span className="font-black text-slate-900 text-sm">{formatFee(modalCommission.fee, modalCommission.currency, modalCommission.feePeriod)}</span>
               </div>
               <div>
                 <span className="text-slate-400 text-[10px] font-bold block">UNIVERSITY STATUS</span>
@@ -800,7 +803,7 @@ export default function CommissionManagement({ clients = [], referralAgents = []
                 </div>
                 <div className="p-3 bg-blue-50/70 border border-blue-200 rounded-xl flex items-center justify-between text-xs">
                   <span className="text-blue-700 font-semibold">
-                    Calculation: ₹{modalCommission.fee.toLocaleString()} × {commissionRate || 0}%
+                    Calculation: {formatFee(modalCommission.fee, modalCommission.currency, modalCommission.feePeriod)} × {commissionRate || 0}%
                   </span>
                   <span className="text-blue-900 font-black text-sm">
                     = ₹{modalCalculatedAmount.toLocaleString()}
