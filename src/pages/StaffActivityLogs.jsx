@@ -737,9 +737,6 @@ export default function StaffActivityLogs() {
 
           {/* Pagination Controls */}
           <div className="p-4 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-500 font-semibold">
-            <span>
-              Showing {sessionLogs.length} of {totalSessionsCount} session logs
-            </span>
             <div className="flex items-center gap-2">
               <ActionButton
                 disabled={currentPage <= 1}

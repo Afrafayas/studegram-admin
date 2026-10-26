@@ -152,7 +152,6 @@ export default function CommissionManagement({ clients = [], referralAgents = []
   const totalItems = displayCommissions.length;
   const totalPages = Math.ceil(totalItems / itemsPerPage) || 1;
   const startIndex = (currentPage - 1) * itemsPerPage;
-  const endIndex = Math.min(startIndex + itemsPerPage, totalItems);
   const paginatedCommissions = displayCommissions.slice(startIndex, startIndex + itemsPerPage);
 
   const handleExport = () => {
@@ -687,9 +686,6 @@ export default function CommissionManagement({ clients = [], referralAgents = []
                 <option value={50}>50</option>
                 <option value={100}>100</option>
               </select>
-              <span className="text-xs font-semibold text-slate-400">
-                Showing {totalItems > 0 ? startIndex + 1 : 0} to {endIndex} of {totalItems} entries
-              </span>
             </div>
 
             <div className="flex items-center gap-1.5">

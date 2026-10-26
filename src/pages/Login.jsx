@@ -53,7 +53,7 @@ export default function Login({ onLoginSuccess }) {
         throw new Error(res.data?.message || 'Failed to send reset password.');
       }
     } catch (err) {
-      setForgotError(err.response?.data?.message || err.message || 'Failed to reset password. Please check your email.');
+      setForgotError(err.response?.data?.message || (!err.response && err.isAxiosError ? 'Unable to reach the password recovery service. Please try again shortly.' : err.message) || 'Failed to reset password. Please check your email.');
     } finally {
       setForgotLoading(false);
     }

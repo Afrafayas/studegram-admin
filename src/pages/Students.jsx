@@ -540,7 +540,6 @@ support@unigather.app`;
   const totalItems = filteredStudents.length;
   const totalPages = Math.ceil(totalItems / itemsPerPage) || 1;
   const startIndex = (currentPage - 1) * itemsPerPage;
-  const endIndex = Math.min(startIndex + itemsPerPage, totalItems);
   const paginatedStudents = filteredStudents.slice(startIndex, startIndex + itemsPerPage);
 
   const toggleExpand = (id) => {
@@ -747,9 +746,6 @@ support@unigather.app`;
           <div className="bg-white border border-[#E2E8F0] border-t-4 border-t-[#D99A1C] rounded-2xl shadow-xs overflow-hidden">
             <div className="px-6 py-4 border-b border-[#E2E8F0] flex justify-between items-center">
               <h2 className="text-xs font-black text-slate-900 uppercase tracking-wider">Registered Student Profiles</h2>
-              <span className="text-[10px] font-bold text-slate-400">
-                Showing {totalItems > 0 ? startIndex + 1 : 0} - {endIndex} of {totalItems} Students
-              </span>
             </div>
             <div className="overflow-x-auto">
               {filteredStudents.length > 0 ? (
@@ -880,9 +876,6 @@ support@unigather.app`;
                     <option value={50}>50</option>
                     <option value={100}>100</option>
                   </select>
-                  <span className="text-xs font-semibold text-slate-400">
-                    Showing {totalItems > 0 ? startIndex + 1 : 0} to {endIndex} of {totalItems} entries
-                  </span>
                 </div>
 
                 <div className="flex items-center gap-1.5">
