@@ -1,3 +1,4 @@
+import { getAssignedExecutiveName } from '../utils/applicationAssignment';
 import { ActionButton, ActionForm } from './ActionControls';
 import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
@@ -785,7 +786,7 @@ function ApplicationChatDrawerContent({ app, onClose }) {
                 </div>
                 <div className="flex justify-between">
                   <span className="text-slate-400">Assigned Executive:</span>
-                  <span className="text-slate-900">{app.assignedExecutive || 'Rahul Krishnan'}</span>
+                  <span className="text-slate-900">{getAssignedExecutiveName(app) || 'Unassigned'}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-slate-400">Application Date:</span>

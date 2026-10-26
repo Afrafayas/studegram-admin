@@ -245,7 +245,7 @@ support@unigather.app`;
       console.warn('Backend mail API failed:', err);
       const errMsg = err.response?.data?.message || err.message || 'Direct mail service unavailable';
       setEmailErrorNotice(errMsg);
-      toast.error(`Direct dispatch could not complete: ${errMsg}. You can click 'Open in Gmail' or 'Default Mail App' below to send immediately.`);
+      toast.error(`Direct dispatch could not complete: ${errMsg}. You can click 'Open in Gmail' below to send immediately.`);
     } finally {
       setIsSendingEmail(false);
     }
@@ -1557,7 +1557,7 @@ support@unigather.app`;
                 <div className="flex-1">
                   <p className="font-extrabold text-[11px] text-amber-950 uppercase tracking-wide">Direct Delivery Issue</p>
                   <p className="text-[11px] text-amber-800 mt-0.5">
-                    {emailErrorNotice}. You can click <strong>"↗ Open in Gmail"</strong> or <strong>"📬 Default Mail App"</strong> below to send directly with your customized message preserved.
+                    {emailErrorNotice}. You can click <strong>"↗ Open in Gmail"</strong> below to send directly with your customized message preserved.
                   </p>
                 </div>
               </div>
@@ -1607,13 +1607,6 @@ support@unigather.app`;
                   >
                     <span>↗ Open in Gmail</span>
                   </ActionButton>
-                  <a
-                    href={`mailto:${emailTargetStudent.email}?subject=${encodeURIComponent(emailSubject)}&body=${encodeURIComponent(emailMessage)}`}
-                    className="flex-1 sm:flex-none px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 font-extrabold text-[11px] rounded-xl transition-all border border-slate-200 flex items-center justify-center gap-1.5 shadow-2xs"
-                    title="Open default system mail client (Outlook, Apple Mail, etc.)"
-                  >
-                    <span>📬 Default Mail App</span>
-                  </a>
                 </div>
 
                 <div className="flex gap-2 w-full sm:w-auto justify-end">

@@ -1,3 +1,4 @@
+import { getAssignedExecutiveName } from './utils/applicationAssignment';
 import React, { useState, useEffect, useRef } from 'react';
 import AdminSidebar from './components/AdminSidebar';
 import AdminHeader from './components/AdminHeader';
@@ -145,7 +146,7 @@ export default function AdminPortal({ onLogout }) {
           partnerName: app.partner?.name || (typeof app.partner === 'string' ? app.partner : 'Direct'),
           partnerCompanyName: app.partner?.companyName || app.partner?.name || 'Direct',
           assignedBdm: app.partner?.companyName || app.partner?.name || 'Direct',
-          assignedExecutive: 'Rahul Krishnan',
+          assignedExecutive: getAssignedExecutiveName(app),
           statusHistory: app.statusHistory || [],
           dob: app.student?.dob ? new Date(app.student.dob).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : null,
           studentEmail: app.student?.email || null,
@@ -260,7 +261,7 @@ export default function AdminPortal({ onLogout }) {
       dateAdded: '30 Sept 2026',
       country: 'Canada',
       assignedBdm: 'Interman Agent',
-      assignedExecutive: 'Rahul Krishnan',
+      assignedExecutive: '',
       statusHistory: [],
       dob: '2001-05-15',
       studentEmail: 'dharvesh@gmail.com',
@@ -548,7 +549,7 @@ export default function AdminPortal({ onLogout }) {
           assignedTo: newApp.assignedTo || matchedStaff?.name,
           country: newApp.country || currentUser.country || 'India',
           assignedBdm: newApp.assignedBdm || (currentUser.role === 'BDM' ? currentUser.name : 'Amit Patel'),
-          assignedExecutive: newApp.assignedExecutive || 'Rahul Krishnan'
+          assignedExecutive: matchedStaff?.name || ''
         };
         
         setApplications(prev => {
@@ -591,7 +592,7 @@ export default function AdminPortal({ onLogout }) {
 
   // Scoped lists depending on the current user's role scoping rules
   const scopedApplications = applications.filter(app => 
-    checkScope(app.country, app.assignedBdm, app.assignedExecutive)
+    checkScope(app.country, app.assignedBdm, getAssignedExecutiveName(app))
   );
 
   const scopedClients = clients.filter(client => {

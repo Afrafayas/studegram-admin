@@ -1,3 +1,4 @@
+import { getAssignedExecutiveName } from '../utils/applicationAssignment';
 import { ActionButton, ActionForm } from '../components/ActionControls';
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
@@ -353,7 +354,7 @@ export default function Staff({ staffList, setStaffList, applications }) {
 
   // Find applications assigned to this staff member
   const getAssignedApplications = (staffName) => {
-    return applications.filter(app => (app.assignedTo || app.assignedExecutive || app.pickedBy?.name || '').toLowerCase() === staffName.toLowerCase());
+    return applications.filter(app => getAssignedExecutiveName(app).toLowerCase() === staffName.toLowerCase());
   };
 
   return (

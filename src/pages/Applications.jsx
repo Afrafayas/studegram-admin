@@ -1,3 +1,4 @@
+import { getAssignedExecutiveName } from '../utils/applicationAssignment';
 import { ActionButton, ActionForm } from '../components/ActionControls';
 import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
@@ -5,6 +6,7 @@ import { useAuth, PRESET_USERS } from '../context/AuthContext';
 import ApplicationChatDrawer from '../components/ApplicationChatDrawer';
 import API from '../api/axios';
 import { useToast } from '../context/ToastContext';
+import { resolveDocumentUrl, documentFileName, downloadApplicationDocument } from '../utils/applicationDocuments';
 
 const STATUS_STEPS = [
   'Submitted',
@@ -39,80 +41,15 @@ const isPicked = (app) => {
   return false;
 };
 
-const getDocumentBlobUrl = (urlOrBase64, mimeType = 'application/pdf') => {
-  if (!urlOrBase64) return '';
-  if (typeof urlOrBase64 !== 'string') return '';
-  if (urlOrBase64.startsWith('blob:') || urlOrBase64.startsWith('http://') || urlOrBase64.startsWith('https://')) {
-    return urlOrBase64;
-  }
-  if (urlOrBase64.startsWith('/uploads/') || urlOrBase64.startsWith('uploads/')) {
-    const cleanPath = urlOrBase64.startsWith('/') ? urlOrBase64 : `/${urlOrBase64}`;
-    return `http://localhost:5000${cleanPath}`;
-  }
-
-  let base64 = urlOrBase64;
-  let type = mimeType;
-
-  if (urlOrBase64.startsWith('data:')) {
-    const parts = urlOrBase64.split(',');
-    const match = parts[0].match(/:(.*?);/);
-    if (match) type = match[1];
-    base64 = parts[1] || '';
-  }
-
-  try {
-    const binary = atob(base64.replace(/\s/g, ''));
-    const bytes = new Uint8Array(binary.length);
-    for (let i = 0; i < binary.length; i++) {
-      bytes[i] = binary.charCodeAt(i);
-    }
-    const blob = new Blob([bytes], { type });
-    return URL.createObjectURL(blob);
-  } catch (err) {
-    return urlOrBase64;
-  }
-};
-
-const createSampleAppDocBlobUrl = (title, studentName, camsId) => {
-  const cleanTitle = (title || 'Application Document').toString().toUpperCase();
-  const cleanStudent = (studentName || 'Student Applicant').toString();
-  const cleanCams = (camsId || 'CAMS-10001').toString();
-  const svgContent = `<svg xmlns="http://www.w3.org/2000/svg" width="800" height="1000" viewBox="0 0 800 1000">
-    <rect width="800" height="1000" fill="#ffffff"/>
-    <rect x="30" y="30" width="740" height="940" fill="none" stroke="#cbd5e1" stroke-width="2" rx="20"/>
-    <rect x="30" y="30" width="740" height="130" fill="#0a0a0f" rx="20"/>
-    <text x="70" y="85" fill="#d99a1c" font-family="system-ui, sans-serif" font-size="24" font-weight="900">UNIGATHER ADMIN PORTAL</text>
-    <text x="70" y="120" fill="#94a3b8" font-family="system-ui, sans-serif" font-size="14" font-weight="700">OFFICIAL STUDENT APPLICATION DOSSIER — ${cleanCams}</text>
-    <text x="70" y="210" fill="#0f172a" font-family="system-ui, sans-serif" font-size="26" font-weight="900">${cleanTitle}</text>
-    <text x="70" y="245" fill="#64748b" font-family="system-ui, sans-serif" font-size="15" font-weight="600">Applicant: ${cleanStudent} (${cleanCams})</text>
-    <line x1="70" y1="275" x2="730" y2="275" stroke="#e2e8f0" stroke-width="2"/>
-    <rect x="70" y="310" width="660" height="340" fill="#f8fafc" stroke="#e2e8f0" rx="16"/>
-    <text x="100" y="360" fill="#334155" font-family="system-ui, sans-serif" font-size="18" font-weight="800">APPLICATION COMPLIANCE RECORD</text>
-    <text x="100" y="400" fill="#475569" font-family="system-ui, sans-serif" font-size="14">File Ref ID: ${cleanCams}</text>
-    <text x="100" y="430" fill="#475569" font-family="system-ui, sans-serif" font-size="14">Submission Date: ${new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}</text>
-    <text x="100" y="460" fill="#475569" font-family="system-ui, sans-serif" font-size="14">Verification Stage: SUBMITTED &amp; VERIFIED</text>
-    <rect x="100" y="530" width="240" height="46" fill="#ecfdf5" stroke="#10b981" stroke-width="1.5" rx="12"/>
-    <text x="125" y="560" fill="#047857" font-family="system-ui, sans-serif" font-size="15" font-weight="800">✓ DOCUMENT VALID</text>
-    <circle cx="580" cy="790" r="65" fill="#2563eb" fill-opacity="0.1" stroke="#2563eb" stroke-width="2" stroke-dasharray="6,4"/>
-    <text x="545" y="796" fill="#1e3a8a" font-family="system-ui, sans-serif" font-size="17" font-weight="900">VERIFIED</text>
-    <text x="70" y="930" fill="#94a3b8" font-family="system-ui, sans-serif" font-size="12">Confidential document stored in Unigather Student Filing System.</text>
-  </svg>`;
-  const blob = new Blob([svgContent], { type: 'image/svg+xml' });
-  return URL.createObjectURL(blob);
-};
-
-const handleDownloadAppDocument = (docUrl, fileName) => {
-  if (!docUrl) return;
-  const link = document.createElement('a');
-  link.href = docUrl;
-  link.download = fileName || 'application_document.pdf';
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-};
-
 export default function Applications({ applications, referralAgents = [], intakes = [], staffList = [], universities = [], courses = [], initialSelectedAppId = null, onAddClick, onRefresh, onApplicationUpdated }) {
   const toast = useToast();
+  const handleDownloadAppDocument = async (url, fileName) => {
+    try {
+      await downloadApplicationDocument(url, fileName);
+    } catch (error) {
+      toast.error(error.message || 'Unable to download the document.');
+    }
+  };
   const { currentUser } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
@@ -417,7 +354,7 @@ export default function Applications({ applications, referralAgents = [], intake
             partnerName: freshApp.partner?.name || 'Direct',
             partnerCompanyName: freshApp.partner?.companyName || freshApp.partner?.name || 'Direct',
             assignedBdm: freshApp.partner?.companyName || freshApp.partner?.name || 'Direct',
-            assignedExecutive: 'Rahul Krishnan',
+            assignedExecutive: getAssignedExecutiveName(freshApp),
             statusHistory: freshApp.statusHistory || [],
             dob: freshApp.student?.dob ? new Date(freshApp.student.dob).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : null,
             studentEmail: freshApp.student?.email || null,
@@ -1624,7 +1561,7 @@ export default function Applications({ applications, referralAgents = [], intake
                   </div>
                   <div className="flex justify-between py-1 border-b border-slate-100">
                     <span className="text-slate-400 font-bold">Assigned Executive:</span>
-                    <span className="font-bold text-slate-800">{singleViewApp.assignedExecutive || 'Rahul Krishnan'}</span>
+                    <span className="font-bold text-slate-800">{getAssignedExecutiveName(singleViewApp) || 'Unassigned'}</span>
                   </div>
                   <div className="flex justify-between items-center py-1">
                     <span className="text-slate-400 font-bold">Handling Staff (Picked):</span>
@@ -1693,7 +1630,7 @@ export default function Applications({ applications, referralAgents = [], intake
                   <div>
                     <span className="text-[10px] font-extrabold text-[#D99A1C] uppercase tracking-wider block">Submitted File Proofs</span>
                     <h3 className="text-sm font-black text-slate-900 uppercase tracking-wider">
-                      Application Documents ({singleViewApp.documents ? singleViewApp.documents.length : 4})
+                      Application Documents ({singleViewApp.documents?.length || 0})
                     </h3>
                   </div>
                   <span className="text-[10px] font-black text-emerald-700 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200">
@@ -1703,27 +1640,20 @@ export default function Applications({ applications, referralAgents = [], intake
 
                 {/* Compact Document Cards Grid */}
                 {(() => {
-                  const docsToDisplay = (singleViewApp.documents && singleViewApp.documents.length > 0)
-                    ? singleViewApp.documents
-                    : [
-                        { title: 'Passport Copy', fileName: 'passport_scan.pdf' },
-                        { title: 'Academic Mark Sheets', fileName: 'academic_transcripts.pdf' },
-                        { title: 'Statement of Purpose (SOP)', fileName: 'sop_statement.pdf' },
-                        { title: 'English Test Score', fileName: 'ielts_scorecard.pdf' }
-                      ];
+                  const docsToDisplay = singleViewApp.documents || [];
+                  if (!docsToDisplay.length) return <p className="text-xs text-slate-500 py-4">No documents uploaded yet.</p>;
 
                   return (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       {docsToDisplay.map((doc, dIdx) => {
-                        const rawUrl = typeof doc === 'object' ? (doc.previewUrl || doc.url || doc.path || doc.fileUrl || doc.dataUrl || doc.data || doc.src) : (typeof doc === 'string' ? doc : null);
-                        const fallbackFileName = typeof rawUrl === 'string' ? rawUrl.split('/').pop().split('?')[0] : '';
+                        const rawUrl = typeof doc === 'object' ? (doc.url || doc.fileUrl || doc.path || doc.dataUrl || doc.data || doc.src || doc.previewUrl) : (typeof doc === 'string' ? doc : null);
                         const docTitle = typeof doc === 'string' ? doc : (doc.name || doc.title || doc.comment || doc.fileName || ('Document ' + (dIdx + 1)));
-                        const docFileName = typeof doc === 'string' ? doc : (doc.fileName || fallbackFileName || doc.name || doc.title || 'Attached Document');
+                        const docFileName = documentFileName(doc, rawUrl);
                         const isImg = (typeof rawUrl === 'string' && (rawUrl.startsWith('data:image/') || docFileName.match(/\.(png|jpg|jpeg|gif|svg|webp)$/i)));
-                        const docBlobUrl = getDocumentBlobUrl(rawUrl, isImg ? 'image/png' : 'application/pdf') || createSampleAppDocBlobUrl(docTitle, singleViewApp.studentName, singleViewApp.camsId);
+                        const docBlobUrl = resolveDocumentUrl(rawUrl);
 
                         return (
-                          <div key={dIdx} className="bg-slate-50 border border-slate-200 rounded-2xl p-3 flex flex-col justify-between space-y-2.5 hover:border-[#D99A1C] hover:shadow-xs transition-all">
+                          <div key={dIdx} className="bg-slate-50 border border-slate-200 rounded-2xl p-4 min-w-0 flex flex-col justify-between space-y-3 hover:border-[#D99A1C] hover:shadow-xs transition-all">
                             <div className="flex items-start justify-between gap-1.5">
                               <div className="flex items-center gap-2 overflow-hidden min-w-0">
                                 <div className="w-8 h-8 rounded-xl bg-amber-50 text-[#D99A1C] border border-amber-200/60 flex items-center justify-center shrink-0 text-sm font-bold shadow-2xs">
@@ -1743,6 +1673,7 @@ export default function Applications({ applications, referralAgents = [], intake
                             <div className="flex items-center gap-1.5 pt-1 border-t border-slate-200/60">
                               <ActionButton
                                 type="button"
+                                disabled={!docBlobUrl}
                                 onClick={() => {
                                   setPreviewModalDoc({
                                     title: docTitle,
@@ -1758,7 +1689,8 @@ export default function Applications({ applications, referralAgents = [], intake
                               </ActionButton>
                               <ActionButton
                                 type="button"
-                                onClick={() => handleDownloadAppDocument(docBlobUrl, (docTitle.replace(/\s+/g, '_') + '.pdf'))}
+                                onClick={() => handleDownloadAppDocument(rawUrl, docFileName)}
+                                disabled={!docBlobUrl}
                                 className="flex-1 py-1.5 bg-gradient-to-r from-[#D99A1C] to-[#F5B025] hover:from-[#c28815] hover:to-[#e09e1d] text-white rounded-lg font-bold text-[11px] transition-all cursor-pointer flex items-center justify-center gap-1 shadow-2xs"
                               >
                                 <span>📥 Download</span>
@@ -2266,11 +2198,7 @@ export default function Applications({ applications, referralAgents = [], intake
                 <div className="flex items-center gap-2">
                   <ActionButton
                     type="button"
-                    onClick={() => {
-                      if (previewModalDoc.previewUrl) {
-                        handleDownloadAppDocument(previewModalDoc.previewUrl, `${(previewModalDoc.title || 'document').replace(/\s+/g, '_')}.pdf`);
-                      }
-                    }}
+                    onClick={() => handleDownloadAppDocument(previewModalDoc.rawUrl || previewModalDoc.previewUrl, previewModalDoc.fileName)}
                     className="px-3 py-1.5 sm:px-4 sm:py-2 bg-gradient-to-r from-[#D99A1C] to-[#F5B025] hover:from-[#c28815] hover:to-[#e09e1d] text-white font-black text-[11px] sm:text-xs rounded-xl transition-all flex items-center gap-1.5 cursor-pointer shadow-xs"
                   >
                     <span>📥 Download</span>
