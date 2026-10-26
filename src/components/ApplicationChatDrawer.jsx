@@ -332,7 +332,7 @@ function ApplicationChatDrawerContent({ app, onClose }) {
       });
 
       if (!response.ok) {
-        throw new Error('API sending failed. Falling back to local offline posting.');
+        throw new Error('Message and attachments could not be saved. Please retry.');
       }
 
       const resData = await response.json();
@@ -344,32 +344,8 @@ function ApplicationChatDrawerContent({ app, onClose }) {
         throw new Error(resData.message || 'Failed to deliver message');
       }
     } catch (err) {
-      console.warn('API message send failed. Saving to mock storage:', err.message);
-      
-      // Perform fallback storage updates
-      const mockAttachments = selectedFiles.map(file => 
-        file.preview ? file.preview : `/uploads/mock-file-${Date.now()}-${file.name}`
-      );
-
-      const newMsg = {
-        _id: `msg-${Date.now()}`,
-        senderModel: 'User',
-        sender: { 
-          name: currentUser ? currentUser.name : 'Super Admin',
-          email: currentUser ? currentUser.email : 'admin@studegram.com'
-        },
-        message: messageText,
-        attachments: mockAttachments,
-        isSystemLog: false,
-        createdAt: new Date().toISOString()
-      };
-
-      const updatedMsgs = [...messages, newMsg];
-      setMessages(updatedMsgs);
-      saveMockMessages(updatedMsgs);
-
-      setMessageText('');
-      setSelectedFiles([]);
+      setErrorMsg(err.message || 'Message and attachments could not be saved. Please retry.');
+      toast.error(err.message || 'Failed to send message.');
     } finally {
       setIsSending(false);
     }

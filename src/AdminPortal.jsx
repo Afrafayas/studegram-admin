@@ -116,6 +116,7 @@ export default function AdminPortal({ onLogout }) {
           activeApps: 0,
           studentCode: `STD-${10001 + idx}`,
           passportNo: student.passportNo || 'Pending',
+          documents: Array.isArray(student.documents) ? student.documents : [],
           dob: student.dob || '',
           dateAdded: new Date(student.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
           referredBy: student.referredBy || 'Direct',
@@ -537,7 +538,7 @@ export default function AdminPortal({ onLogout }) {
         }
 
         toast.success('Application successfully created in database!');
-        fetchInitialData(); // Refresh list
+        await fetchInitialData(); // Refresh list before showing applications
       } else {
         // Mock fallback
         const randomId = `CAMS${Math.floor(10000 + Math.random() * 90000)}`;
@@ -591,8 +592,12 @@ export default function AdminPortal({ onLogout }) {
           }
         });
       }
+      handleSelectTab('applications');
+      setActiveSubTab(null);
+      return true;
     } catch (err) {
       toast.error(err.message);
+      return false;
     }
   };
 

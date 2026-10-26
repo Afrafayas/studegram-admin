@@ -569,7 +569,8 @@ export default function BecomePartner({ clients = [], setClients, applications =
         uploadedUrl = uploadRes.data.url || uploadRes.data.fileUrl;
       }
     } catch (uploadErr) {
-      console.warn('Backend file upload fallback to base64:', uploadErr.message);
+      toast.error(uploadErr.response?.data?.message || 'S3 upload failed. Please retry.');
+      return;
     }
 
     if (uploadedUrl) {
@@ -586,23 +587,7 @@ export default function BecomePartner({ clients = [], setClients, applications =
       }));
       toast.success(`Uploaded '${file.name}' successfully!`);
     } else {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        const base64Url = reader.result;
-        setDocuments(prev => ({
-          ...prev,
-          [docKey]: {
-            fileObj: file,
-            name: file.name,
-            previewUrl: base64Url,
-            size: (file.size / (1024 * 1024)).toFixed(2) + ' MB',
-            type: file.type.includes('pdf') ? 'pdf' : 'image',
-            uploadedAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-          }
-        }));
-        toast.success(`Uploaded '${file.name}'`);
-      };
-      reader.readAsDataURL(file);
+      toast.error('File was not stored in S3. Please retry.');
     }
   };
 
@@ -1833,7 +1818,8 @@ export default function BecomePartner({ clients = [], setClients, applications =
                               fileUrl = uploadRes.data.url || uploadRes.data.fileUrl;
                             }
                           } catch (err) {
-                            console.warn('Upload API fallback to Base64:', err.message);
+                            toast.error(err.response?.data?.message || 'S3 upload failed. Please retry.');
+                            return;
                           } finally {
                             setIsUploadingEditDoc(false);
                           }
@@ -1855,11 +1841,7 @@ export default function BecomePartner({ clients = [], setClients, applications =
                           if (fileUrl) {
                             attachDocObj(fileUrl);
                           } else {
-                            const reader = new FileReader();
-                            reader.onloadend = () => {
-                              attachDocObj(reader.result);
-                            };
-                            reader.readAsDataURL(file);
+                            toast.error('File was not stored in S3. Please retry.');
                           }
                         }}
                       />

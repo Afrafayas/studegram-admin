@@ -182,7 +182,13 @@ export default function SalesOrderStudy({
       };
     }
 
-    onAddApplication(newApp);
+    let submitted;
+    try {
+      submitted = await onAddApplication(newApp);
+    } finally {
+      setIsSubmitting(false);
+    }
+    if (!submitted) return;
     setSuccessMessage(true);
     setIsSubmitting(false);
 
