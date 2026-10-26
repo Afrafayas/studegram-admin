@@ -1,3 +1,4 @@
+import PartnerDocumentRequests from '../components/PartnerDocumentRequests';
 import { ActionButton, ActionForm } from '../components/ActionControls';
 import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
@@ -325,6 +326,7 @@ export default function BecomePartner({ clients = [], setClients, applications =
 
     const statusMatch = statusFilter === 'All' || 
                         (statusFilter === 'Pending' && p.status === 'Pending') ||
+                        (statusFilter === 'Waiting for Missing Document' && p.status === 'Waiting for Missing Document') ||
                         (statusFilter === 'Approved' && p.status === 'Active');
 
     const locationMatch = locationFilter === 'All' || p.country === locationFilter;
@@ -773,7 +775,7 @@ export default function BecomePartner({ clients = [], setClients, applications =
           <div className="bg-white border border-slate-200/90 rounded-2xl p-4 md:p-5 shadow-xs flex flex-col lg:flex-row gap-4 items-center justify-between">
             {/* Status Filter Tabs */}
             <div className="bg-slate-100/90 p-1 rounded-xl flex w-full lg:w-auto border border-slate-200/60">
-              {['All', 'Pending', 'Approved'].map((status) => (
+              {['All', 'Pending', 'Waiting for Missing Document', 'Approved'].map((status) => (
                 <ActionButton
                   key={status}
                   onClick={() => setStatusFilter(status)}
@@ -783,7 +785,7 @@ export default function BecomePartner({ clients = [], setClients, applications =
                       : 'text-slate-500 hover:text-slate-900'
                   }`}
                 >
-                  {status === 'All' ? 'All Channels' : status === 'Pending' ? 'Pending Review' : 'Approved Active'}
+                  {status === 'All' ? 'All Channels' : status === 'Pending' ? 'Pending Review' : status === 'Waiting for Missing Document' ? 'Waiting for Documents' : 'Approved Active'}
                 </ActionButton>
               ))}
             </div>
@@ -1158,6 +1160,11 @@ export default function BecomePartner({ clients = [], setClients, applications =
               </ActionButton>
             </div>
           </div>
+
+          <PartnerDocumentRequests key={singleViewPartner.id || singleViewPartner._id} partnerId={singleViewPartner.id || singleViewPartner._id} onUpdate={updated => {
+            setSingleViewPartner(previous => ({ ...previous, ...updated }));
+            if (setClients) setClients(previous => previous.map(client => String(client.id || client._id) === String(updated._id) ? { ...client, ...updated } : client));
+          }} />
 
           {/* Verification Status Banner if Pending */}
           {singleViewPartner.status === 'Pending' && (
