@@ -1,3 +1,4 @@
+import { ActionButton } from '../components/ActionControls';
 import React, { createContext, useContext, useState, useCallback } from 'react';
 
 const ToastContext = createContext(null);
@@ -83,7 +84,7 @@ export function ToastProvider({ children }) {
                 <p className={`font-extrabold text-[10px] uppercase tracking-wider ${titleColor}`}>{title}</p>
                 <p className="leading-relaxed font-semibold">{t.message}</p>
               </div>
-              <button 
+              <ActionButton
                 onClick={(e) => {
                   e.stopPropagation();
                   removeToast(t.id);
@@ -91,7 +92,7 @@ export function ToastProvider({ children }) {
                 className="text-slate-400 hover:text-slate-200 font-bold self-start pl-1 text-[11px]"
               >
                 ✕
-              </button>
+              </ActionButton>
             </div>
           );
         })}

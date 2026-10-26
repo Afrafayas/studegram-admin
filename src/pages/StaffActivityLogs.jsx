@@ -1,3 +1,4 @@
+import { ActionButton } from '../components/ActionControls';
 import React, { useState, useEffect } from 'react';
 import API from '../api/axios';
 import { useAuth } from '../context/AuthContext';
@@ -289,7 +290,7 @@ export default function StaffActivityLogs() {
         </div>
 
         <div className="flex items-center gap-3">
-          <button
+          <ActionButton
             onClick={fetchOverviewData}
             disabled={isRefreshing}
             className="flex items-center gap-2 px-3.5 py-2 bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 rounded-xl text-xs font-bold shadow-xs transition-all disabled:opacity-50"
@@ -298,7 +299,7 @@ export default function StaffActivityLogs() {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
             </svg>
             <span>{isRefreshing ? 'Syncing...' : 'Sync Logs'}</span>
-          </button>
+          </ActionButton>
         </div>
       </div>
 
@@ -380,7 +381,7 @@ export default function StaffActivityLogs() {
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-3 border-b border-slate-100">
           {/* View Mode Toggle: Staff Summary vs All Session Logs */}
           <div className="flex items-center gap-2 bg-slate-100 p-1 rounded-xl w-fit">
-            <button
+            <ActionButton
               onClick={() => setActiveSubView('summary')}
               className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all ${
                 activeSubView === 'summary'
@@ -392,9 +393,9 @@ export default function StaffActivityLogs() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
               </svg>
               <span>Staff Summary Overview ({filteredStaffSummary.length})</span>
-            </button>
+            </ActionButton>
 
-            <button
+            <ActionButton
               onClick={() => setActiveSubView('sessions')}
               className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all ${
                 activeSubView === 'sessions'
@@ -406,7 +407,7 @@ export default function StaffActivityLogs() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
               </svg>
               <span>All Session Logs ({totalSessionsCount})</span>
-            </button>
+            </ActionButton>
           </div>
 
           {/* Quick Info text */}
@@ -606,7 +607,7 @@ export default function StaffActivityLogs() {
 
                       {/* Action: View Timeline Button */}
                       <td className="py-3.5 px-4 text-right">
-                        <button
+                        <ActionButton
                           onClick={(e) => {
                             e.stopPropagation();
                             setSelectedStaffId(staff.userId || staff.email);
@@ -617,7 +618,7 @@ export default function StaffActivityLogs() {
                           <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M9 5l7 7-7 7" />
                           </svg>
-                        </button>
+                        </ActionButton>
                       </td>
                     </tr>
                   ))
@@ -717,7 +718,7 @@ export default function StaffActivityLogs() {
 
                       {/* Action */}
                       <td className="py-3.5 px-4 text-right">
-                        <button
+                        <ActionButton
                           onClick={(e) => {
                             e.stopPropagation();
                             setSelectedStaffId(sess.user?._id || sess.user || sess.userEmail);
@@ -725,7 +726,7 @@ export default function StaffActivityLogs() {
                           className="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-bold transition-all"
                         >
                           View Timeline
-                        </button>
+                        </ActionButton>
                       </td>
                     </tr>
                   ))
@@ -740,21 +741,21 @@ export default function StaffActivityLogs() {
               Showing {sessionLogs.length} of {totalSessionsCount} session logs
             </span>
             <div className="flex items-center gap-2">
-              <button
+              <ActionButton
                 disabled={currentPage <= 1}
                 onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
                 className="px-3 py-1.5 rounded-lg border border-slate-200 hover:bg-slate-50 disabled:opacity-40 font-bold"
               >
                 Previous
-              </button>
+              </ActionButton>
               <span className="px-2 text-slate-700 font-bold">Page {currentPage}</span>
-              <button
+              <ActionButton
                 disabled={currentPage * itemsPerPage >= totalSessionsCount}
                 onClick={() => setCurrentPage(prev => prev + 1)}
                 className="px-3 py-1.5 rounded-lg border border-slate-200 hover:bg-slate-50 disabled:opacity-40 font-bold"
               >
                 Next
-              </button>
+              </ActionButton>
             </div>
           </div>
         </div>

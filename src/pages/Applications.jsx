@@ -1,3 +1,4 @@
+import { ActionButton, ActionForm } from '../components/ActionControls';
 import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useAuth, PRESET_USERS } from '../context/AuthContext';
@@ -110,7 +111,7 @@ const handleDownloadAppDocument = (docUrl, fileName) => {
   document.body.removeChild(link);
 };
 
-export default function Applications({ applications, referralAgents = [], intakes = [], staffList = [], universities = [], courses = [], initialSelectedAppId = null, onAddClick, onRefresh }) {
+export default function Applications({ applications, referralAgents = [], intakes = [], staffList = [], universities = [], courses = [], initialSelectedAppId = null, onAddClick, onRefresh, onApplicationUpdated }) {
   const toast = useToast();
   const { currentUser } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
@@ -741,6 +742,42 @@ export default function Applications({ applications, referralAgents = [], intake
   const [selectedStatus, setSelectedStatus] = useState('Submitted');
   const [remarks, setRemarks] = useState('');
   const [isUpdating, setIsUpdating] = useState(false);
+  const statusUpdateLock = useRef(false);
+  const [pendingStage, setPendingStage] = useState(null);
+
+  const applySavedStatus = (appId, status, data = {}) => {
+    const changes = {
+      status, secondaryStatus: status,
+      ...(data.statusHistory ? { statusHistory: data.statusHistory } : {}),
+      ...(data.paymentStatus ? { paymentStatus: data.paymentStatus } : {}),
+      ...(status === 'Paid Students' ? { paymentStatus: 'Paid' } : {}),
+    };
+    setSingleViewApp(prev => prev && String(prev.id || prev._id) === String(appId)
+      ? { ...prev, ...changes } : prev);
+    onApplicationUpdated?.(appId, changes);
+  };
+
+  const handleStageUpdate = async (step) => {
+    if (statusUpdateLock.current || !singleViewApp) return;
+    if ((singleViewApp.secondaryStatus || singleViewApp.status) === step) return;
+    statusUpdateLock.current = true;
+    setPendingStage(step);
+    try {
+      const appId = singleViewApp.id || singleViewApp._id;
+      const res = await API.put(`/applications/${appId}`, {
+        status: step, remarks: `Stage updated to ${step}`,
+        ...(step === 'Paid Students' ? { paymentStatus: 'Paid' } : {}),
+      });
+      if (!res.data?.success) throw new Error(res.data?.message || 'Failed to update status.');
+      applySavedStatus(appId, step, res.data.data);
+      toast.success(`Stage updated to ${step}`);
+    } catch (error) {
+      toast.error(error.response?.data?.message || error.message || 'Failed to update status.');
+    } finally {
+      statusUpdateLock.current = false;
+      setPendingStage(null);
+    }
+  };
   const [isAssigning, setIsAssigning] = useState(false);
 
   // Extract available intakes from master list and applications
@@ -758,8 +795,9 @@ export default function Applications({ applications, referralAgents = [], intake
 
   const handleStatusUpdateSubmit = async (e) => {
     e.preventDefault();
-    if (!statusModalApp) return;
+    if (!statusModalApp || statusUpdateLock.current) return;
 
+    statusUpdateLock.current = true;
     setIsUpdating(true);
     try {
       const appId = statusModalApp.id || statusModalApp._id;
@@ -789,9 +827,9 @@ export default function Applications({ applications, referralAgents = [], intake
       }
 
       if (res.data?.success) {
+        applySavedStatus(appId, selectedStatus, res.data.data);
         toast.success(`Application status updated to "${selectedStatus}" successfully!`);
         setStatusModalApp(null);
-        if (onRefresh) onRefresh();
       } else {
         toast.error(res.data?.message || 'Failed to update application status.');
       }
@@ -799,6 +837,7 @@ export default function Applications({ applications, referralAgents = [], intake
       console.error('Update status error:', err);
       toast.error(err.response?.data?.message || err.message || 'Error updating status.');
     } finally {
+      statusUpdateLock.current = false;
       setIsUpdating(false);
     }
   };
@@ -1008,7 +1047,7 @@ export default function Applications({ applications, referralAgents = [], intake
           <h1 className="text-xl font-black text-slate-900 tracking-tight">Student Applications Registry</h1>
           <p className="text-xs text-slate-500 font-medium">View, search, filter B2B partner applications, and update application lifecycle status up to Closing.</p>
         </div>
-        <button
+        <ActionButton
           onClick={onAddClick}
           className="bg-[#D99A1C] hover:bg-[#F5B025] text-white font-extrabold text-xs px-4 py-2 rounded-xl transition-all shadow-md inline-flex items-center gap-1.5 cursor-pointer"
         >
@@ -1016,7 +1055,7 @@ export default function Applications({ applications, referralAgents = [], intake
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
           </svg>
           <span>Create Application</span>
-        </button>
+        </ActionButton>
       </div>
 
       {/* SuperAdmin / Admin Overview Cards */}
@@ -1049,30 +1088,30 @@ export default function Applications({ applications, referralAgents = [], intake
       {/* Ownership & Scoping Tabs */}
       <div className="bg-white border border-slate-200 p-3 rounded-2xl shadow-xs flex flex-col sm:flex-row gap-3 items-center justify-between">
         <div className="flex gap-2 w-full sm:w-auto">
-          <button
+          <ActionButton
             onClick={() => setOwnershipTab('All')}
             className={`px-4 py-2 text-xs font-black rounded-xl transition-all ${
               ownershipTab === 'All' ? 'bg-[#0A0A0F] text-white shadow-sm' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
             }`}
           >
             All Applications ({applications.length})
-          </button>
-          <button
+          </ActionButton>
+          <ActionButton
             onClick={() => setOwnershipTab('My Picked')}
             className={`px-4 py-2 text-xs font-black rounded-xl transition-all ${
               ownershipTab === 'My Picked' ? 'bg-[#D99A1C] text-white shadow-sm' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
             }`}
           >
             My Picked Applications
-          </button>
-          <button
+          </ActionButton>
+          <ActionButton
             onClick={() => setOwnershipTab('Unpicked')}
             className={`px-4 py-2 text-xs font-black rounded-xl transition-all ${
               ownershipTab === 'Unpicked' ? 'bg-amber-600 text-white shadow-sm' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
             }`}
           >
             Waiting / Unpicked List ({unpickedCount})
-          </button>
+          </ActionButton>
         </div>
       </div>
 
@@ -1080,7 +1119,7 @@ export default function Applications({ applications, referralAgents = [], intake
       <div className="bg-white border border-[#E2E8F0] border-t-4 border-t-[#2563EB] rounded-2xl p-5 shadow-xs flex flex-col sm:flex-row gap-4 items-center justify-between">
         <div className="flex flex-wrap gap-2">
           {['All', 'Submitted', 'Under Review', 'Paid Students', 'Conditional Offer Issued', 'CAS / I-20 Issued', 'Visa Approved', 'Enrolled / Closed'].map((status) => (
-            <button
+            <ActionButton
               key={status}
               onClick={() => setStatusFilter(status)}
               className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer ${
@@ -1090,7 +1129,7 @@ export default function Applications({ applications, referralAgents = [], intake
               }`}
             >
               {status}
-            </button>
+            </ActionButton>
           ))}
         </div>
 
@@ -1238,26 +1277,26 @@ export default function Applications({ applications, referralAgents = [], intake
                       </td>
                       <td className="px-6 py-4 text-right pr-6" onClick={(e) => e.stopPropagation()}>
                         <div className="flex items-center justify-end gap-1.5 flex-wrap">
-                          <button
+                          <ActionButton
                             onClick={() => handleOpenSingleView(app)}
                             className="bg-slate-800 hover:bg-slate-900 text-white font-extrabold text-[9px] px-2.5 py-1.5 rounded-xl transition-all shadow-3xs inline-flex items-center gap-1 cursor-pointer uppercase tracking-wider"
                             title="View Full Single Application Page"
                           >
                             <span>👁️ View</span>
-                          </button>
+                          </ActionButton>
 
                           {!isPicked(app) && (
-                            <button
+                            <ActionButton
                               onClick={() => handlePickApplication(app)}
                               className="bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-[9px] px-2.5 py-1.5 rounded-xl transition-all shadow-3xs inline-flex items-center gap-1 cursor-pointer uppercase tracking-wider"
                               title="Pick Application to handle follow-up"
                             >
                               <span>✋ Pick App</span>
-                            </button>
+                            </ActionButton>
                           )}
 
                           {(['SuperAdmin', 'Super Admin', 'Admin', 'Director'].includes(currentUser?.role)) && (
-                            <button
+                            <ActionButton
                               onClick={() => {
                                 setAssignModalApp(app);
                                 setSelectedStaffId('');
@@ -1266,38 +1305,38 @@ export default function Applications({ applications, referralAgents = [], intake
                               title="Assign Staff Member"
                             >
                               <span>👉 Assign Staff</span>
-                            </button>
+                            </ActionButton>
                           )}
 
                           {(['CRE', 'SuperAdmin', 'Super Admin', 'Admin', 'Director'].includes(currentUser?.role)) && displayStatus === 'Submitted' && (
-                            <button
+                            <ActionButton
                               onClick={() => handleForwardToOperations(app)}
                               className="bg-purple-600 hover:bg-purple-700 text-white font-extrabold text-[9px] px-2.5 py-1.5 rounded-xl transition-all shadow-3xs inline-flex items-center gap-1 cursor-pointer uppercase tracking-wider"
                               title="Forward CRE verified file to Operations Head"
                             >
                               <span>➡️ Forward Ops</span>
-                            </button>
+                            </ActionButton>
                           )}
 
-                          <button
+                          <ActionButton
                             onClick={() => openEditModal(app)}
                             className="bg-slate-100 hover:bg-slate-200 text-slate-800 font-extrabold text-[9px] px-2.5 py-1.5 rounded-xl transition-all shadow-3xs inline-flex items-center gap-1 cursor-pointer"
                             title="Edit Application & University"
                           >
                             <span>✏️ Edit</span>
-                          </button>
-                          <button
+                          </ActionButton>
+                          <ActionButton
                             onClick={() => openStatusModal(app)}
                             className="bg-amber-500 hover:bg-amber-600 text-white font-extrabold text-[9px] px-2.5 py-1.5 rounded-xl transition-all shadow-3xs inline-flex items-center gap-1 cursor-pointer"
                           >
                             <span>Update</span>
-                          </button>
-                          <button
+                          </ActionButton>
+                          <ActionButton
                             onClick={() => setSelectedChatApp(app)}
                             className="bg-[#2563EB] hover:bg-[#1D4ED8] text-white font-extrabold text-[9px] px-2.5 py-1.5 rounded-xl transition-all shadow-3xs inline-flex items-center gap-1 cursor-pointer"
                           >
                             <span>Chat</span>
-                          </button>
+                          </ActionButton>
                         </div>
                       </td>
                     </tr>
@@ -1341,16 +1380,16 @@ export default function Applications({ applications, referralAgents = [], intake
             </div>
 
             <div className="flex items-center gap-1.5">
-              <button
+              <ActionButton
                 disabled={currentPage === 1}
                 onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
                 className="px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-bold bg-white text-slate-600 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer"
               >
                 ◀ Prev
-              </button>
+              </ActionButton>
 
               {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
-                <button
+                <ActionButton
                   key={page}
                   onClick={() => setCurrentPage(page)}
                   className={`px-3 py-1.5 rounded-lg text-xs font-extrabold transition-all cursor-pointer ${
@@ -1360,16 +1399,16 @@ export default function Applications({ applications, referralAgents = [], intake
                   }`}
                 >
                   {page}
-                </button>
+                </ActionButton>
               ))}
 
-              <button
+              <ActionButton
                 disabled={currentPage === totalPages}
                 onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
                 className="px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-bold bg-white text-slate-600 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer"
               >
                 Next ▶
-              </button>
+              </ActionButton>
             </div>
           </div>
         )}
@@ -1381,12 +1420,12 @@ export default function Applications({ applications, referralAgents = [], intake
           {/* Top Header & Breadcrumbs Card */}
           <div className="bg-white border border-slate-200 border-t-4 border-t-[#D99A1C] p-5 sm:p-6 rounded-3xl shadow-sm flex flex-col xl:flex-row items-start xl:items-center justify-between gap-4">
             <div className="flex items-center gap-4">
-              <button
+              <ActionButton
                 onClick={handleBackToList}
                 className="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-extrabold text-xs rounded-xl transition-all flex items-center gap-1.5 cursor-pointer border border-slate-200 shadow-2xs"
               >
                 <span>← Back to Applications List</span>
-              </button>
+              </ActionButton>
               <div>
                 <div className="flex items-center gap-2">
                   <span className="text-[10px] font-extrabold text-[#D99A1C] uppercase tracking-wider">Application Detailed Dossier</span>
@@ -1418,18 +1457,18 @@ export default function Applications({ applications, referralAgents = [], intake
             {/* Action Buttons Bar - Strictly in One Row for all screens */}
             <div className="flex items-center gap-1.5 sm:gap-2 flex-nowrap overflow-x-auto no-scrollbar py-1 shrink-0 w-full xl:w-auto justify-start xl:justify-end">
               {!isPicked(singleViewApp) && (
-                <button
+                <ActionButton
                   onClick={() => {
-                    handlePickApplication(singleViewApp);
+                    return handlePickApplication(singleViewApp);
                   }}
                   className="px-2.5 sm:px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-[10px] sm:text-xs rounded-xl shadow-xs transition-all cursor-pointer flex items-center gap-1.5 uppercase tracking-wider whitespace-nowrap shrink-0"
                 >
                   <span>✋ Pick App</span>
-                </button>
+                </ActionButton>
               )}
 
               {(['SuperAdmin', 'Super Admin', 'Admin', 'Director'].includes(currentUser?.role)) && (
-                <button
+                <ActionButton
                   onClick={() => {
                     setAssignModalApp(singleViewApp);
                     setSelectedStaffId('');
@@ -1437,30 +1476,30 @@ export default function Applications({ applications, referralAgents = [], intake
                   className="px-2.5 sm:px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold text-[10px] sm:text-xs rounded-xl shadow-xs transition-all cursor-pointer flex items-center gap-1.5 uppercase tracking-wider whitespace-nowrap shrink-0"
                 >
                   <span>👉 Assign Staff</span>
-                </button>
+                </ActionButton>
               )}
 
-              <button
+              <ActionButton
                 onClick={() => openEditModal(singleViewApp)}
                 className="px-2.5 sm:px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-800 font-extrabold text-[10px] sm:text-xs rounded-xl shadow-xs transition-all cursor-pointer flex items-center gap-1.5 uppercase tracking-wider whitespace-nowrap shrink-0 border border-slate-200"
               >
                 <span>✏️ Edit App</span>
-              </button>
-              <button
+              </ActionButton>
+              <ActionButton
                 onClick={() => openStatusModal(singleViewApp)}
                 className="px-2.5 sm:px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-white font-extrabold text-[10px] sm:text-xs rounded-xl shadow-xs transition-all cursor-pointer flex items-center gap-1.5 uppercase tracking-wider whitespace-nowrap shrink-0"
               >
                 <span>⚡ Update Status</span>
-              </button>
+              </ActionButton>
 
-              <button
+              <ActionButton
                 onClick={() => setSelectedChatApp(singleViewApp)}
                 className="px-2.5 sm:px-3 py-1.5 bg-[#2563EB] hover:bg-[#1D4ED8] text-white font-extrabold text-[10px] sm:text-xs rounded-xl shadow-xs transition-all cursor-pointer flex items-center gap-1.5 uppercase tracking-wider whitespace-nowrap shrink-0"
               >
                 <span>💬 Open Chat</span>
-              </button>
+              </ActionButton>
 
-              <button
+              <ActionButton
                 onClick={handleSaveApplicationData}
                 disabled={isSavingApp}
                 className="px-2.5 sm:px-3 py-1.5 bg-[#0A0A0F] hover:bg-slate-800 text-white font-black text-[10px] sm:text-xs rounded-xl shadow-xs transition-all cursor-pointer inline-flex items-center justify-center gap-1.5 uppercase tracking-wider disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap shrink-0"
@@ -1472,7 +1511,7 @@ export default function Applications({ applications, referralAgents = [], intake
                   </svg>
                 )}
                 <span>💾 {isSavingApp ? 'Saving...' : 'Save All Data'}</span>
-              </button>
+              </ActionButton>
             </div>
           </div>
 
@@ -1492,19 +1531,10 @@ export default function Applications({ applications, referralAgents = [], intake
                 const isPast = STATUS_STEPS.indexOf(currentStage) > idx;
 
                 return (
-                  <button
+                  <ActionButton
                     key={step}
-                    onClick={() => {
-                      const appId = singleViewApp.id || singleViewApp._id;
-                      API.put(`/applications/${appId}`, { status: step, remarks: `Stage updated to ${step}` }).then(() => {
-                        setSingleViewApp(prev => ({ ...prev, secondaryStatus: step, status: step }));
-                        toast.success(`Stage updated to ${step}`);
-                        if (onRefresh) onRefresh();
-                      }).catch(() => {
-                        setSingleViewApp(prev => ({ ...prev, secondaryStatus: step, status: step }));
-                        toast.success(`Stage set to ${step}`);
-                      });
-                    }}
+                    onClick={() => handleStageUpdate(step)}
+                    disabled={isActive || pendingStage !== null || isUpdating}
                     className={`px-3 py-1.5 text-[10px] font-bold rounded-xl transition-all border cursor-pointer ${
                       isActive
                         ? 'bg-amber-500 text-white border-amber-500 shadow-md font-black scale-105'
@@ -1514,7 +1544,7 @@ export default function Applications({ applications, referralAgents = [], intake
                     }`}
                   >
                     <span>{isPast ? '✓ ' : ''}{step}</span>
-                  </button>
+                  </ActionButton>
                 );
               })}
             </div>
@@ -1603,12 +1633,12 @@ export default function Applications({ applications, referralAgents = [], intake
                         {singleViewApp.pickedBy?.name || singleViewApp.pickedBy?.email || singleViewApp.pickedBy}
                       </span>
                     ) : (
-                      <button
+                      <ActionButton
                         onClick={() => handlePickApplication(singleViewApp)}
                         className="bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-[10px] px-3 py-1 rounded-lg transition-all shadow-xs cursor-pointer uppercase tracking-wider flex items-center gap-1"
                       >
                         <span>✋ Pick Application</span>
-                      </button>
+                      </ActionButton>
                     )}
                   </div>
                 </div>
@@ -1624,7 +1654,7 @@ export default function Applications({ applications, referralAgents = [], intake
                         Counselor Notes
                       </h3>
                     </div>
-                    <button
+                    <ActionButton
                       type="button"
                       onClick={handleSaveApplicationData}
                       disabled={isSavingApp}
@@ -1637,7 +1667,7 @@ export default function Applications({ applications, referralAgents = [], intake
                         </svg>
                       )}
                       <span>💾 {isSavingApp ? 'Saving...' : 'Save Notes'}</span>
-                    </button>
+                    </ActionButton>
                   </div>
                   <div className="pt-2">
                     <textarea
@@ -1711,7 +1741,7 @@ export default function Applications({ applications, referralAgents = [], intake
 
                             {/* Action Controls: Expand & Download */}
                             <div className="flex items-center gap-1.5 pt-1 border-t border-slate-200/60">
-                              <button
+                              <ActionButton
                                 type="button"
                                 onClick={() => {
                                   setPreviewModalDoc({
@@ -1725,14 +1755,14 @@ export default function Applications({ applications, referralAgents = [], intake
                                 className="flex-1 py-1.5 bg-white hover:bg-slate-100 text-slate-800 border border-slate-200 rounded-lg font-bold text-[11px] transition-all cursor-pointer flex items-center justify-center gap-1 shadow-2xs"
                               >
                                 <span>🔍 Expand</span>
-                              </button>
-                              <button
+                              </ActionButton>
+                              <ActionButton
                                 type="button"
                                 onClick={() => handleDownloadAppDocument(docBlobUrl, (docTitle.replace(/\s+/g, '_') + '.pdf'))}
                                 className="flex-1 py-1.5 bg-gradient-to-r from-[#D99A1C] to-[#F5B025] hover:from-[#c28815] hover:to-[#e09e1d] text-white rounded-lg font-bold text-[11px] transition-all cursor-pointer flex items-center justify-center gap-1 shadow-2xs"
                               >
                                 <span>📥 Download</span>
-                              </button>
+                              </ActionButton>
                             </div>
                           </div>
                         );
@@ -1757,7 +1787,7 @@ export default function Applications({ applications, referralAgents = [], intake
                 </div>
 
                 {/* Add Comment Input Form */}
-                <form onSubmit={handleAddComment} className="space-y-2.5 bg-slate-50 p-3.5 rounded-2xl border border-slate-200 my-3 shrink-0">
+                <ActionForm onSubmit={handleAddComment} className="space-y-2.5 bg-slate-50 p-3.5 rounded-2xl border border-slate-200 my-3 shrink-0">
                   <label className="text-xs font-black text-slate-800 block uppercase tracking-wider">Add Internal Note / Staff Comment</label>
                   <textarea
                     rows="2"
@@ -1768,7 +1798,7 @@ export default function Applications({ applications, referralAgents = [], intake
                   ></textarea>
                   <div className="flex justify-between items-center pt-0.5">
                     <span className="text-[10px] text-slate-400 font-semibold">Visible to internal admin &amp; staff members</span>
-                    <button
+                    <ActionButton
                       type="submit"
                       disabled={!newCommentInput.trim() || isPostingComment}
                       className="px-4 py-1.5 bg-gradient-to-r from-[#D99A1C] to-[#F5B025] hover:from-[#c28815] hover:to-[#e09e1d] text-white font-black text-xs rounded-xl shadow-xs transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center justify-center gap-1.5"
@@ -1780,9 +1810,9 @@ export default function Applications({ applications, referralAgents = [], intake
                         </svg>
                       )}
                       <span>{isPostingComment ? 'Posting...' : '💬 Post Comment'}</span>
-                    </button>
+                    </ActionButton>
                   </div>
-                </form>
+                </ActionForm>
 
                 {/* Comments List Feed: Expands to fill the entire remaining card space! */}
                 <div className="space-y-3 flex-1 overflow-y-auto pr-1 min-h-[220px]">
@@ -1833,17 +1863,17 @@ export default function Applications({ applications, referralAgents = [], intake
                   Applicant: <strong className="text-slate-900">{editModalApp.studentName}</strong> ({editModalApp.camsId || 'CAMS File'})
                 </p>
               </div>
-              <button 
+              <ActionButton
                 onClick={() => setEditModalApp(null)}
                 className="text-slate-400 hover:text-slate-700 p-1 rounded-lg cursor-pointer"
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
                 </svg>
-              </button>
+              </ActionButton>
             </div>
 
-            <form onSubmit={handleSaveEditApplication} className="space-y-4 text-left">
+            <ActionForm onSubmit={handleSaveEditApplication} className="space-y-4 text-left">
               {/* Destination Country (FIRST) */}
               <div className="space-y-1.5">
                 <label className="block text-[10px] font-extrabold text-slate-600 uppercase tracking-wider">
@@ -2010,15 +2040,15 @@ export default function Applications({ applications, referralAgents = [], intake
               </div>
 
               <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-100">
-                <button
+                <ActionButton
                   type="button"
                   onClick={() => setEditModalApp(null)}
                   disabled={isSavingEdit}
                   className="px-4 py-2.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-600 hover:bg-slate-100 cursor-pointer"
                 >
                   Cancel
-                </button>
-                <button
+                </ActionButton>
+                <ActionButton
                   type="submit"
                   disabled={isSavingEdit}
                   className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-[#D99A1C] to-[#F5B025] hover:scale-[1.01] text-white font-extrabold text-xs shadow-md transition-all uppercase tracking-wider disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer inline-flex items-center justify-center gap-1.5"
@@ -2030,9 +2060,9 @@ export default function Applications({ applications, referralAgents = [], intake
                     </svg>
                   )}
                   <span>{isSavingEdit ? 'Saving...' : 'Save Changes'}</span>
-                </button>
+                </ActionButton>
               </div>
-            </form>
+            </ActionForm>
           </div>
         </div>,
         document.body
@@ -2047,17 +2077,17 @@ export default function Applications({ applications, referralAgents = [], intake
                 <h3 className="text-sm font-black text-slate-900">Update Application Status</h3>
                 <p className="text-[11px] text-slate-500 font-semibold">Student: <strong className="text-slate-900">{statusModalApp.studentName}</strong> ({statusModalApp.camsId})</p>
               </div>
-              <button 
+              <ActionButton
                 onClick={() => setStatusModalApp(null)}
                 className="text-slate-400 hover:text-slate-700 p-1 rounded-lg"
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
                 </svg>
-              </button>
+              </ActionButton>
             </div>
 
-            <form onSubmit={handleStatusUpdateSubmit} className="space-y-4">
+            <ActionForm onSubmit={handleStatusUpdateSubmit} className="space-y-4">
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1">Select Stage / Status</label>
                 <select
@@ -2083,14 +2113,14 @@ export default function Applications({ applications, referralAgents = [], intake
               </div>
 
               <div className="flex items-center justify-end gap-3 pt-2">
-                <button
+                <ActionButton
                   type="button"
                   onClick={() => setStatusModalApp(null)}
                   className="px-4 py-2 text-xs font-bold text-slate-600 hover:text-slate-900 bg-slate-100 rounded-xl"
                 >
                   Cancel
-                </button>
-                <button
+                </ActionButton>
+                <ActionButton
                   type="submit"
                   disabled={isUpdating}
                   className="px-5 py-2 text-xs font-extrabold text-white bg-[#D99A1C] hover:bg-[#F5B025] rounded-xl shadow-md transition-all disabled:opacity-50 flex items-center gap-1.5"
@@ -2102,9 +2132,9 @@ export default function Applications({ applications, referralAgents = [], intake
                     </svg>
                   )}
                   {isUpdating ? 'Updating...' : 'Save & Publish Update'}
-                </button>
+                </ActionButton>
               </div>
-            </form>
+            </ActionForm>
           </div>
         </div>,
         document.body
@@ -2119,15 +2149,15 @@ export default function Applications({ applications, referralAgents = [], intake
                 <h3 className="text-sm font-black text-slate-900 uppercase tracking-wider">Assign Staff Member</h3>
                 <p className="text-[11px] text-slate-500 font-semibold">Student: <strong className="text-slate-900">{assignModalApp.studentName}</strong> ({assignModalApp.camsId})</p>
               </div>
-              <button 
+              <ActionButton
                 onClick={() => setAssignModalApp(null)}
                 className="text-slate-400 hover:text-slate-700 p-1 rounded-lg"
               >
                 ✕
-              </button>
+              </ActionButton>
             </div>
 
-            <form onSubmit={handleAssignSubmit} className="space-y-4">
+            <ActionForm onSubmit={handleAssignSubmit} className="space-y-4">
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1">Select Handling Staff Member</label>
                 <select
@@ -2146,14 +2176,14 @@ export default function Applications({ applications, referralAgents = [], intake
               </div>
 
               <div className="flex items-center justify-end gap-3 pt-2">
-                <button
+                <ActionButton
                   type="button"
                   onClick={() => setAssignModalApp(null)}
                   className="px-4 py-2 text-xs font-bold text-slate-600 hover:text-slate-900 bg-slate-100 rounded-xl"
                 >
                   Cancel
-                </button>
-                <button
+                </ActionButton>
+                <ActionButton
                   type="submit"
                   disabled={isAssigning}
                   className="px-5 py-2 text-xs font-extrabold text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 rounded-xl shadow-md transition-all flex items-center gap-1.5"
@@ -2165,9 +2195,9 @@ export default function Applications({ applications, referralAgents = [], intake
                     </svg>
                   )}
                   {isAssigning ? 'Assigning...' : 'Confirm Staff Assignment'}
-                </button>
+                </ActionButton>
               </div>
-            </form>
+            </ActionForm>
           </div>
         </div>,
         document.body
@@ -2191,13 +2221,13 @@ export default function Applications({ applications, referralAgents = [], intake
                 <h3 className="text-xs sm:text-sm font-black text-slate-900">{previewModalDoc.title}</h3>
                 <p className="text-[10px] sm:text-[11px] text-slate-400 font-semibold">{previewModalDoc.fileName}</p>
               </div>
-              <button
+              <ActionButton
                 type="button"
                 onClick={() => setPreviewModalDoc(null)}
                 className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold flex items-center justify-center transition-all cursor-pointer shrink-0"
               >
                 ✕
-              </button>
+              </ActionButton>
             </div>
 
             <div className="flex-1 overflow-auto bg-slate-50 rounded-2xl border border-slate-200 p-2 sm:p-3 flex items-center justify-center my-3 min-h-[300px]">
@@ -2234,7 +2264,7 @@ export default function Applications({ applications, referralAgents = [], intake
             <div className="flex justify-between items-center pt-3 border-t border-slate-100 shrink-0">
               {previewModalDoc.previewUrl ? (
                 <div className="flex items-center gap-2">
-                  <button
+                  <ActionButton
                     type="button"
                     onClick={() => {
                       if (previewModalDoc.previewUrl) {
@@ -2244,8 +2274,8 @@ export default function Applications({ applications, referralAgents = [], intake
                     className="px-3 py-1.5 sm:px-4 sm:py-2 bg-gradient-to-r from-[#D99A1C] to-[#F5B025] hover:from-[#c28815] hover:to-[#e09e1d] text-white font-black text-[11px] sm:text-xs rounded-xl transition-all flex items-center gap-1.5 cursor-pointer shadow-xs"
                   >
                     <span>📥 Download</span>
-                  </button>
-                  <button
+                  </ActionButton>
+                  <ActionButton
                     type="button"
                     onClick={() => {
                       if (previewModalDoc.previewUrl) {
@@ -2255,16 +2285,16 @@ export default function Applications({ applications, referralAgents = [], intake
                     className="px-3 py-1.5 sm:px-4 sm:py-2 bg-amber-50 hover:bg-amber-100 text-[#D99A1C] border border-amber-200 font-extrabold text-[11px] sm:text-xs rounded-xl transition-all flex items-center gap-1.5 cursor-pointer shadow-xs"
                   >
                     <span>↗ Open in New Tab</span>
-                  </button>
+                  </ActionButton>
                 </div>
               ) : <div />}
-              <button
+              <ActionButton
                 type="button"
                 onClick={() => setPreviewModalDoc(null)}
                 className="px-4 py-1.5 sm:px-5 sm:py-2 bg-slate-800 hover:bg-slate-900 text-white font-extrabold text-[11px] sm:text-xs rounded-xl shadow-md transition-all cursor-pointer"
               >
                 Close Preview
-              </button>
+              </ActionButton>
             </div>
           </div>
         </div>,

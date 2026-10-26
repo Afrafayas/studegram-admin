@@ -1,3 +1,4 @@
+import { ActionButton } from '../components/ActionControls';
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useAuth } from '../context/AuthContext';
@@ -412,7 +413,7 @@ export default function CommissionManagement({ clients = [], referralAgents = []
         </div>
         <div className="flex gap-2">
           {hasPermission('commissions:export') && (
-            <button
+            <ActionButton
               onClick={handleExport}
               className="bg-[#2563EB] hover:bg-blue-600 text-white font-extrabold text-xs px-4 py-2 rounded-xl transition-all shadow-md inline-flex items-center gap-1.5 cursor-pointer"
             >
@@ -420,7 +421,7 @@ export default function CommissionManagement({ clients = [], referralAgents = []
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
               </svg>
               <span>Export Report</span>
-            </button>
+            </ActionButton>
           )}
         </div>
       </div>
@@ -497,7 +498,7 @@ export default function CommissionManagement({ clients = [], referralAgents = []
             {/* Filter Tabs */}
             <div className="bg-slate-100 p-1 rounded-xl flex gap-1 text-[10px] font-bold w-full sm:w-auto">
               {['All', 'Paid', 'Pending Approval', 'Under Review'].map((status) => (
-                <button
+                <ActionButton
                   key={status}
                   onClick={() => setFilterStatus(status)}
                   className={`px-3 py-1 rounded-lg transition-all flex-1 sm:flex-none text-center ${
@@ -505,7 +506,7 @@ export default function CommissionManagement({ clients = [], referralAgents = []
                   }`}
                 >
                   {status}
-                </button>
+                </ActionButton>
               ))}
             </div>
           </div>
@@ -564,7 +565,7 @@ export default function CommissionManagement({ clients = [], referralAgents = []
                       {/* University Payment Toggle Column */}
                       <td className="px-5 py-4">
                         <div className="flex flex-col items-center justify-center gap-1">
-                          <button
+                          <ActionButton
                             type="button"
                             onClick={() => handleToggleUniversityPayment(comm)}
                             disabled={isUpdatingId === (comm._id || comm.id) || !hasPermission('commissions:manage')}
@@ -578,7 +579,7 @@ export default function CommissionManagement({ clients = [], referralAgents = []
                                 isUniPaid ? 'translate-x-5' : 'translate-x-0'
                               }`}
                             />
-                          </button>
+                          </ActionButton>
                           <span className={`text-[9px] font-bold tracking-tight px-1.5 py-0.5 rounded ${
                             isUniPaid 
                               ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' 
@@ -610,7 +611,7 @@ export default function CommissionManagement({ clients = [], referralAgents = []
                         {hasPermission('commissions:manage') ? (
                           <div className="flex items-center justify-end gap-1.5">
                             {/* Set Commission Button */}
-                            <button
+                            <ActionButton
                               type="button"
                               onClick={() => openSetCommissionModal(comm)}
                               className="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 font-bold text-[10px] px-2.5 py-1 rounded-lg transition-all cursor-pointer inline-flex items-center gap-1 shadow-2xs active:scale-95"
@@ -620,11 +621,11 @@ export default function CommissionManagement({ clients = [], referralAgents = []
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                               </svg>
                               <span>Set Comm</span>
-                            </button>
+                            </ActionButton>
 
                             {/* Pay / Approve Payout Button */}
                             {!isPaidStatus ? (
-                              <button
+                              <ActionButton
                                 type="button"
                                 disabled={!isUniPaid || isUpdatingId === (comm._id || comm.id)}
                                 onClick={() => handleDirectPay(comm)}
@@ -643,7 +644,7 @@ export default function CommissionManagement({ clients = [], referralAgents = []
                                     {!isUniPaid && <span className="text-[9px]">🔒</span>}
                                   </>
                                 )}
-                              </button>
+                              </ActionButton>
                             ) : (
                               <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-md inline-flex items-center gap-1">
                                 <span>Paid</span>
@@ -692,16 +693,16 @@ export default function CommissionManagement({ clients = [], referralAgents = []
             </div>
 
             <div className="flex items-center gap-1.5">
-              <button
+              <ActionButton
                 disabled={currentPage === 1}
                 onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
                 className="px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-bold bg-white text-slate-600 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer"
               >
                 ◀ Prev
-              </button>
+              </ActionButton>
 
               {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
-                <button
+                <ActionButton
                   key={page}
                   onClick={() => setCurrentPage(page)}
                   className={`px-3 py-1.5 rounded-lg text-xs font-extrabold transition-all cursor-pointer ${
@@ -711,16 +712,16 @@ export default function CommissionManagement({ clients = [], referralAgents = []
                   }`}
                 >
                   {page}
-                </button>
+                </ActionButton>
               ))}
 
-              <button
+              <ActionButton
                 disabled={currentPage === totalPages}
                 onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
                 className="px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-bold bg-white text-slate-600 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer"
               >
                 Next ▶
-              </button>
+              </ActionButton>
             </div>
           </div>
         )}
@@ -745,14 +746,14 @@ export default function CommissionManagement({ clients = [], referralAgents = []
                   Set Commission for {modalCommission.studentName}
                 </h3>
               </div>
-              <button
+              <ActionButton
                 type="button"
                 onClick={() => setModalCommission(null)}
                 disabled={isSavingModal}
                 className="w-7 h-7 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-400 hover:text-slate-600 flex items-center justify-center transition-colors"
               >
                 ✕
-              </button>
+              </ActionButton>
             </div>
 
             {/* Application & Partner Context Card */}
@@ -787,7 +788,7 @@ export default function CommissionManagement({ clients = [], referralAgents = []
             <div className="space-y-1.5">
               <label className="text-xs font-bold text-slate-700 block">Commission Calculation Type</label>
               <div className="grid grid-cols-2 gap-2 bg-slate-100 p-1 rounded-xl">
-                <button
+                <ActionButton
                   type="button"
                   onClick={() => setCommissionMode('percentage')}
                   className={`py-2 rounded-lg text-xs font-black transition-all ${
@@ -797,8 +798,8 @@ export default function CommissionManagement({ clients = [], referralAgents = []
                   }`}
                 >
                   Percentage (%) Wise
-                </button>
-                <button
+                </ActionButton>
+                <ActionButton
                   type="button"
                   onClick={() => setCommissionMode('fixed')}
                   className={`py-2 rounded-lg text-xs font-black transition-all ${
@@ -808,7 +809,7 @@ export default function CommissionManagement({ clients = [], referralAgents = []
                   }`}
                 >
                   Fixed Amount (₹)
-                </button>
+                </ActionButton>
               </div>
             </div>
 
@@ -887,15 +888,15 @@ export default function CommissionManagement({ clients = [], referralAgents = []
 
             {/* Modal Actions */}
             <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
-              <button
+              <ActionButton
                 type="button"
                 disabled={isSavingModal}
                 onClick={() => setModalCommission(null)}
                 className="px-4 py-2.5 rounded-xl border border-slate-300 text-slate-700 font-bold text-xs hover:bg-slate-100 transition-colors"
               >
                 Cancel
-              </button>
-              <button
+              </ActionButton>
+              <ActionButton
                 type="button"
                 disabled={isSavingModal}
                 onClick={() => handleSaveModalCommission(false)}
@@ -908,8 +909,8 @@ export default function CommissionManagement({ clients = [], referralAgents = []
                   </svg>
                 )}
                 {isSavingModal ? 'Saving...' : 'Save Commission'}
-              </button>
-              <button
+              </ActionButton>
+              <ActionButton
                 type="button"
                 disabled={isSavingModal || !modalCommission.universityPaid}
                 onClick={() => handleSaveModalCommission(true)}
@@ -928,7 +929,7 @@ export default function CommissionManagement({ clients = [], referralAgents = []
                 )}
                 <span>Save & Pay</span>
                 {!modalCommission.universityPaid ? <span>🔒</span> : <span>✓</span>}
-              </button>
+              </ActionButton>
             </div>
           </div>
         </div>,

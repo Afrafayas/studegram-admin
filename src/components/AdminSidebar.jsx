@@ -1,3 +1,4 @@
+import { ActionButton } from './ActionControls';
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 
@@ -68,7 +69,7 @@ export default function AdminSidebar({
           {/* Navigation Links */}
           <nav className="space-y-1.5">
             {/* Daily Report */}
-            <button
+            <ActionButton
               onClick={() => handleTabClick('daily-report')}
               className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left text-xs font-semibold transition-all duration-150 ${
                 activeTab === 'daily-report' && !activeSubTab
@@ -80,11 +81,11 @@ export default function AdminSidebar({
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
               </svg>
               <span>Daily Report</span>
-            </button>
+            </ActionButton>
             
             {/* Applications */}
             {currentUser.role !== 'Finance' && (
-              <button
+              <ActionButton
                 onClick={() => handleTabClick('applications')}
                 className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left text-xs font-semibold transition-all duration-150 ${
                   activeTab === 'applications' && !activeSubTab
@@ -96,13 +97,13 @@ export default function AdminSidebar({
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                 </svg>
                 <span>Applications</span>
-              </button>
+              </ActionButton>
             )}
 
             {/* Admin-Report Collapsible */}
             {(['SuperAdmin', 'Super Admin', 'Admin', 'Director', 'COO', 'Country Head'].includes(currentUser.role)) && (
               <div>
-                <button
+                <ActionButton
                   onClick={() => setAdminReportsOpen(!adminReportsOpen)}
                   className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-left text-xs font-semibold transition-all duration-150 ${
                     activeTab === 'admin-report' ? 'text-white font-bold bg-[#161622]/40' : 'hover:bg-[#161622]/50 hover:text-white'
@@ -117,11 +118,11 @@ export default function AdminSidebar({
                   <svg className={`w-3.5 h-3.5 transform transition-transform duration-200 ${adminReportsOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
                   </svg>
-                </button>
+                </ActionButton>
 
                 {adminReportsOpen && (
                   <div className="pl-7 mt-1.5 space-y-1 border-l border-slate-800 ml-5">
-                    <button
+                    <ActionButton
                       onClick={() => handleSubTabClick('admin-report', 'report-agent')}
                       className={`w-full text-left py-2 px-3 text-[11px] font-semibold rounded-md transition-colors ${
                         activeTab === 'admin-report' && activeSubTab === 'report-agent'
@@ -130,8 +131,8 @@ export default function AdminSidebar({
                       }`}
                     >
                       Report by Agent
-                    </button>
-                    <button
+                    </ActionButton>
+                    <ActionButton
                       onClick={() => handleSubTabClick('admin-report', 'report-university')}
                       className={`w-full text-left py-2 px-3 text-[11px] font-semibold rounded-md transition-colors ${
                         activeTab === 'admin-report' && activeSubTab === 'report-university'
@@ -140,8 +141,8 @@ export default function AdminSidebar({
                       }`}
                     >
                       Report by University
-                    </button>
-                    <button
+                    </ActionButton>
+                    <ActionButton
                       onClick={() => handleSubTabClick('admin-report', 'report-country')}
                       className={`w-full text-left py-2 px-3 text-[11px] font-semibold rounded-md transition-colors ${
                         activeTab === 'admin-report' && activeSubTab === 'report-country'
@@ -150,7 +151,7 @@ export default function AdminSidebar({
                       }`}
                     >
                       Report by Country
-                    </button>
+                    </ActionButton>
                   </div>
                 )}
               </div>
@@ -158,7 +159,7 @@ export default function AdminSidebar({
 
                         {/* Become our Partner */}
             {hasPermission('partners:view') && (
-              <button
+              <ActionButton
                 onClick={() => handleTabClick('become-partner')}
                 className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left text-xs font-semibold transition-all duration-150 ${
                   activeTab === 'become-partner' && !activeSubTab
@@ -170,14 +171,14 @@ export default function AdminSidebar({
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
                 </svg>
                 <span>Become our Partner</span>
-              </button>
+              </ActionButton>
             )}
 
 
 
             {/* Students */}
             {hasPermission('students:view') && (
-              <button
+              <ActionButton
                 onClick={() => handleTabClick('students')}
                 className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left text-xs font-semibold transition-all duration-150 ${
                   activeTab === 'students' && !activeSubTab
@@ -191,12 +192,12 @@ export default function AdminSidebar({
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 14v6" />
                 </svg>
                 <span>Students</span>
-              </button>
+              </ActionButton>
             )}
 
             {/* Commission Management */}
             {(hasPermission('commissions:view') || currentUser.role === 'Country Head') && (
-              <button
+              <ActionButton
                 onClick={() => handleTabClick('commissions')}
                 className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left text-xs font-semibold transition-all duration-150 ${
                   activeTab === 'commissions' && !activeSubTab
@@ -208,12 +209,12 @@ export default function AdminSidebar({
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
                 <span>Commissions</span>
-              </button>
+              </ActionButton>
             )}
 
             {/* Staff */}
             {hasPermission('staff:view') && (
-              <button
+              <ActionButton
                 onClick={() => handleTabClick('staff')}
                 className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left text-xs font-semibold transition-all duration-150 ${
                   activeTab === 'staff' && !activeSubTab
@@ -225,12 +226,12 @@ export default function AdminSidebar({
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
                 </svg>
                 <span>Staff Management</span>
-              </button>
+              </ActionButton>
             )}
 
             {/* Staff Activity Log */}
             {(hasPermission('staff:view') || hasPermission('activity_logs:view') || ['SuperAdmin', 'Super Admin', 'Admin', 'Director', 'COO', 'Country Head'].includes(currentUser.role)) && (
-              <button
+              <ActionButton
                 onClick={() => handleTabClick('staff-activity-logs')}
                 className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left text-xs font-semibold transition-all duration-150 ${
                   activeTab === 'staff-activity-logs' && !activeSubTab
@@ -243,13 +244,13 @@ export default function AdminSidebar({
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                 </svg>
                 <span>Staff Activity Log</span>
-              </button>
+              </ActionButton>
             )}
 
 
             {/* Roles & Permissions */}
             {(['SuperAdmin', 'Super Admin', 'Admin', 'Director', 'COO'].includes(currentUser.role) || hasPermission('roles:manage')) && (
-              <button
+              <ActionButton
                 onClick={() => handleTabClick('roles')}
                 className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left text-xs font-semibold transition-all duration-150 ${
                   (activeTab === 'roles' || activeTab === 'role-hierarchy') && !activeSubTab
@@ -261,7 +262,7 @@ export default function AdminSidebar({
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
                 </svg>
                 <span>Roles & Permissions</span>
-              </button>
+              </ActionButton>
             )}
 
 
@@ -269,7 +270,7 @@ export default function AdminSidebar({
             {/* Application Portal Settings Dropdown */}
             {hasPermission('settings:view') && (
               <div>
-                <button
+                <ActionButton
                   onClick={() => setSettingsOpen(!settingsOpen)}
                   className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-left text-xs font-semibold transition-all duration-150 ${
                     activeTab === 'settings' ? 'text-white font-bold bg-[#161622]/40' : 'hover:bg-[#161622]/50 hover:text-white'
@@ -285,7 +286,7 @@ export default function AdminSidebar({
                   <svg className={`w-3.5 h-3.5 transform transition-transform duration-200 ${settingsOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
                   </svg>
-                </button>
+                </ActionButton>
 
                 {settingsOpen && (
                   <div className="pl-7 mt-1.5 space-y-1 border-l border-slate-800 ml-5">
@@ -301,7 +302,7 @@ export default function AdminSidebar({
                       { id: 'settings-actions', label: 'Staged Actions' },
                       { id: 'settings-qualifications', label: 'Qualifications' },
                     ].map((subItem) => (
-                      <button
+                      <ActionButton
                         key={subItem.id}
                         onClick={() => handleSubTabClick('settings', subItem.id)}
                         className={`w-full text-left py-1.5 px-3 text-[11px] font-semibold rounded-md transition-colors ${
@@ -311,7 +312,7 @@ export default function AdminSidebar({
                         }`}
                       >
                         {subItem.label}
-                      </button>
+                      </ActionButton>
                     ))}
                   </div>
                 )}
@@ -319,7 +320,7 @@ export default function AdminSidebar({
             )}
 
             {/* To-do List */}
-            <button
+            <ActionButton
               onClick={() => handleTabClick('todo-list')}
               className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left text-xs font-semibold transition-all duration-150 ${
                 activeTab === 'todo-list' && !activeSubTab
@@ -331,14 +332,14 @@ export default function AdminSidebar({
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
               </svg>
               <span>To-do List</span>
-            </button>
+            </ActionButton>
           </nav>
         </div>
 
         {/* Footer actions inside Sidebar */}
         <div className="px-4 mt-auto pt-4 border-t border-slate-900 flex flex-col gap-2">
           {/* Logout */}
-          <button
+          <ActionButton
             onClick={onLogout}
             className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 hover:text-rose-300 rounded-xl text-xs font-bold transition-all"
           >
@@ -346,7 +347,7 @@ export default function AdminSidebar({
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
             </svg>
             <span>Log Out</span>
-          </button>
+          </ActionButton>
         </div>
       </aside>
     </>

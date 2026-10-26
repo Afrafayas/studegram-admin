@@ -654,6 +654,9 @@ export default function AdminPortal({ onLogout }) {
             setActiveSubTab('study');
           }}
           onRefresh={fetchInitialData}
+          onApplicationUpdated={(appId, changes) => setApplications(prev => prev.map(app =>
+            String(app.id || app._id) === String(appId) ? { ...app, ...changes } : app
+          ))}
         />
       );
     }

@@ -1,3 +1,4 @@
+import { ActionButton, ActionForm } from '../components/ActionControls';
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useAuth } from '../context/AuthContext';
@@ -638,7 +639,7 @@ support@unigather.app`;
               <p className="text-xs text-slate-500 font-medium">Manage Direct and B2B-referred students, view files status and passport records.</p>
             </div>
             {canOnboard && (
-              <button
+              <ActionButton
                 onClick={() => setIsModalOpen(true)}
                 className="bg-[#D99A1C] hover:bg-[#F5B025] text-white font-extrabold text-xs px-4 py-2 rounded-xl transition-all shadow-md inline-flex items-center gap-1.5 cursor-pointer"
               >
@@ -646,7 +647,7 @@ support@unigather.app`;
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
                 </svg>
                 <span>Onboard Student</span>
-              </button>
+              </ActionButton>
             )}
           </div>
 
@@ -654,7 +655,7 @@ support@unigather.app`;
           <div className="bg-white border border-[#E2E8F0] border-t-4 border-t-[#2563EB] rounded-2xl p-5 shadow-xs flex flex-col sm:flex-row gap-4 items-center justify-between">
             <div className="bg-slate-100 p-1 rounded-xl flex w-full sm:w-auto">
               {['All', 'Active', 'Inactive', 'Paid Students'].map((status) => (
-                <button
+                <ActionButton
                   key={status}
                   onClick={() => setStatusFilter(status)}
                   className={`flex-1 sm:flex-none px-4 py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer ${
@@ -664,7 +665,7 @@ support@unigather.app`;
                   }`}
                 >
                   {status}
-                </button>
+                </ActionButton>
               ))}
             </div>
 
@@ -712,18 +713,18 @@ support@unigather.app`;
                   placeholder="Search by name, passport, email, referral..."
                 />
                 {searchTerm && (
-                  <button
+                  <ActionButton
                     type="button"
                     onClick={() => setSearchTerm('')}
                     className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600 font-bold text-xs cursor-pointer"
                     title="Clear search"
                   >
                     ✕
-                  </button>
+                  </ActionButton>
                 )}
               </div>
 
-              <button
+              <ActionButton
                 type="button"
                 onClick={handleResetFilters}
                 disabled={!hasActiveFilters}
@@ -738,7 +739,7 @@ support@unigather.app`;
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                 </svg>
                 <span>Reset Filters</span>
-              </button>
+              </ActionButton>
             </div>
           </div>
 
@@ -820,14 +821,14 @@ support@unigather.app`;
                           </td>
                           <td className="px-6 py-4 text-right pr-6" onClick={(e) => e.stopPropagation()}>
                             <div className="flex items-center justify-end gap-1.5">
-                              <button
+                              <ActionButton
                                 type="button"
                                 onClick={() => handleOpenSingleView(student)}
                                 className="bg-slate-800 hover:bg-slate-900 text-white font-extrabold text-[9px] px-2.5 py-1.5 rounded-xl transition-all shadow-3xs inline-flex items-center gap-1 cursor-pointer uppercase tracking-wider"
                                 title="View Full Student Profile Dossier"
                               >
                                 <span>👁️ View</span>
-                              </button>
+                              </ActionButton>
                             </div>
                           </td>
                         </tr>
@@ -844,7 +845,7 @@ support@unigather.app`;
                   <p className="text-[10px] text-slate-400 font-semibold max-w-xs mx-auto">No student directory profiles matched your query.</p>
                   {hasActiveFilters && (
                     <div className="pt-2">
-                      <button
+                      <ActionButton
                         type="button"
                         onClick={handleResetFilters}
                         className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-[#D99A1C] hover:bg-[#F5B025] text-white text-[11px] font-extrabold rounded-xl transition-all shadow-xs cursor-pointer"
@@ -853,7 +854,7 @@ support@unigather.app`;
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                         </svg>
                         <span>Clear all filters</span>
-                      </button>
+                      </ActionButton>
                     </div>
                   )}
                 </div>
@@ -885,16 +886,16 @@ support@unigather.app`;
                 </div>
 
                 <div className="flex items-center gap-1.5">
-                  <button
+                  <ActionButton
                     disabled={currentPage === 1}
                     onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
                     className="px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-bold bg-white text-slate-600 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer"
                   >
                     ◀ Prev
-                  </button>
+                  </ActionButton>
 
                   {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
-                    <button
+                    <ActionButton
                       key={page}
                       onClick={() => setCurrentPage(page)}
                       className={`px-3 py-1.5 rounded-lg text-xs font-extrabold transition-all cursor-pointer ${
@@ -904,16 +905,16 @@ support@unigather.app`;
                       }`}
                     >
                       {page}
-                    </button>
+                    </ActionButton>
                   ))}
 
-                  <button
+                  <ActionButton
                     disabled={currentPage === totalPages}
                     onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
                     className="px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-bold bg-white text-slate-600 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer"
                   >
                     Next ▶
-                  </button>
+                  </ActionButton>
                 </div>
               </div>
             )}
@@ -932,13 +933,13 @@ support@unigather.app`;
                 {/* Header Card */}
                 <div className="bg-white border border-[#E2E8F0] border-t-4 border-t-[#D99A1C] p-6 rounded-3xl shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                   <div className="flex items-center gap-4 flex-wrap">
-                    <button
+                    <ActionButton
                       type="button"
                       onClick={handleBackToStudentsList}
                       className="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-extrabold text-xs rounded-xl transition-all flex items-center gap-1.5 cursor-pointer border border-slate-200 shadow-2xs"
                     >
                       <span>← Back to Students Directory</span>
-                    </button>
+                    </ActionButton>
 
                     <div className="flex items-center gap-3">
                       <div className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-[#D99A1C] to-[#F5B025] text-white flex items-center justify-center font-black text-base shadow-sm">
@@ -977,7 +978,7 @@ support@unigather.app`;
                   {/* Top Action Bar */}
                   <div className="flex items-center gap-2 flex-wrap">
                     {studentApps.length > 0 && (
-                      <button
+                      <ActionButton
                         type="button"
                         onClick={() => {
                           const appToChat = studentApps[0] || {
@@ -990,17 +991,17 @@ support@unigather.app`;
                         className="px-4 py-2 bg-[#2563EB] hover:bg-[#1D4ED8] text-white font-extrabold text-xs rounded-xl shadow-md transition-all cursor-pointer flex items-center gap-1.5 uppercase tracking-wider"
                       >
                         <span>💬 Open Student Chat</span>
-                      </button>
+                      </ActionButton>
                     )}
                     {singleViewStudent.email && (
-                      <button
+                      <ActionButton
                         type="button"
                         onClick={() => handleOpenEmailModal(singleViewStudent)}
                         className="px-3.5 py-2 bg-gradient-to-r from-amber-500 to-[#D99A1C] hover:from-amber-600 hover:to-[#b88214] text-white font-extrabold text-xs rounded-xl transition-all shadow-md flex items-center gap-1.5 cursor-pointer"
                         title={`Send Email to ${singleViewStudent.email}`}
                       >
                         <span>✉️ Email Student</span>
-                      </button>
+                      </ActionButton>
                     )}
                     {singleViewStudent.phone && (
                       <a
@@ -1153,22 +1154,22 @@ support@unigather.app`;
                                     </td>
                                     <td className="px-4 py-3.5 text-right pr-4">
                                       <div className="flex items-center justify-end gap-1.5">
-                                        <button
+                                        <ActionButton
                                           type="button"
                                           onClick={() => handleViewApplication(app)}
                                           className="bg-slate-800 hover:bg-slate-900 text-white font-extrabold text-[9px] px-2.5 py-1.5 rounded-xl transition-all shadow-3xs inline-flex items-center gap-1 cursor-pointer uppercase tracking-wider"
                                           title="Open Full Application Dossier"
                                         >
                                           <span>👁️ View App</span>
-                                        </button>
-                                        <button
+                                        </ActionButton>
+                                        <ActionButton
                                           type="button"
                                           onClick={() => setSelectedChatApp({ ...app, referredBy: singleViewStudent.referredBy })}
                                           className="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-extrabold text-[9px] px-2.5 py-1.5 rounded-xl transition-all border border-indigo-200 inline-flex items-center gap-1 cursor-pointer shadow-xs"
                                           title="Chat with counselor"
                                         >
                                           <span>💬 Chat</span>
-                                        </button>
+                                        </ActionButton>
                                       </div>
                                     </td>
                                   </tr>
@@ -1245,7 +1246,7 @@ support@unigather.app`;
 
                                   {/* Action Controls: Expand & Download */}
                                   <div className="flex items-center gap-2 pt-1">
-                                    <button
+                                    <ActionButton
                                       type="button"
                                       onClick={() => {
                                         setPreviewModalDoc({
@@ -1259,14 +1260,14 @@ support@unigather.app`;
                                       className="flex-1 py-2 bg-white hover:bg-slate-100 text-slate-800 border border-slate-200 rounded-xl font-bold text-xs transition-all cursor-pointer flex items-center justify-center gap-1.5 shadow-2xs"
                                     >
                                       <span>🔍 Expand</span>
-                                    </button>
-                                    <button
+                                    </ActionButton>
+                                    <ActionButton
                                       type="button"
                                       onClick={() => handleDownloadStudentDoc(docBlobUrl, `${docTitle.replace(/\s+/g, '_')}.pdf`)}
                                       className="flex-1 py-2 bg-gradient-to-r from-[#D99A1C] to-[#F5B025] hover:from-[#c28815] hover:to-[#e09e1d] text-white rounded-xl font-bold text-xs transition-all cursor-pointer flex items-center justify-center gap-1.5 shadow-2xs"
                                     >
                                       <span>📥 Download</span>
-                                    </button>
+                                    </ActionButton>
                                   </div>
                                 </div>
                               );
@@ -1292,15 +1293,15 @@ support@unigather.app`;
                 <h3 className="text-xs font-black text-slate-900 uppercase tracking-wider">Onboard Student Profile</h3>
                 <p className="text-[10px] text-slate-400 font-semibold">Register direct or referral student client profile</p>
               </div>
-              <button 
+              <ActionButton
                 onClick={() => setIsModalOpen(false)} 
                 className="text-slate-400 hover:text-slate-600 font-bold cursor-pointer"
               >
                 ✕
-              </button>
+              </ActionButton>
             </div>
 
-            <form onSubmit={handleOnboardStudent} className="space-y-4">
+            <ActionForm onSubmit={handleOnboardStudent} className="space-y-4">
               <div className="space-y-1.5">
                 <label className="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">Full Name <span className="text-rose-500">*</span></label>
                 <input
@@ -1374,14 +1375,14 @@ support@unigather.app`;
               </div>
 
               <div className="flex justify-end gap-2 pt-2">
-                <button
+                <ActionButton
                   type="button"
                   onClick={() => setIsModalOpen(false)}
                   className="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-extrabold text-xs rounded-xl transition-all cursor-pointer"
                 >
                   Cancel
-                </button>
-                <button
+                </ActionButton>
+                <ActionButton
                   type="submit"
                   disabled={isSubmitting}
                   className="px-4 py-2 bg-[#D99A1C] hover:bg-[#F5B025] disabled:opacity-50 disabled:cursor-not-allowed text-white font-extrabold text-xs rounded-xl transition-all shadow-md inline-flex items-center justify-center gap-1.5 cursor-pointer"
@@ -1393,9 +1394,9 @@ support@unigather.app`;
                     </svg>
                   )}
                   {isSubmitting ? 'Onboarding...' : 'Confirm Onboarding'}
-                </button>
+                </ActionButton>
               </div>
-            </form>
+            </ActionForm>
           </div>
         </div>,
         document.body
@@ -1413,7 +1414,7 @@ support@unigather.app`;
                   <p className="text-[10px] text-slate-400 font-semibold">{previewModalDoc.fileName}</p>
                 </div>
               </div>
-              <button 
+              <ActionButton
                 type="button"
                 onClick={() => setPreviewModalDoc(null)}
                 className="text-slate-400 hover:text-slate-700 p-1.5 rounded-lg cursor-pointer transition-colors"
@@ -1421,7 +1422,7 @@ support@unigather.app`;
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
                 </svg>
-              </button>
+              </ActionButton>
             </div>
 
             {/* Document Body */}
@@ -1459,7 +1460,7 @@ support@unigather.app`;
             <div className="flex justify-between items-center pt-3 border-t border-slate-100 shrink-0">
               {previewModalDoc.previewUrl ? (
                 <div className="flex items-center gap-2">
-                  <button
+                  <ActionButton
                     type="button"
                     onClick={() => {
                       if (previewModalDoc.previewUrl) {
@@ -1469,8 +1470,8 @@ support@unigather.app`;
                     className="px-3 py-1.5 sm:px-4 sm:py-2 bg-gradient-to-r from-[#D99A1C] to-[#F5B025] hover:from-[#c28815] hover:to-[#e09e1d] text-white font-black text-[11px] sm:text-xs rounded-xl transition-all flex items-center gap-1.5 cursor-pointer shadow-xs"
                   >
                     <span>📥 Download</span>
-                  </button>
-                  <button
+                  </ActionButton>
+                  <ActionButton
                     type="button"
                     onClick={() => {
                       if (previewModalDoc.previewUrl) {
@@ -1480,16 +1481,16 @@ support@unigather.app`;
                     className="px-3 py-1.5 sm:px-4 sm:py-2 bg-amber-50 hover:bg-amber-100 text-[#D99A1C] border border-amber-200 font-extrabold text-[11px] sm:text-xs rounded-xl transition-all flex items-center gap-1.5 cursor-pointer shadow-xs"
                   >
                     <span>↗ Open in New Tab</span>
-                  </button>
+                  </ActionButton>
                 </div>
               ) : <div />}
-              <button
+              <ActionButton
                 type="button"
                 onClick={() => setPreviewModalDoc(null)}
                 className="px-4 py-1.5 sm:px-5 sm:py-2 bg-slate-800 hover:bg-slate-900 text-white font-extrabold text-[11px] sm:text-xs rounded-xl shadow-md transition-all cursor-pointer"
               >
                 Close Preview
-              </button>
+              </ActionButton>
             </div>
           </div>
         </div>,
@@ -1521,14 +1522,14 @@ support@unigather.app`;
                 <h3 className="text-sm font-black text-slate-900 uppercase tracking-wide">Compose Email to Student</h3>
                 <p className="text-[10.5px] text-slate-400 font-semibold">Directly dispatch official updates to student's inbox</p>
               </div>
-              <button
+              <ActionButton
                 type="button"
                 onClick={() => setIsEmailModalOpen(false)}
                 className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 font-bold flex items-center justify-center transition-colors cursor-pointer"
                 title="Close modal (Esc)"
               >
                 ✕
-              </button>
+              </ActionButton>
             </div>
 
             {/* Recipient Details Chip */}
@@ -1563,7 +1564,7 @@ support@unigather.app`;
             )}
 
             {/* Form */}
-            <form onSubmit={handleSendEmail} className="space-y-3.5">
+            <ActionForm onSubmit={handleSendEmail} className="space-y-3.5">
               <div className="space-y-1">
                 <label className="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">
                   Subject Line <span className="text-rose-500">*</span>
@@ -1595,7 +1596,7 @@ support@unigather.app`;
               {/* Action Buttons */}
               <div className="flex flex-col sm:flex-row gap-2 pt-2 justify-between items-center">
                 <div className="flex gap-2 w-full sm:w-auto">
-                  <button
+                  <ActionButton
                     type="button"
                     onClick={() => {
                       const gmailUrl = `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(emailTargetStudent.email)}&su=${encodeURIComponent(emailSubject)}&body=${encodeURIComponent(emailMessage)}`;
@@ -1605,7 +1606,7 @@ support@unigather.app`;
                     title="Compose directly in Gmail web application"
                   >
                     <span>↗ Open in Gmail</span>
-                  </button>
+                  </ActionButton>
                   <a
                     href={`mailto:${emailTargetStudent.email}?subject=${encodeURIComponent(emailSubject)}&body=${encodeURIComponent(emailMessage)}`}
                     className="flex-1 sm:flex-none px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 font-extrabold text-[11px] rounded-xl transition-all border border-slate-200 flex items-center justify-center gap-1.5 shadow-2xs"
@@ -1616,15 +1617,15 @@ support@unigather.app`;
                 </div>
 
                 <div className="flex gap-2 w-full sm:w-auto justify-end">
-                  <button
+                  <ActionButton
                     type="button"
                     disabled={isSendingEmail}
                     onClick={() => setIsEmailModalOpen(false)}
                     className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 font-extrabold text-xs rounded-xl transition-all cursor-pointer"
                   >
                     Cancel
-                  </button>
-                  <button
+                  </ActionButton>
+                  <ActionButton
                     type="submit"
                     disabled={isSendingEmail}
                     className="px-5 py-2 bg-gradient-to-r from-amber-500 to-[#D99A1C] hover:from-amber-600 hover:to-[#b88214] text-white font-extrabold text-xs rounded-xl shadow-md transition-all flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
@@ -1642,10 +1643,10 @@ support@unigather.app`;
                         <span>✉️ Send Email</span>
                       </>
                     )}
-                  </button>
+                  </ActionButton>
                 </div>
               </div>
-            </form>
+            </ActionForm>
           </div>
         </div>,
         document.body

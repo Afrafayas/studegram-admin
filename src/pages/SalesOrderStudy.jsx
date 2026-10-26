@@ -1,3 +1,4 @@
+import { ActionButton, ActionForm } from '../components/ActionControls';
 import React, { useState } from 'react';
 import API from '../api/axios';
 import { useToast } from '../context/ToastContext';
@@ -205,7 +206,7 @@ export default function SalesOrderStudy({
     <div className="flex-1 p-6 space-y-6 bg-[#F0F2F5]">
       {/* Header with Back Arrow */}
       <div className="flex items-center gap-4 bg-white border border-[#E2E8F0] border-t-4 border-t-[#D99A1C] p-6 rounded-2xl shadow-xs">
-        <button
+        <ActionButton
           onClick={onBack}
           className="p-2 text-slate-500 hover:text-[#D99A1C] bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl transition-all"
           title="Back to Dashboard"
@@ -213,7 +214,7 @@ export default function SalesOrderStudy({
           <svg className="w-4.5 h-4.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
           </svg>
-        </button>
+        </ActionButton>
         <div className="space-y-1">
           <h1 className="text-xl font-black text-slate-900 tracking-tight">Create Student Application</h1>
           <p className="text-xs text-slate-500 font-medium">Sales Order intake form. Fill in client metadata and university assignments.</p>
@@ -226,17 +227,17 @@ export default function SalesOrderStudy({
             <span>✅</span>
             <span>Application created and successfully synced with the Unigather client database.</span>
           </div>
-          <button 
+          <ActionButton
             onClick={() => setSuccessMessage(false)}
             className="text-emerald-500 hover:text-emerald-700 font-extrabold"
           >
             ✕
-          </button>
+          </ActionButton>
         </div>
       )}
 
       {/* Card Form */}
-      <form onSubmit={handleSubmit} className="bg-white border border-[#E2E8F0] border-t-4 border-t-[#2563EB] rounded-2xl shadow-sm p-6 max-w-3xl space-y-6">
+      <ActionForm onSubmit={handleSubmit} className="bg-white border border-[#E2E8F0] border-t-4 border-t-[#2563EB] rounded-2xl shadow-sm p-6 max-w-3xl space-y-6">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="space-y-4">
             <h3 className="text-xs font-black text-slate-950 uppercase tracking-wider pb-1 border-b border-slate-100">Client Demographics</h3>
@@ -311,7 +312,7 @@ export default function SalesOrderStudy({
                   <div className="space-y-1.5 relative">
                     <label className="block text-[9px] font-extrabold text-slate-500 uppercase tracking-wider">Phone Number <span className="text-rose-500">*</span></label>
                     <div className="flex border border-slate-200 rounded-xl overflow-visible bg-white focus-within:border-[#D99A1C] focus-within:ring-1 focus-within:ring-[#D99A1C] transition-all">
-                      <button
+                      <ActionButton
                         type="button"
                         onClick={() => setIsFlagDropdownOpen(!isFlagDropdownOpen)}
                         className="flex items-center gap-1.5 px-3 py-1.5 border-r border-slate-200 hover:bg-slate-50 rounded-l-xl text-xs font-extrabold text-slate-700 shrink-0"
@@ -321,14 +322,14 @@ export default function SalesOrderStudy({
                         <svg className="w-3 h-3 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M19 9l-7 7-7-7" />
                         </svg>
-                      </button>
+                      </ActionButton>
 
                       {isFlagDropdownOpen && (
                         <>
                           <div className="fixed inset-0 z-10" onClick={() => setIsFlagDropdownOpen(false)}></div>
                           <div className="absolute left-0 top-[110px] w-48 bg-white border border-slate-200 rounded-xl shadow-xl py-1 z-20 text-xs font-semibold text-slate-700 animate-in fade-in slide-in-from-top-1 duration-150">
                             {countries.map(c => (
-                              <button
+                              <ActionButton
                                 key={c.code}
                                 type="button"
                                 onClick={() => {
@@ -340,7 +341,7 @@ export default function SalesOrderStudy({
                                 <span className="text-sm">{c.flag}</span>
                                 <span className="font-bold">{c.code}</span>
                                 <span className="text-slate-400 font-medium truncate">{c.name}</span>
-                              </button>
+                              </ActionButton>
                             ))}
                           </div>
                         </>
@@ -602,13 +603,13 @@ export default function SalesOrderStudy({
                   <div key={idx} className="flex items-center gap-1.5 bg-[#D99A1C]/10 border border-[#D99A1C]/25 text-[#D99A1C] text-[10px] px-2.5 py-1 rounded-lg font-bold">
                     <span>📄</span>
                     <span className="truncate max-w-[150px]">{file.name}</span>
-                    <button
+                    <ActionButton
                       type="button"
                       onClick={() => setUploadedFiles(prev => prev.filter((_, i) => i !== idx))}
                       className="hover:text-red-500 transition-colors pl-1 font-bold text-xs"
                     >
                       ✕
-                    </button>
+                    </ActionButton>
                   </div>
                 ))}
               </div>
@@ -628,15 +629,15 @@ export default function SalesOrderStudy({
         </div>
 
         <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-100">
-          <button
+          <ActionButton
             type="button"
             onClick={onBack}
             className="px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-extrabold text-xs rounded-xl transition-all"
           >
             Cancel
-          </button>
+          </ActionButton>
           
-          <button
+          <ActionButton
             type="submit"
             disabled={isSubmitting || isUploading || uploadedFiles.length === 0}
             className="px-6 py-2.5 bg-gradient-to-r from-[#D99A1C] to-[#F5B025] hover:scale-[1.01] hover:shadow-lg text-white font-extrabold text-xs rounded-xl transition-all duration-150 shadow-md uppercase tracking-wider disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center justify-center gap-1.5"
@@ -648,9 +649,9 @@ export default function SalesOrderStudy({
               </svg>
             )}
             {isSubmitting ? 'Submitting Application...' : 'Submit Application'}
-          </button>
+          </ActionButton>
         </div>
-      </form>
+      </ActionForm>
     </div>
   );
 }

@@ -1,3 +1,4 @@
+import { ActionButton } from './ActionControls';
 import React, { useEffect } from 'react';
 import { createPortal } from 'react-dom';
 
@@ -25,7 +26,7 @@ export default function LogoutConfirmModal({ isOpen, onClose, onConfirm }) {
         className="bg-white border border-[#E2E8F0] rounded-2xl p-6 max-w-sm w-full shadow-2xl relative space-y-4 text-center animate-in zoom-in-95 duration-150 max-h-[90vh] overflow-y-auto my-auto"
       >
         {/* Close "X" Button */}
-        <button
+        <ActionButton
           onClick={onClose}
           type="button"
           aria-label="Close"
@@ -34,7 +35,7 @@ export default function LogoutConfirmModal({ isOpen, onClose, onConfirm }) {
           <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M6 18L18 6M6 6l12 12" />
           </svg>
-        </button>
+        </ActionButton>
 
         {/* Warning / Logout Icon */}
         <div className="w-14 h-14 bg-rose-50 text-rose-600 rounded-full flex items-center justify-center mx-auto ring-8 ring-rose-50/60 shadow-inner">
@@ -60,14 +61,14 @@ export default function LogoutConfirmModal({ isOpen, onClose, onConfirm }) {
 
         {/* Buttons */}
         <div className="grid grid-cols-2 gap-3 pt-2">
-          <button
+          <ActionButton
             type="button"
             onClick={onClose}
             className="w-full py-2.5 px-4 rounded-xl border border-slate-200 text-slate-700 hover:bg-slate-100 text-xs font-bold transition-all focus:outline-none focus:ring-2 focus:ring-slate-300"
           >
             Cancel
-          </button>
-          <button
+          </ActionButton>
+          <ActionButton
             type="button"
             onClick={() => {
               onClose();
@@ -79,7 +80,7 @@ export default function LogoutConfirmModal({ isOpen, onClose, onConfirm }) {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
             </svg>
             <span>Log Out</span>
-          </button>
+          </ActionButton>
         </div>
       </div>
     </div>,

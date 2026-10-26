@@ -1,3 +1,4 @@
+import { ActionButton } from '../components/ActionControls';
 import React from 'react';
 
 export default function SalesOrderTourist() {
@@ -45,12 +46,12 @@ export default function SalesOrderTourist() {
               </div>
               
               <div className="pt-2">
-                <button 
+                <ActionButton
                   onClick={() => alert(`Initiating sales request details for ${pkg.name}...`)}
                   className="w-full bg-white border border-slate-200 hover:border-slate-300 hover:bg-slate-50 text-slate-700 text-xs font-bold py-2.5 rounded-xl transition-all uppercase tracking-wider"
                 >
                   Inquire Package
-                </button>
+                </ActionButton>
               </div>
             </div>
           </div>
