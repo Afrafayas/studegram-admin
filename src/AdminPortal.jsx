@@ -119,6 +119,8 @@ export default function AdminPortal({ onLogout }) {
           dob: student.dob || '',
           dateAdded: new Date(student.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
           referredBy: student.referredBy || 'Direct',
+          partner: student.partner || null,
+          partnerId: student.partner?._id || student.partner?.id || student.partner || null,
           country: student.country || 'India',
           status: student.status || 'Active'
         }));
@@ -128,12 +130,14 @@ export default function AdminPortal({ onLogout }) {
         setClients([...mappedAgents, ...mappedStudents]);
       }
 
-      if (appRes.data?.success && Array.isArray(appRes.data.data) && appRes.data.data.length > 0) {
+      if (appRes.data?.success && Array.isArray(appRes.data.data)) {
         const mapped = appRes.data.data.map((app, idx) => ({
           id: app._id,
           _id: app._id,
           camsId: app.camsId || (app._id ? `CAMS-${app._id.toString().slice(-5).toUpperCase()}` : `CAMS-${10001 + idx}`),
           studentName: app.student?.name || 'N/A',
+          student: app.student || null,
+          studentId: app.student?._id || app.student?.id || (typeof app.student === 'string' ? app.student : null),
           passportNo: app.student?.passportNo || 'N/A',
           universityName: app.university?.name || 'N/A',
           courseName: app.course?.title || 'N/A',

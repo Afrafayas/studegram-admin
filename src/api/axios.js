@@ -1,7 +1,7 @@
 import axios from 'axios';
 
-// Reads backend API URL from .env (VITE_API_BASE_URL) with fallback to local development backend
-export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
+// Use the configured API, defaulting to the hosted backend. Set VITE_API_BASE_URL for local backend development.
+export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL?.trim() || 'https://api.unigather.app/api';
 
 const API = axios.create({
   baseURL: API_BASE_URL,

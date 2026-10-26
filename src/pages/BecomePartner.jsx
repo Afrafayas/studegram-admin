@@ -4,6 +4,7 @@ import { createPortal } from 'react-dom';
 import API from '../api/axios';
 import { useToast } from '../context/ToastContext';
 import { useAuth } from '../context/AuthContext';
+import { getPartnerReferredStudents } from '../utils/partnerReferrals';
 
 // Helper to convert base64 string or data URL to Blob URL for clean PDF/Image rendering in iframe
 const getDocumentBlobUrl = (urlOrBase64, mimeType = 'application/pdf') => {
@@ -80,9 +81,11 @@ export default function BecomePartner({ clients = [], setClients, applications =
   const toast = useToast();
   const { addAuditLog } = useAuth();
   const dismissedTargetRef = useRef(false);
+  const dismissedPartnerTargetRef = useRef(null);
 
   const handleBackToDirectory = () => {
     dismissedTargetRef.current = true;
+    dismissedPartnerTargetRef.current = initialSelectedPartnerId;
     setSingleViewPartner(null);
     setSubView('directory');
     localStorage.removeItem('studegram_admin_single_view_partner_id');
@@ -144,7 +147,7 @@ export default function BecomePartner({ clients = [], setClients, applications =
 
   // Auto-navigate to Partner Single View Dossier when initialSelectedPartnerId is passed from notifications or saved ID
   useEffect(() => {
-    if (dismissedTargetRef.current && !initialSelectedPartnerId) return;
+    if (dismissedTargetRef.current && (!initialSelectedPartnerId || initialSelectedPartnerId === dismissedPartnerTargetRef.current)) return;
     if (initialSelectedPartnerId) {
       dismissedTargetRef.current = false;
     }
@@ -361,7 +364,6 @@ export default function BecomePartner({ clients = [], setClients, applications =
   const totalItems = filteredPartners.length;
   const totalPages = Math.ceil(totalItems / itemsPerPage) || 1;
   const startIndex = (currentPage - 1) * itemsPerPage;
-  const endIndex = Math.min(startIndex + itemsPerPage, totalItems);
   const paginatedPartners = filteredPartners.slice(startIndex, startIndex + itemsPerPage);
 
 
@@ -510,9 +512,7 @@ export default function BecomePartner({ clients = [], setClients, applications =
     }
   };
 
-  const getReferredStudents = (partnerName) => {
-    return clients.filter(c => c.type === 'Student' && c.referredBy === partnerName);
-  };
+  const getReferredStudents = partner => getPartnerReferredStudents(partner, clients, applications);
 
   // --- ONBOARDING FORM STATES & LOGIC ---
   const [partnerType, setPartnerType] = useState('Company'); // 'Company' | 'Individual'
@@ -750,6 +750,16 @@ export default function BecomePartner({ clients = [], setClients, applications =
     });
   };
 
+  const handleOpenOnboarding = () => {
+    // Dismiss the old detail target before clearing the selection so the
+    // restoration effect cannot immediately replace the onboarding form.
+    handleBackToDirectory();
+    resetOnboardingForm();
+    setSubView('onboard');
+    document.getElementById('admin-main-content')?.scrollTo({ top: 0 });
+    window.scrollTo({ top: 0 });
+  };
+
   return (
     <div className="flex-1 p-5 md:p-8 space-y-6 bg-[#F8FAFC] animate-fade-in-up">
       {/* Premium Header Banner with Metrics & View Switcher */}
@@ -810,11 +820,7 @@ export default function BecomePartner({ clients = [], setClients, applications =
             </ActionButton>
 
             <ActionButton
-              onClick={() => {
-                setSubView('onboard');
-                setSingleViewPartner(null);
-                resetOnboardingForm();
-              }}
+              onClick={handleOpenOnboarding}
               className={`px-5 py-2.5 text-xs font-black rounded-xl transition-all cursor-pointer flex items-center gap-2 ${
                 subView === 'onboard'
                   ? 'bg-gradient-to-r from-[#D99A1C] to-[#F5B025] text-slate-950 shadow-lg shadow-[#D99A1C]/25'
@@ -887,10 +893,7 @@ export default function BecomePartner({ clients = [], setClients, applications =
               </div>
 
               <ActionButton
-                onClick={() => {
-                  setSubView('onboard');
-                  resetOnboardingForm();
-                }}
+                onClick={handleOpenOnboarding}
                 className="w-full sm:w-auto bg-gradient-to-r from-[#D99A1C] to-[#F5B025] hover:from-[#c28815] hover:to-[#e09e1d] text-white font-black text-xs px-4 py-2.5 rounded-xl shadow-md transition-all cursor-pointer flex items-center justify-center gap-1.5 shrink-0"
               >
                 <span>+ Onboard Agency</span>
@@ -907,9 +910,6 @@ export default function BecomePartner({ clients = [], setClients, applications =
                   Referral Agency Directory ({filteredPartners.length})
                 </h2>
               </div>
-              <span className="text-[10px] text-slate-400 font-bold">
-                Showing {totalItems > 0 ? startIndex + 1 : 0} to {endIndex} of {totalItems} Channels
-              </span>
             </div>
 
             <div className="overflow-x-auto">
@@ -927,7 +927,7 @@ export default function BecomePartner({ clients = [], setClients, applications =
                   </thead>
                   <tbody className="divide-y divide-slate-100 text-xs font-semibold text-slate-700">
                     {paginatedPartners.map((partner, idx) => {
-                      const referredStudents = getReferredStudents(partner.name);
+                      const referredStudents = getReferredStudents(partner);
 
                       return (
                         <tr 
@@ -1098,9 +1098,6 @@ export default function BecomePartner({ clients = [], setClients, applications =
                     <option value={50}>50</option>
                     <option value={100}>100</option>
                   </select>
-                  <span className="text-xs font-semibold text-slate-400">
-                    Showing {totalItems > 0 ? startIndex + 1 : 0} to {endIndex} of {totalItems} entries
-                  </span>
                 </div>
 
                 <div className="flex items-center gap-1.5">
@@ -1310,7 +1307,7 @@ export default function BecomePartner({ clients = [], setClients, applications =
 
               {/* Referred Students Count Card */}
               {(() => {
-                const refStudents = getReferredStudents(singleViewPartner.name);
+                const refStudents = getReferredStudents(singleViewPartner);
                 return (
                   <div className="bg-gradient-to-br from-slate-900 to-slate-800 text-white rounded-3xl p-6 shadow-md space-y-3 border border-slate-700/60">
                     <span className="text-[10px] font-black uppercase tracking-widest text-[#D99A1C]">Referred Metrics</span>
@@ -1432,7 +1429,7 @@ export default function BecomePartner({ clients = [], setClients, applications =
 
               {/* Referred Students Table in Single View */}
               {(() => {
-                const refStudents = getReferredStudents(singleViewPartner.name);
+                const refStudents = getReferredStudents(singleViewPartner);
                 return (
                   <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm space-y-4">
                     <div className="flex justify-between items-center pb-2 border-b border-slate-100">
@@ -1453,13 +1450,13 @@ export default function BecomePartner({ clients = [], setClients, applications =
                           </thead>
                           <tbody className="divide-y divide-slate-100 font-semibold text-slate-700">
                             {refStudents.map(student => (
-                              <tr key={student.id} className="hover:bg-slate-50/50">
+                              <tr key={student._id || student.id || student.passportNo || student.email} className="hover:bg-slate-50/50">
                                 <td className="px-4 py-3 font-bold text-slate-900">{student.name}</td>
-                                <td className="px-4 py-3 text-slate-500">{student.email}</td>
-                                <td className="px-4 py-3 text-slate-500">{student.phone}</td>
+                                <td className="px-4 py-3 text-slate-500">{student.email || 'Not provided'}</td>
+                                <td className="px-4 py-3 text-slate-500">{student.phone || 'Not provided'}</td>
                                 <td className="px-4 py-3">
                                   <span className="px-2 py-0.5 bg-indigo-50 text-indigo-700 rounded-md text-[9px] font-extrabold border border-indigo-100">
-                                    Active Student
+                                    {student.status || 'Not provided'}
                                   </span>
                                 </td>
                               </tr>
