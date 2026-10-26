@@ -1,3 +1,4 @@
+import { getDisplayId } from '../utils/displayId';
 import { ActionButton, ActionForm } from '../components/ActionControls';
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
@@ -111,7 +112,7 @@ export default function Students({ clients = [], setClients, applications = [], 
 
     const apps = getStudentApplications(target);
     const primaryApp = apps[0];
-    const stdCode = target.studentCode || (target.id ? `STD-${String(target.id).slice(-5).toUpperCase()}` : '');
+    const stdCode = getDisplayId(target);
 
     setEmailTargetStudent(target);
     setEmailErrorNotice('');
@@ -132,7 +133,7 @@ We are contacting you from the Unigather Admissions & Operations team regarding 
     if (primaryApp) {
       const uName = primaryApp.universityName || primaryApp.university || 'Target University';
       const cName = primaryApp.courseName || primaryApp.course || 'Academic Program';
-      const cams = primaryApp.camsId ? ` (CAMS ID: ${primaryApp.camsId})` : '';
+      const cams = primaryApp.camsId ? ` (Application ID: ${primaryApp.camsId})` : '';
       const intake = primaryApp.intake ? ` for ${primaryApp.intake}` : '';
       messageBody += `
 
@@ -1054,7 +1055,7 @@ support@unigather.app`;
                           <table className="w-full text-left border-collapse text-xs">
                             <thead>
                               <tr className="bg-slate-50 border-b border-slate-200">
-                                <th className="px-4 py-3 text-slate-400 text-[10px] font-extrabold uppercase tracking-wider">CAMS ID</th>
+                                <th className="px-4 py-3 text-slate-400 text-[10px] font-extrabold uppercase tracking-wider">Application ID</th>
                                 <th className="px-4 py-3 text-slate-400 text-[10px] font-extrabold uppercase tracking-wider">University &amp; Course</th>
                                 <th className="px-4 py-3 text-slate-400 text-[10px] font-extrabold uppercase tracking-wider">Intake</th>
                                 <th className="px-4 py-3 text-slate-400 text-[10px] font-extrabold uppercase tracking-wider text-center">Status</th>
@@ -1067,7 +1068,7 @@ support@unigather.app`;
                                 return (
                                   <tr key={app.camsId || app.id || app._id} className="hover:bg-slate-50/50 transition-colors">
                                     <td className="px-4 py-3.5 font-mono font-bold text-[#D99A1C]">
-                                      {app.camsId && app.camsId.startsWith('CAMS') ? app.camsId : `CAMS${(app.camsId || '').substring((app.camsId || '').length - 6).toUpperCase()}`}
+                                      {getDisplayId(app)}
                                     </td>
                                     <td className="px-4 py-3.5">
                                       <p className="text-slate-950 font-black">{app.universityName}</p>

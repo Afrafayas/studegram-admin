@@ -1,3 +1,4 @@
+import { getDisplayId } from '../utils/displayId';
 import { normalizeKey, normalizeIntake, readRow, headerErrors, mapCurrency, mapFeePeriod, mapDegreeLevel, mapCategory, validFee, splitIntakes, buildLookup } from '../utils/courseImport';
 import { currencies, feeCurrency, formatFee, feePeriods, inferFeePeriod } from '../utils/courseFee';
 import { ActionButton, ActionForm } from '../components/ActionControls';
@@ -1138,7 +1139,7 @@ if (!token) throw new Error('Please sign in to save changes.');
                         <tr key={cId} className="hover:bg-slate-50/60 transition-colors">
                           <td className="px-5 py-3.5 font-black text-slate-900">
                             <div>
-                              <p className="text-xs font-black text-slate-900">{course.title}</p>
+                              <p className="text-xs font-black text-slate-900">{course.title}</p><p className="text-[10px] text-slate-500 font-mono">{getDisplayId(course)}</p>
                               {course.category && <p className="text-[9px] text-slate-400 font-bold uppercase">{course.category}</p>}
                             </div>
                           </td>

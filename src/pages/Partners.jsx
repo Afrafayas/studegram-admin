@@ -1,3 +1,4 @@
+import { getDisplayId } from '../utils/displayId';
 import { ActionButton, ActionForm } from '../components/ActionControls';
 import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
@@ -137,7 +138,7 @@ if (!token) throw new Error('Please sign in to save changes.');
       const response = await API.post('/partners', { name: newPartnerName, email: newPartnerEmail, phone: newPartnerPhone, partnerType });
       if (!response.data?.success) throw new Error(response.data?.message || 'Unable to create partner.');
       const saved = response.data.data;
-      const newPartner = { ...saved, id: saved._id, type: 'Agent', partnerCode: saved.partnerCode || saved._id,
+      const newPartner = { ...saved, id: saved._id, type: 'Agent', partnerCode: getDisplayId(saved),
         dateAdded: saved.createdAt ? new Date(saved.createdAt).toLocaleDateString('en-GB') : '' };
       setClients(prev => [newPartner, ...prev]);
       

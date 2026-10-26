@@ -1,3 +1,4 @@
+import { getDisplayId } from '../utils/displayId';
 import PartnerDocumentRequests from '../components/PartnerDocumentRequests';
 import { ActionButton, ActionForm } from '../components/ActionControls';
 import React, { useState, useEffect, useRef } from 'react';
@@ -634,7 +635,7 @@ export default function BecomePartner({ clients = [], setClients, applications =
             country: formData.country,
             email: formData.email,
             phone: formData.phone,
-            partnerCode: newlyCreated.partnerCode || newlyCreated._id,
+            partnerCode: getDisplayId(newlyCreated),
             status: 'Active',
             activeApps: 0,
             documents: docsPayload,
@@ -645,7 +646,7 @@ export default function BecomePartner({ clients = [], setClients, applications =
             setClients(prev => [newPartnerObj, ...prev]);
           }
 
-          setSubmittedPartnerCode(newlyCreated.partnerCode || newlyCreated._id);
+          setSubmittedPartnerCode(getDisplayId(newlyCreated));
           setIsSubmittedSuccess(true);
           addAuditLog('ONBOARD_PARTNER', 'Partner', newlyCreated._id, `Onboarded ${newlyCreated.name}`);
           if (onPartnerOnboarded) onPartnerOnboarded();

@@ -1,3 +1,4 @@
+import { getDisplayId } from '../utils/displayId';
 import { applicationFee } from '../utils/courseFee';
 import { getAssignedExecutiveName } from '../utils/applicationAssignment';
 import { ActionButton, ActionForm } from '../components/ActionControls';
@@ -339,7 +340,7 @@ export default function Applications({ applications, referralAgents = [], intake
           const mappedApp = {
             id: freshApp._id,
             _id: freshApp._id,
-            camsId: freshApp.camsId || `CAMS-${freshApp._id.slice(-5)}`,
+            camsId: getDisplayId(freshApp),
             studentName: freshApp.student?.name || 'N/A',
             passportNo: freshApp.student?.passportNo || 'N/A',
             universityName: freshApp.university?.name || 'N/A',
@@ -1128,7 +1129,7 @@ export default function Applications({ applications, referralAgents = [], intake
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="bg-slate-50 border-b border-[#E2E8F0]">
-                  <th className="px-6 py-3.5 text-slate-400 text-[10px] font-extrabold uppercase tracking-wider pl-6">ID / CAMS ID</th>
+                  <th className="px-6 py-3.5 text-slate-400 text-[10px] font-extrabold uppercase tracking-wider pl-6">ID / Application ID</th>
                   <th className="px-6 py-3.5 text-slate-400 text-[10px] font-extrabold uppercase tracking-wider">Student Profile</th>
                   <th className="px-6 py-3.5 text-slate-400 text-[10px] font-extrabold uppercase tracking-wider">University & Course</th>
                   <th className="px-6 py-3.5 text-slate-400 text-[10px] font-extrabold uppercase tracking-wider">Handling Staff</th>
@@ -1154,7 +1155,7 @@ export default function Applications({ applications, referralAgents = [], intake
                       <td className="px-6 py-4 font-extrabold text-[#D99A1C] pl-6 truncate max-w-[120px]">
                         <div>
                           <span className="group-hover:underline group-hover:text-[#F5B025] transition-colors flex items-center gap-1">
-                            <span>{app.camsId && app.camsId.startsWith('CAMS') ? app.camsId : `CAMS${(app.camsId || '').substring((app.camsId || '').length - 6).toUpperCase()}`}</span>
+                            <span>{getDisplayId(app)}</span>
                             <span className="text-[10px] text-[#D99A1C] opacity-0 group-hover:opacity-100 transition-opacity font-extrabold">↗</span>
                           </span>
                           {app.hasUnrepliedMessage && (
@@ -1368,7 +1369,7 @@ export default function Applications({ applications, referralAgents = [], intake
                 <h2 className="text-xl font-black text-slate-900 flex items-center gap-2 flex-wrap mt-0.5">
                   <span>{singleViewApp.studentName}</span>
                   <span className="text-xs font-mono font-bold bg-blue-50 text-blue-700 px-2.5 py-0.5 rounded-md border border-blue-200">
-                    {singleViewApp.camsId && singleViewApp.camsId.startsWith('CAMS') ? singleViewApp.camsId : `CAMS${(singleViewApp.camsId || '').substring((singleViewApp.camsId || '').length - 6).toUpperCase()}`}
+                    {getDisplayId(singleViewApp)}
                   </span>
                   <span className={`px-2.5 py-0.5 border rounded-full text-[10px] font-extrabold ${
                     (singleViewApp.secondaryStatus || singleViewApp.status || 'Submitted').includes('Closed') || (singleViewApp.secondaryStatus || singleViewApp.status) === 'Enrolled / Closed' || (singleViewApp.secondaryStatus || singleViewApp.status) === 'Visa Approved' || (singleViewApp.secondaryStatus || singleViewApp.status) === 'Paid Students'
@@ -1787,7 +1788,7 @@ export default function Applications({ applications, referralAgents = [], intake
               <div>
                 <h3 className="text-sm font-black text-slate-900">Edit Application Details</h3>
                 <p className="text-[11px] text-slate-500 font-semibold">
-                  Applicant: <strong className="text-slate-900">{editModalApp.studentName}</strong> ({editModalApp.camsId || 'CAMS File'})
+                  Applicant: <strong className="text-slate-900">{editModalApp.studentName}</strong> ({editModalApp.camsId || 'Application file'})
                 </p>
               </div>
               <ActionButton

@@ -1,3 +1,4 @@
+import { getDisplayId } from './utils/displayId';
 import { getAssignedExecutiveName } from './utils/applicationAssignment';
 import React, { useState, useEffect, useRef } from 'react';
 import AdminSidebar from './components/AdminSidebar';
@@ -61,7 +62,9 @@ export default function AdminPortal({ onLogout }) {
       if (userRes.data?.success && Array.isArray(userRes.data.data)) {
         const mappedUsers = userRes.data.data.map(u => ({
           id: u._id,
+          displayId: u.displayId,
           _id: u._id,
+          displayId: u.displayId,
           name: u.name,
           email: u.email,
           createdAt: u.createdAt,
@@ -95,6 +98,7 @@ export default function AdminPortal({ onLogout }) {
         setReferralAgents(partnerRes.data.data);
         mappedAgents = partnerRes.data.data.map((agent) => ({
           id: agent._id,
+          displayId: agent.displayId,
           name: agent.name,
           type: 'Agent',
           email: agent.email,
@@ -104,7 +108,7 @@ export default function AdminPortal({ onLogout }) {
           taxId: agent.taxId || '',
           documents: Array.isArray(agent.documents) ? agent.documents : (agent.documents ? [agent.documents] : []),
           activeApps: (appRes.data?.data || []).filter(app => String(app.partner?._id || app.partner || '') === String(agent._id)).length,
-          partnerCode: agent.partnerCode || agent._id,
+          partnerCode: getDisplayId(agent),
           dateAdded: new Date(agent.createdAt || Date.now()).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
           country: agent.country || '',
           status: agent.status || 'Active'
@@ -121,7 +125,7 @@ export default function AdminPortal({ onLogout }) {
           email: student.email,
           phone: student.phone || '',
           activeApps: (appRes.data?.data || []).filter(app => String(app.student?._id || app.student || '') === String(student._id)).length,
-          studentCode: student.studentCode || student._id,
+          studentCode: getDisplayId(student),
           passportNo: student.passportNo || 'Pending',
           documents: Array.isArray(student.documents) ? student.documents : [],
           dob: student.dob || '',
@@ -146,7 +150,7 @@ export default function AdminPortal({ onLogout }) {
           ...app,
           id: app._id,
           _id: app._id,
-          camsId: app.camsId || app._id,
+          camsId: getDisplayId(app),
           studentName: app.student?.name || 'N/A',
           student: app.student || null,
           studentId: app.student?._id || app.student?.id || (typeof app.student === 'string' ? app.student : null),

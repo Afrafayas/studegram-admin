@@ -235,8 +235,8 @@ export default function AdminHeader({
     setShowNotifications(false);
 
     const { tab, subTab } = getNotificationDestination(n);
-    const extractedCams = (n.message || '').match(/CAMS-\d+/i)?.[0] || (n.title || '').match(/CAMS-\d+/i)?.[0];
-    const extractedPartnerCode = (n.message || '').match(/PRTNR-\d+/i)?.[0] || (n.title || '').match(/PRTNR-\d+/i)?.[0];
+    const extractedCams = (n.message || '').match(/(?:APP|CAMS)-\d+/i)?.[0] || (n.title || '').match(/(?:APP|CAMS)-\d+/i)?.[0];
+    const extractedPartnerCode = (n.message || '').match(/(?:AGT|PRTNR)-\d+/i)?.[0] || (n.title || '').match(/(?:AGT|PRTNR)-\d+/i)?.[0];
     const targetId = n.relatedId || n.applicationId || n.partnerId || n.studentId || n.targetAppId || n.appId || extractedCams || extractedPartnerCode || null;
 
     if (onNavigate) {

@@ -1,3 +1,4 @@
+import { getDisplayId } from '../utils/displayId';
 import { ActionButton } from '../components/ActionControls';
 import React, { useState, useMemo } from 'react';
 
@@ -67,7 +68,7 @@ export default function AdminReport({
       }
 
       return {
-        camsId: app.camsId || app._id || app.id || '',
+        camsId: getDisplayId(app),
         name: app.studentName || `${app.firstName || ''} ${app.lastName || ''}`.trim() || 'N/A',
         agent: agentName,
         university: univName,
@@ -146,7 +147,7 @@ export default function AdminReport({
 
   const handleExport = () => {
     try {
-      const headers = ['CAMS ID', 'Student Name', 'Agent Channel', 'University', 'Course', 'Intake', 'Country', 'Status'];
+      const headers = ['Application ID', 'Student Name', 'Agent Channel', 'University', 'Course', 'Intake', 'Country', 'Status'];
       const rows = filteredApps.map(app => [
         `"${(app.camsId || '').replace(/"/g, '""')}"`,
         `"${(app.name || '').replace(/"/g, '""')}"`,
@@ -294,7 +295,7 @@ export default function AdminReport({
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="bg-slate-50 border-b border-[#E2E8F0]">
-                  <th className="px-6 py-3 text-slate-400 text-[10px] font-extrabold uppercase tracking-wider">CAMS ID</th>
+                  <th className="px-6 py-3 text-slate-400 text-[10px] font-extrabold uppercase tracking-wider">Application ID</th>
                   <th className="px-6 py-3 text-slate-400 text-[10px] font-extrabold uppercase tracking-wider">Student Name</th>
                   <th className="px-6 py-3 text-slate-400 text-[10px] font-extrabold uppercase tracking-wider">Agent Channel</th>
                   <th className="px-6 py-3 text-slate-400 text-[10px] font-extrabold uppercase tracking-wider">University</th>
