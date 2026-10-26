@@ -1,3 +1,4 @@
+import { ActionButton } from '../components/ActionControls';
 import React, { useState, useEffect } from 'react';
 import API from '../api/axios';
 import { useToast } from '../context/ToastContext';
@@ -110,7 +111,7 @@ export default function StaffActivitySingleView({ staffId, onBack }) {
         <p className="text-xs text-slate-500 mt-1">
           No activity logs could be found for this staff member identifier.
         </p>
-        <button
+        <ActionButton
           onClick={onBack}
           className="mt-6 px-4 py-2 bg-slate-900 text-white rounded-xl text-xs font-bold hover:bg-slate-800 transition-all inline-flex items-center gap-2"
         >
@@ -118,7 +119,7 @@ export default function StaffActivitySingleView({ staffId, onBack }) {
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
           </svg>
           Back to Activity Logs
-        </button>
+        </ActionButton>
       </div>
     );
   }
@@ -291,7 +292,7 @@ export default function StaffActivitySingleView({ staffId, onBack }) {
       {/* Top Navigation Bar with Back Button */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-200">
         <div className="flex items-center gap-3">
-          <button
+          <ActionButton
             onClick={onBack}
             className="group flex items-center gap-2 px-3 py-1.5 bg-white border border-slate-200 hover:border-slate-300 text-slate-700 hover:text-slate-900 rounded-xl text-xs font-bold transition-all shadow-xs"
           >
@@ -299,7 +300,7 @@ export default function StaffActivitySingleView({ staffId, onBack }) {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
             </svg>
             <span>Back to Activity Logs</span>
-          </button>
+          </ActionButton>
           <div className="h-4 w-px bg-slate-300"></div>
           <div>
             <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Staff Single View</span>
@@ -313,7 +314,7 @@ export default function StaffActivitySingleView({ staffId, onBack }) {
         </div>
 
         <div className="flex items-center gap-2">
-          <button
+          <ActionButton
             onClick={fetchStaffDetails}
             className="flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-slate-50 border border-slate-200 text-slate-600 rounded-xl text-xs font-semibold shadow-xs transition-all"
             title="Refresh Timeline Data"
@@ -322,7 +323,7 @@ export default function StaffActivitySingleView({ staffId, onBack }) {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
             </svg>
             <span>Refresh</span>
-          </button>
+          </ActionButton>
         </div>
       </div>
 
@@ -433,7 +434,7 @@ export default function StaffActivitySingleView({ staffId, onBack }) {
             { id: 'Application', label: 'Application Operations' },
             { id: 'Other', label: 'Other Activities' }
           ].map(tab => (
-            <button
+            <ActionButton
               key={tab.id}
               onClick={() => setCategoryFilter(tab.id)}
               className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
@@ -443,7 +444,7 @@ export default function StaffActivitySingleView({ staffId, onBack }) {
               }`}
             >
               {tab.label}
-            </button>
+            </ActionButton>
           ))}
         </div>
 

@@ -1,3 +1,4 @@
+import { ActionButton, ActionForm } from '../components/ActionControls';
 import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
 import API from '../api/axios';
@@ -178,7 +179,7 @@ export default function Partners({ clients, setClients }) {
           <h1 className="text-xl font-black text-slate-900 tracking-tight">Referral Partners Directory</h1>
           <p className="text-xs text-slate-500 font-medium">Manage B2B Referral Agents, view their details and referred student applications.</p>
         </div>
-        <button
+        <ActionButton
           onClick={() => setIsModalOpen(true)}
           className="bg-[#D99A1C] hover:bg-[#F5B025] text-white font-extrabold text-xs px-4 py-2 rounded-xl transition-all shadow-md inline-flex items-center gap-1.5"
         >
@@ -186,14 +187,14 @@ export default function Partners({ clients, setClients }) {
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
           </svg>
           <span>Become our Partner / Onboard</span>
-        </button>
+        </ActionButton>
       </div>
 
       {/* Directory Filters & Search */}
       <div className="bg-white border border-[#E2E8F0] border-t-4 border-t-[#2563EB] rounded-2xl p-5 shadow-xs flex flex-col sm:flex-row gap-4 items-center justify-between">
         <div className="bg-slate-100 p-1 rounded-xl flex w-full sm:w-auto">
           {['All', 'Pending', 'Approved'].map((status) => (
-            <button
+            <ActionButton
               key={status}
               onClick={() => setStatusFilter(status)}
               className={`flex-1 sm:flex-none px-4 py-1.5 text-xs font-bold rounded-lg transition-all ${
@@ -203,7 +204,7 @@ export default function Partners({ clients, setClients }) {
               }`}
             >
               {status}
-            </button>
+            </ActionButton>
           ))}
         </div>
 
@@ -304,13 +305,13 @@ export default function Partners({ clients, setClients }) {
                           </span>
                           {partner.status === 'Pending' && (
                             <>
-                              <button
+                              <ActionButton
                                 onClick={() => handleUpdateStatus(partner.id || partner._id, 'Active')}
                                 className="bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-[9px] px-2 py-1 rounded-md transition-all shadow-3xs cursor-pointer uppercase tracking-wider"
                               >
                                 Approve
-                              </button>
-                              <button
+                              </ActionButton>
+                              <ActionButton
                                 onClick={() => {
                                   setRejectPartnerModal(partner);
                                   setRejectionReason('');
@@ -318,24 +319,24 @@ export default function Partners({ clients, setClients }) {
                                 className="bg-rose-600 hover:bg-rose-700 text-white font-extrabold text-[9px] px-2 py-1 rounded-md transition-all shadow-3xs cursor-pointer uppercase tracking-wider"
                               >
                                 Reject
-                              </button>
+                              </ActionButton>
                             </>
                           )}
                           {partner.status === 'Active' && (
-                            <button
+                            <ActionButton
                               onClick={() => handleUpdateStatus(partner.id || partner._id, 'Inactive')}
                               className="bg-rose-500 hover:bg-rose-600 text-white font-extrabold text-[9px] px-2 py-1 rounded-md transition-all shadow-3xs cursor-pointer uppercase tracking-wider"
                             >
                               Deactivate
-                            </button>
+                            </ActionButton>
                           )}
                           {partner.status === 'Inactive' && (
-                            <button
+                            <ActionButton
                               onClick={() => handleUpdateStatus(partner.id || partner._id, 'Active')}
                               className="bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-[9px] px-2 py-1 rounded-md transition-all shadow-3xs cursor-pointer uppercase tracking-wider"
                             >
                               Activate
-                            </button>
+                            </ActionButton>
                           )}
                         </td>
                       </tr>
@@ -355,7 +356,7 @@ export default function Partners({ clients, setClients }) {
                                 {/* Sub tabs header */}
                                 <div className="flex justify-between items-center border-b border-slate-150 pb-2">
                                   <div className="flex gap-4">
-                                    <button 
+                                    <ActionButton
                                       onClick={() => setSubTab('overview')}
                                       className={`pb-1 text-xs font-black uppercase tracking-wider transition-all border-b-2 cursor-pointer ${
                                         currentSubTab === 'overview' 
@@ -364,8 +365,8 @@ export default function Partners({ clients, setClients }) {
                                       }`}
                                     >
                                       Overview
-                                    </button>
-                                    <button 
+                                    </ActionButton>
+                                    <ActionButton
                                       onClick={() => setSubTab('applications')}
                                       className={`pb-1 text-xs font-black uppercase tracking-wider transition-all border-b-2 cursor-pointer ${
                                         currentSubTab === 'applications' 
@@ -374,7 +375,7 @@ export default function Partners({ clients, setClients }) {
                                       }`}
                                     >
                                       Applications ({referredStudents.length})
-                                    </button>
+                                    </ActionButton>
                                   </div>
                                   <p className="text-[10px] text-slate-400 font-semibold">
                                     Joined On: {partner.dateAdded || 'N/A'}
@@ -457,13 +458,13 @@ export default function Partners({ clients, setClients }) {
                                                 </div>
 
                                                 <div className="flex items-center gap-2 pt-1 border-t border-slate-100">
-                                                  <button
+                                                  <ActionButton
                                                     type="button"
                                                     onClick={() => setPreviewDocModal({ title: docName, url: docUrl })}
                                                     className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-800 text-[10px] font-bold py-1.5 rounded-lg text-center transition-all"
                                                   >
                                                     View / Preview
-                                                  </button>
+                                                  </ActionButton>
                                                   <a
                                                     href={docUrl}
                                                     target="_blank"
@@ -552,15 +553,15 @@ export default function Partners({ clients, setClients }) {
                 <h3 className="text-xs font-black text-slate-900 uppercase tracking-wider">Onboard Referral Partner</h3>
                 <p className="text-[10px] text-slate-400 font-semibold">Invite new agency partner to access referral portal</p>
               </div>
-              <button 
+              <ActionButton
                 onClick={() => setIsModalOpen(false)} 
                 className="text-slate-400 hover:text-slate-600 font-bold"
               >
                 ✕
-              </button>
+              </ActionButton>
             </div>
 
-            <form onSubmit={handleInvitePartner} className="space-y-4">
+            <ActionForm onSubmit={handleInvitePartner} className="space-y-4">
               <div className="space-y-1.5">
                 <label className="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">Partner / Agency Name</label>
                 <input
@@ -598,14 +599,14 @@ export default function Partners({ clients, setClients }) {
               </div>
 
               <div className="flex justify-end gap-2 pt-2">
-                <button
+                <ActionButton
                   type="button"
                   onClick={() => setIsModalOpen(false)}
                   className="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-extrabold text-xs rounded-xl transition-all"
                 >
                   Cancel
-                </button>
-                <button
+                </ActionButton>
+                <ActionButton
                   type="submit"
                   disabled={isInviting}
                   className="px-4 py-2 bg-[#D99A1C] hover:bg-[#F5B025] disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center justify-center gap-1.5 text-white font-extrabold text-xs rounded-xl transition-all shadow-md"
@@ -617,9 +618,9 @@ export default function Partners({ clients, setClients }) {
                     </svg>
                   )}
                   {isInviting ? 'Onboarding...' : 'Confirm Onboarding'}
-                </button>
+                </ActionButton>
               </div>
-            </form>
+            </ActionForm>
           </div>
         </div>,
         document.body
@@ -634,15 +635,15 @@ export default function Partners({ clients, setClients }) {
                 <h3 className="text-sm font-black text-rose-900 uppercase tracking-wider">Reject Partner Registration</h3>
                 <p className="text-[11px] text-slate-500 font-semibold">Partner: <strong className="text-slate-800">{rejectPartnerModal.name}</strong></p>
               </div>
-              <button 
+              <ActionButton
                 onClick={() => setRejectPartnerModal(null)} 
                 className="text-slate-400 hover:text-slate-600 font-bold text-sm"
               >
                 ✕
-              </button>
+              </ActionButton>
             </div>
 
-            <form onSubmit={handleRejectPartnerSubmit} className="space-y-4">
+            <ActionForm onSubmit={handleRejectPartnerSubmit} className="space-y-4">
               <div className="space-y-1.5">
                 <label className="block text-[10px] font-extrabold text-slate-600 uppercase tracking-wider">
                   Mandatory Rejection Reason <span className="text-rose-500">*</span>
@@ -658,14 +659,14 @@ export default function Partners({ clients, setClients }) {
               </div>
 
               <div className="flex justify-end gap-2 pt-2">
-                <button
+                <ActionButton
                   type="button"
                   onClick={() => setRejectPartnerModal(null)}
                   className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-extrabold text-xs rounded-xl transition-all"
                 >
                   Cancel
-                </button>
-                <button
+                </ActionButton>
+                <ActionButton
                   type="submit"
                   disabled={isRejecting}
                   className="px-5 py-2 bg-rose-600 hover:bg-rose-700 disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center justify-center gap-1.5 text-white font-extrabold text-xs rounded-xl transition-all shadow-md"
@@ -677,9 +678,9 @@ export default function Partners({ clients, setClients }) {
                     </svg>
                   )}
                   {isRejecting ? 'Rejecting...' : 'Confirm Rejection & Send Email Notification'}
-                </button>
+                </ActionButton>
               </div>
-            </form>
+            </ActionForm>
           </div>
         </div>,
         document.body
@@ -690,9 +691,9 @@ export default function Partners({ clients, setClients }) {
           <div className="bg-white border border-slate-200 rounded-2xl w-full max-w-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
             <div className="flex justify-between items-center p-4 bg-slate-900 text-white">
               <h3 className="text-xs font-bold uppercase tracking-wider">{previewDocModal.title || 'Legal Document Preview'}</h3>
-              <button onClick={() => setPreviewDocModal(null)} className="text-slate-400 hover:text-white font-bold text-sm">
+              <ActionButton onClick={() => setPreviewDocModal(null)} className="text-slate-400 hover:text-white font-bold text-sm">
                 ✕ Close
-              </button>
+              </ActionButton>
             </div>
             <div className="flex-1 p-4 overflow-auto bg-slate-100 flex items-center justify-center min-h-[400px]">
               {previewDocModal.url?.startsWith('data:image') || previewDocModal.url?.match(/\.(jpg|jpeg|png|webp)$/i) ? (

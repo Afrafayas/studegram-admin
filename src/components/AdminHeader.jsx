@@ -1,3 +1,4 @@
+import { ActionButton } from './ActionControls';
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import API from '../api/axios';
@@ -314,7 +315,7 @@ export default function AdminHeader({
       <div className="h-[64px] min-h-[64px] px-6 flex items-center justify-between">
         {/* Left Side: Hamburger & Breadcrumbs */}
         <div className="flex items-center gap-4">
-          <button 
+          <ActionButton
             onClick={onToggleSidebar}
             className="lg:hidden p-1.5 text-slate-400 hover:text-white hover:bg-slate-900 rounded-lg focus:outline-none"
             title="Toggle Navigation"
@@ -322,10 +323,10 @@ export default function AdminHeader({
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" />
             </svg>
-          </button>
+          </ActionButton>
 
           {onBack && (
-            <button
+            <ActionButton
               onClick={onBack}
               className="p-1.5 text-slate-400 hover:text-white hover:bg-slate-900 rounded-lg focus:outline-none transition-all flex items-center justify-center active:scale-95 duration-100"
               title="Go Back"
@@ -333,7 +334,7 @@ export default function AdminHeader({
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
               </svg>
-            </button>
+            </ActionButton>
           )}
 
           {/* Breadcrumbs */}
@@ -359,7 +360,7 @@ export default function AdminHeader({
         {/* Right Side: Profile Dropdown, Notifications & Refresh Button */}
         <div className="flex items-center gap-3 relative">
           {onRefreshData && (
-            <button
+            <ActionButton
               onClick={onRefreshData}
               disabled={isSyncing}
               title="Refresh Live Data"
@@ -367,12 +368,12 @@ export default function AdminHeader({
             >
               <span className={isSyncing ? "animate-spin text-[#D99A1C]" : "text-[#D99A1C]"}>🔄</span>
               <span className="hidden md:inline">{isSyncing ? "Refreshing..." : "Refresh"}</span>
-            </button>
+            </ActionButton>
           )}
 
           {/* Real-time Application Comments Icon & Drawer */}
           <div className="relative">
-            <button
+            <ActionButton
               onClick={() => {
                 setShowComments(!showComments);
                 if (showNotifications) setShowNotifications(false);
@@ -388,7 +389,7 @@ export default function AdminHeader({
                   {unreadCommentsCount}
                 </span>
               )}
-            </button>
+            </ActionButton>
 
             {/* Application Comments Dropdown */}
             {showComments && (
@@ -456,7 +457,7 @@ export default function AdminHeader({
 
           {/* Real-time Notification Bell Drawer */}
           <div className="relative">
-            <button
+            <ActionButton
               onClick={() => {
                 setShowNotifications(!showNotifications);
                 if (showComments) setShowComments(false);
@@ -472,7 +473,7 @@ export default function AdminHeader({
                   {unreadCount}
                 </span>
               )}
-            </button>
+            </ActionButton>
 
             {/* Notifications Dropdown Drawer */}
             {showNotifications && (
@@ -488,12 +489,12 @@ export default function AdminHeader({
                       <p className="text-[10px] text-slate-400">Live operational & application logs</p>
                     </div>
                     {unreadCount > 0 && (
-                      <button
+                      <ActionButton
                         onClick={handleMarkAllRead}
                         className="text-[9px] font-extrabold text-[#D99A1C] hover:underline cursor-pointer"
                       >
                         Mark all as read
-                      </button>
+                      </ActionButton>
                     )}
                   </div>
 
@@ -543,7 +544,7 @@ export default function AdminHeader({
             <p className="text-[10px] text-[#D99A1C] font-extrabold uppercase">{currentUser?.role || 'SuperAdmin'} ({currentUser?.country || 'Global'})</p>
           </div>
 
-          <button
+          <ActionButton
             onClick={() => setProfileDropdownOpen(!profileDropdownOpen)}
             className="relative cursor-pointer group focus:outline-none"
           >
@@ -551,7 +552,7 @@ export default function AdminHeader({
               {currentUser?.avatar || 'SA'}
             </div>
             <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-emerald-500 rounded-full ring-2 ring-white"></span>
-          </button>
+          </ActionButton>
 
           {/* Profile Dropdown Menu */}
           {profileDropdownOpen && (
@@ -580,7 +581,7 @@ export default function AdminHeader({
                   <span>Student Portal</span>
                 </a>
                 <hr className="border-slate-900 my-1" />
-                <button
+                <ActionButton
                   onClick={() => {
                     setProfileDropdownOpen(false);
                     onLogout();
@@ -591,7 +592,7 @@ export default function AdminHeader({
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
                   </svg>
                   <span>Sign Out</span>
-                </button>
+                </ActionButton>
               </div>
             </>
           )}

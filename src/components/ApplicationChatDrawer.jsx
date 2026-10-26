@@ -1,3 +1,5 @@
+import { getAssignedExecutiveName } from '../utils/applicationAssignment';
+import { ActionButton, ActionForm } from './ActionControls';
 import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useAuth } from '../context/AuthContext';
@@ -38,7 +40,7 @@ class DrawerErrorBoundary extends React.Component {
                 </p>
               )}
             </div>
-            <button
+            <ActionButton
               onClick={() => {
                 this.setState({ hasError: false, error: null });
                 if (this.props.onClose) this.props.onClose();
@@ -46,7 +48,7 @@ class DrawerErrorBoundary extends React.Component {
               className="w-full bg-[#D99A1C] hover:bg-[#b88214] text-white font-bold py-2.5 px-4 rounded-xl text-xs transition-colors cursor-pointer shadow-sm"
             >
               Close Drawer
-            </button>
+            </ActionButton>
           </div>
         </div>,
         document.body
@@ -417,7 +419,7 @@ function ApplicationChatDrawerContent({ app, onClose }) {
               <span className="text-[10px] font-semibold text-slate-400">{app.studentName}</span>
             </div>
           </div>
-          <button 
+          <ActionButton
             onClick={onClose}
             className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-900 transition-all"
             title="Close Panel"
@@ -425,12 +427,12 @@ function ApplicationChatDrawerContent({ app, onClose }) {
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M6 18L18 6M6 6l12 12" />
             </svg>
-          </button>
+          </ActionButton>
         </div>
 
         {/* Drawer Tabs */}
         <div className="flex border-b border-slate-250 bg-slate-100/60 px-4 pt-2 gap-4">
-          <button 
+          <ActionButton
             onClick={() => setActiveTab('chat')}
             className={`pb-2 text-[10px] font-black uppercase tracking-wider transition-all border-b-2 cursor-pointer ${
               activeTab === 'chat' 
@@ -439,8 +441,8 @@ function ApplicationChatDrawerContent({ app, onClose }) {
             }`}
           >
             Chat Discussion
-          </button>
-          <button 
+          </ActionButton>
+          <ActionButton
             onClick={() => setActiveTab('details')}
             className={`pb-2 text-[10px] font-black uppercase tracking-wider transition-all border-b-2 cursor-pointer ${
               activeTab === 'details' 
@@ -449,7 +451,7 @@ function ApplicationChatDrawerContent({ app, onClose }) {
             }`}
           >
             Application Details
-          </button>
+          </ActionButton>
         </div>
 
         {/* Small metadata summary bar */}
@@ -628,7 +630,7 @@ function ApplicationChatDrawerContent({ app, onClose }) {
                       </svg>
                       <span className="truncate flex-1 font-mono">{file.name}</span>
                       <span className="text-[8px] text-slate-400 shrink-0">({file.size}MB)</span>
-                      <button 
+                      <ActionButton
                         onClick={() => removeFile(fIdx)} 
                         className="p-0.5 rounded-full text-slate-400 hover:text-rose-500 hover:bg-slate-300/40 transition-colors shrink-0"
                         title="Remove attachment"
@@ -636,14 +638,14 @@ function ApplicationChatDrawerContent({ app, onClose }) {
                         <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M6 18L18 6M6 6l12 12" />
                         </svg>
-                      </button>
+                      </ActionButton>
                     </div>
                   ))}
                 </div>
               )}
 
               {/* Form action */}
-              <form onSubmit={handleSendMessage} className="flex gap-2 items-center">
+              <ActionForm onSubmit={handleSendMessage} className="flex gap-2 items-center">
                 {/* File attachment hook */}
                 <input 
                   type="file" 
@@ -653,7 +655,7 @@ function ApplicationChatDrawerContent({ app, onClose }) {
                   className="hidden"
                   accept=".pdf,.docx,.doc,.jpg,.jpeg,.png"
                 />
-                <button 
+                <ActionButton
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
                   className="p-2.5 rounded-xl border border-slate-200 text-slate-400 hover:text-[#D99A1C] hover:border-[#D99A1C] hover:bg-slate-50 transition-all shrink-0 shadow-xs"
@@ -663,7 +665,7 @@ function ApplicationChatDrawerContent({ app, onClose }) {
                   <svg className="w-4.5 h-4.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.3" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
                   </svg>
-                </button>
+                </ActionButton>
 
                 {/* Message input */}
                 <input 
@@ -676,7 +678,7 @@ function ApplicationChatDrawerContent({ app, onClose }) {
                 />
 
                 {/* Submit button */}
-                <button 
+                <ActionButton
                   type="submit"
                   disabled={isSending || (!messageText.trim() && selectedFiles.length === 0)}
                   className="p-2.5 rounded-xl bg-slate-800 hover:bg-[#D99A1C] text-white hover:scale-[1.03] transition-all disabled:opacity-40 disabled:cursor-not-allowed inline-flex items-center justify-center gap-1.5 shrink-0 shadow-md"
@@ -692,8 +694,8 @@ function ApplicationChatDrawerContent({ app, onClose }) {
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
                     </svg>
                   )}
-                </button>
-              </form>
+                </ActionButton>
+              </ActionForm>
             </div>
           </>
         )}
@@ -784,7 +786,7 @@ function ApplicationChatDrawerContent({ app, onClose }) {
                 </div>
                 <div className="flex justify-between">
                   <span className="text-slate-400">Assigned Executive:</span>
-                  <span className="text-slate-900">{app.assignedExecutive || 'Rahul Krishnan'}</span>
+                  <span className="text-slate-900">{getAssignedExecutiveName(app) || 'Unassigned'}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-slate-400">Application Date:</span>
@@ -828,7 +830,7 @@ function ApplicationChatDrawerContent({ app, onClose }) {
                         {selectedUploadFile.name}
                       </span>
                     </div>
-                    <button
+                    <ActionButton
                       type="button"
                       onClick={() => {
                         setSelectedUploadFile(null);
@@ -837,7 +839,7 @@ function ApplicationChatDrawerContent({ app, onClose }) {
                       className="text-xs text-rose-500 hover:text-rose-700 font-bold transition-colors cursor-pointer shrink-0"
                     >
                       ✕ Remove
-                    </button>
+                    </ActionButton>
                   </div>
                   <input
                     type="text"
@@ -870,7 +872,7 @@ function ApplicationChatDrawerContent({ app, onClose }) {
 
               {/* Submit Button */}
               <div className="flex justify-end pt-1">
-                <button
+                <ActionButton
                   type="button"
                   disabled={isUploadingDoc || !selectedUploadFile}
                   onClick={handleUploadNewDoc}
@@ -883,7 +885,7 @@ function ApplicationChatDrawerContent({ app, onClose }) {
                     </svg>
                   )}
                   {isUploadingDoc ? 'Uploading...' : 'Upload Document'}
-                </button>
+                </ActionButton>
               </div>
 
               {uploadDocError && (
@@ -928,7 +930,7 @@ function ApplicationChatDrawerContent({ app, onClose }) {
                           </div>
                           
                           <div className="flex items-center gap-1.5 shrink-0">
-                            <button
+                            <ActionButton
                               type="button"
                               onClick={() => {
                                 setEditingDocIdx(editingDocIdx === idx ? null : idx);
@@ -938,7 +940,7 @@ function ApplicationChatDrawerContent({ app, onClose }) {
                               className="border border-amber-200 bg-amber-50 hover:bg-amber-100 text-[#D99A1C] font-extrabold text-[10px] px-2.5 py-1.5 rounded-xl transition-all cursor-pointer flex items-center gap-1"
                             >
                               <span>✏️ Edit</span>
-                            </button>
+                            </ActionButton>
                             <a
                               href={docUrl}
                               target="_blank"
@@ -973,7 +975,7 @@ function ApplicationChatDrawerContent({ app, onClose }) {
                                 className="text-[10px] text-slate-500 font-semibold cursor-pointer"
                               />
                               <div className="flex gap-1.5 self-end">
-                                <button
+                                <ActionButton
                                   type="button"
                                   onClick={() => {
                                     setEditingDocIdx(null);
@@ -982,8 +984,8 @@ function ApplicationChatDrawerContent({ app, onClose }) {
                                   className="border border-slate-200 bg-white hover:bg-slate-100 text-slate-600 text-[10px] font-bold px-2.5 py-1 rounded-lg transition-colors cursor-pointer"
                                 >
                                   Cancel
-                                </button>
-                                <button
+                                </ActionButton>
+                                <ActionButton
                                   type="button"
                                   disabled={isReplacing}
                                   onClick={() => handleSaveEditedDoc(idx)}
@@ -996,7 +998,7 @@ function ApplicationChatDrawerContent({ app, onClose }) {
                                     </svg>
                                   )}
                                   {isReplacing ? 'Saving...' : 'Save Changes'}
-                                </button>
+                                </ActionButton>
                               </div>
                             </div>
                           </div>

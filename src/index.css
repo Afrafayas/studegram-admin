@@ -50,3 +50,9 @@ body {
 .animate-fade-in-up {
   animation: fadeInUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
+
+/* Shared pending feedback for asynchronous actions. */
+button[aria-busy="true"] { cursor: wait; opacity: .75; }
+.action-spinner { display: inline-block; width: 1em; height: 1em; margin-right: .4em; vertical-align: middle; flex-shrink: 0; border: 2px solid currentColor; border-right-color: transparent; border-radius: 50%; animation: action-spin .7s linear infinite; }
+@keyframes action-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .action-spinner { animation: none; } }

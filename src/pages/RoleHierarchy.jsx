@@ -1,3 +1,4 @@
+import { ActionButton, ActionForm } from '../components/ActionControls';
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useAuth } from '../context/AuthContext';
@@ -205,30 +206,30 @@ export default function RoleHierarchy() {
         
         {/* Navigation Tabs */}
         <div className="bg-slate-150 p-1.5 rounded-xl flex gap-1 text-[11px] font-bold text-slate-600 shrink-0">
-          <button
+          <ActionButton
             onClick={() => setActiveTab('checklist')}
             className={`px-4 py-2 rounded-lg cursor-pointer transition-all ${
               activeTab === 'checklist' ? 'bg-white text-[#D99A1C] shadow-sm font-black' : 'hover:bg-white/50 hover:text-slate-950'
             }`}
           >
             📋 Role & Permissions Checklist
-          </button>
-          <button
+          </ActionButton>
+          <ActionButton
             onClick={() => setActiveTab('hierarchy')}
             className={`px-4 py-2 rounded-lg cursor-pointer transition-all ${
               activeTab === 'hierarchy' ? 'bg-white text-[#D99A1C] shadow-sm font-black' : 'hover:bg-white/50 hover:text-slate-950'
             }`}
           >
             🌳 Tree Visualizer
-          </button>
-          <button
+          </ActionButton>
+          <ActionButton
             onClick={() => setActiveTab('logs')}
             className={`px-4 py-2 rounded-lg cursor-pointer transition-all ${
               activeTab === 'logs' ? 'bg-white text-[#D99A1C] shadow-sm font-black' : 'hover:bg-white/50 hover:text-slate-950'
             }`}
           >
             📜 Audit Logs
-          </button>
+          </ActionButton>
         </div>
       </div>
 
@@ -241,7 +242,7 @@ export default function RoleHierarchy() {
               <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Portal View Filter:</span>
               <div className="bg-slate-100 p-1 rounded-xl flex gap-1 text-xs font-bold">
                 {['All', 'Admin', 'Agent'].map(p => (
-                  <button
+                  <ActionButton
                     key={p}
                     onClick={() => setPortalFilter(p)}
                     className={`px-3 py-1 rounded-lg transition-all ${
@@ -249,12 +250,12 @@ export default function RoleHierarchy() {
                     }`}
                   >
                     {p === 'All' ? 'All Roles' : p === 'Admin' ? '🏛️ Admin Roles' : '🏢 Agent Roles'}
-                  </button>
+                  </ActionButton>
                 ))}
               </div>
             </div>
 
-            <button
+            <ActionButton
               onClick={openCreateRoleModal}
               className="bg-gradient-to-r from-[#D99A1C] to-[#F5B025] hover:scale-[1.02] text-black font-extrabold text-xs px-4 py-2.5 rounded-xl transition-all shadow-md flex items-center gap-2 active:scale-95"
             >
@@ -262,7 +263,7 @@ export default function RoleHierarchy() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 4v16m8-8H4" />
               </svg>
               <span>Create Custom Role</span>
-            </button>
+            </ActionButton>
           </div>
 
           {/* Roles Grid */}
@@ -306,7 +307,7 @@ export default function RoleHierarchy() {
                   </div>
                 </div>
 
-                <button
+                <ActionButton
                   onClick={() => openEditRoleModal(role)}
                   className="w-full mt-2 bg-slate-900 hover:bg-black text-white font-extrabold text-xs py-2 rounded-xl transition-all uppercase tracking-wider flex items-center justify-center gap-1.5"
                 >
@@ -314,7 +315,7 @@ export default function RoleHierarchy() {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                   </svg>
                   <span>Edit Checklist Permissions</span>
-                </button>
+                </ActionButton>
               </div>
             ))}
           </div>
@@ -418,12 +419,12 @@ export default function RoleHierarchy() {
                 </h3>
                 <p className="text-[10px] text-slate-400 font-semibold">Checklist sidebar visibility & feature action rights</p>
               </div>
-              <button onClick={() => setIsRoleModalOpen(false)} className="text-slate-400 hover:text-white font-bold text-sm">
+              <ActionButton onClick={() => setIsRoleModalOpen(false)} className="text-slate-400 hover:text-white font-bold text-sm">
                 ✕
-              </button>
+              </ActionButton>
             </div>
 
-            <form onSubmit={handleSaveRole} className="p-6 space-y-6 overflow-y-auto flex-1">
+            <ActionForm onSubmit={handleSaveRole} className="p-6 space-y-6 overflow-y-auto flex-1">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-1">
                   <label className="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">Role Title / Display Name *</label>
@@ -548,14 +549,14 @@ export default function RoleHierarchy() {
               </div>
 
               <div className="pt-4 border-t border-slate-150 flex items-center justify-end gap-3">
-                <button
+                <ActionButton
                   type="button"
                   onClick={() => setIsRoleModalOpen(false)}
                   className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition-all"
                 >
                   Cancel
-                </button>
-                <button
+                </ActionButton>
+                <ActionButton
                   type="submit"
                   disabled={isSaving}
                   className="bg-gradient-to-r from-[#D99A1C] to-[#F5B025] hover:scale-[1.01] text-black font-extrabold text-xs px-6 py-2.5 rounded-xl transition-all shadow-md uppercase tracking-wider disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center justify-center gap-1.5"
@@ -567,9 +568,9 @@ export default function RoleHierarchy() {
                     </svg>
                   )}
                   {isSaving ? 'Saving to Database...' : 'Save Role & Permissions to Database ✓'}
-                </button>
+                </ActionButton>
               </div>
-            </form>
+            </ActionForm>
           </div>
         </div>,
         document.body

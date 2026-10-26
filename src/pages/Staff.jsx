@@ -1,3 +1,5 @@
+import AdminStaffDetails from '../components/AdminStaffDetails';
+import { ActionButton, ActionForm } from '../components/ActionControls';
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useAuth } from '../context/AuthContext';
@@ -11,7 +13,20 @@ export default function Staff({ staffList, setStaffList, applications }) {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
   const [countryFilter, setCountryFilter] = useState('All');
-  const [expandedId, setExpandedId] = useState(null);
+  const [selectedStaffId, setSelectedStaffId] = useState(() => new URLSearchParams(window.location.search).get('adminStaffId'));
+  useEffect(() => {
+    const onPopState = () => setSelectedStaffId(new URLSearchParams(window.location.search).get('adminStaffId'));
+    window.addEventListener('popstate', onPopState);
+    return () => window.removeEventListener('popstate', onPopState);
+  }, []);
+  const navigateToStaff = (staffId) => {
+    const url = new URL(window.location.href);
+    if (staffId) url.searchParams.set('adminStaffId', String(staffId));
+    else url.searchParams.delete('adminStaffId');
+    window.history.pushState({ ...window.history.state }, '', url);
+    setSelectedStaffId(staffId ? String(staffId) : null);
+    document.getElementById('admin-main-content')?.scrollTo({ top: 0 });
+  };
 
   // Pagination State Variables
   const [currentPage, setCurrentPage] = useState(1);
@@ -132,7 +147,7 @@ export default function Staff({ staffList, setStaffList, applications }) {
   });
 
   // Apply scope filtering (Country Head / Regional staff scoping)
-  const filteredStaff = baseFiltered.filter(s => {
+  const scopedStaff = safeStaffList.filter(s => {
     if (!currentUser?.role || ['Director', 'COO', 'Super Admin', 'SuperAdmin', 'Admin'].includes(currentUser.role)) return true;
     if (currentUser.role === 'Country Head') {
       return (s.country || 'India').toLowerCase() === (currentUser.country || 'India').toLowerCase();
@@ -140,16 +155,15 @@ export default function Staff({ staffList, setStaffList, applications }) {
     return (s.country || 'India').toLowerCase() === (currentUser.country || 'India').toLowerCase();
   });
 
+  const filteredStaff = baseFiltered.filter(staff => scopedStaff.includes(staff));
+  const selectedStaff = scopedStaff.find(staff => String(staff._id || staff.id) === selectedStaffId);
+
   // Pagination Math & Array Slicing
   const totalItems = filteredStaff.length;
   const totalPages = Math.ceil(totalItems / itemsPerPage) || 1;
   const startIndex = (currentPage - 1) * itemsPerPage;
   const endIndex = Math.min(startIndex + itemsPerPage, totalItems);
   const paginatedStaff = filteredStaff.slice(startIndex, startIndex + itemsPerPage);
-
-  const toggleExpand = (id) => {
-    setExpandedId(expandedId === id ? null : id);
-  };
 
   // Open Edit Modal with selected staff data
   const handleOpenEditModal = (staff) => {
@@ -350,20 +364,31 @@ export default function Staff({ staffList, setStaffList, applications }) {
     }
   };
 
-  // Find applications assigned to this staff member
-  const getAssignedApplications = (staffName) => {
-    return applications.filter(app => (app.assignedTo || app.assignedExecutive || app.pickedBy?.name || '').toLowerCase() === staffName.toLowerCase());
+  // Persisted identifiers take precedence; names only support legacy records without IDs.
+  const matchesStaff = (assignment, staff) => {
+    if (!assignment || !staff) return false;
+    const staffId = String(staff._id || staff.id || '');
+    const assignedId = typeof assignment === 'object' ? assignment.id || assignment._id : assignment;
+    if (assignedId && /^[a-f0-9]{24}$/i.test(String(assignedId))) return String(assignedId) === staffId;
+    if (assignedId && typeof assignment === 'object') return String(assignedId) === staffId;
+    const email = typeof assignment === 'object' ? assignment.email : '';
+    if (email) return email.trim().toLowerCase() === (staff.email || '').trim().toLowerCase();
+    const name = typeof assignment === 'object' ? assignment.name : assignment;
+    return typeof name === 'string' && !!staff.name && name.trim().toLowerCase() === staff.name.trim().toLowerCase();
   };
+  const getAssignedApplications = staff => (applications || []).filter(app => matchesStaff(app.pickedBy, staff));
+  const getSubmittedApplications = staff => (applications || []).filter(app => matchesStaff(app.submittedByStaff, staff));
 
   return (
     <div className="flex-1 p-6 space-y-6 bg-[#F0F2F5]">
+      {selectedStaffId ? <AdminStaffDetails staff={selectedStaff} countries={selectedStaff ? (selectedStaff.countries?.length ? selectedStaff.countries : selectedStaff.country ? [selectedStaff.country] : []) : []} assignedApplications={getAssignedApplications(selectedStaff)} submittedApplications={getSubmittedApplications(selectedStaff)} onBack={() => navigateToStaff(null)} onEdit={handleOpenEditModal} /> : <>
       {/* Header */}
       <div className="flex justify-between items-center bg-white border border-[#E2E8F0] border-t-4 border-t-[#D99A1C] p-6 rounded-2xl shadow-xs">
         <div className="space-y-1">
           <h1 className="text-xl font-black text-slate-900 tracking-tight">Staff Management Directory</h1>
           <p className="text-xs text-slate-500 font-medium">Manage backend admin operations staff, edit profiles, assign active client files and configure permissions by region.</p>
         </div>
-        <button
+        <ActionButton
           onClick={() => setIsModalOpen(true)}
           className="bg-[#D99A1C] hover:bg-[#F5B025] text-white font-extrabold text-xs px-4 py-2 rounded-xl transition-all shadow-md inline-flex items-center gap-1.5 cursor-pointer"
         >
@@ -371,7 +396,7 @@ export default function Staff({ staffList, setStaffList, applications }) {
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
           </svg>
           <span>Add Staff Member</span>
-        </button>
+        </ActionButton>
       </div>
 
       {/* Search & Filters */}
@@ -379,7 +404,7 @@ export default function Staff({ staffList, setStaffList, applications }) {
         <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto">
           <div className="bg-slate-100 p-1 rounded-xl flex">
             {['All', 'Active', 'Inactive', 'Suspended'].map((status) => (
-              <button
+              <ActionButton
                 key={status}
                 onClick={() => setStatusFilter(status)}
                 className={`px-3.5 py-1.5 text-xs font-bold rounded-lg transition-all ${statusFilter === status
@@ -388,7 +413,7 @@ export default function Staff({ staffList, setStaffList, applications }) {
                   }`}
               >
                 {status}
-              </button>
+              </ActionButton>
             ))}
           </div>
 
@@ -434,7 +459,6 @@ export default function Staff({ staffList, setStaffList, applications }) {
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="bg-slate-50 border-b border-[#E2E8F0]">
-                  <th className="px-6 py-3 text-slate-400 text-[10px] font-extrabold uppercase tracking-wider w-[50px]"></th>
                   <th className="px-6 py-3 text-slate-400 text-[10px] font-extrabold uppercase tracking-wider w-[60px]">SI.NO.</th>
                   <th className="px-6 py-3 text-slate-400 text-[10px] font-extrabold uppercase tracking-wider">Staff Member</th>
                   <th className="px-6 py-3 text-slate-400 text-[10px] font-extrabold uppercase tracking-wider">Assigned Country</th>
@@ -448,17 +472,11 @@ export default function Staff({ staffList, setStaffList, applications }) {
               </thead>
               <tbody className="divide-y divide-slate-100 text-xs font-semibold text-slate-700">
                 {paginatedStaff.map((staff, idx) => {
-                  const isExpanded = expandedId === staff.id;
-                  const assignedApps = getAssignedApplications(staff.name);
+                  const assignedApps = getAssignedApplications(staff);
 
                   return (
                     <React.Fragment key={staff._id || staff.id}>
-                      <tr className="hover:bg-slate-50/50 transition-colors cursor-pointer" onClick={() => toggleExpand(staff.id)}>
-                        <td className="pl-6 py-4 w-[40px]">
-                          <svg className={`w-4 h-4 text-slate-400 transition-transform ${isExpanded ? 'rotate-90 text-[#D99A1C]' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M9 5l7 7-7 7" />
-                          </svg>
-                        </td>
+                      <tr className="hover:bg-slate-50/50 transition-colors">
                         <td className="px-6 py-4 font-bold text-slate-400">{startIndex + idx + 1}</td>
                         <td className="px-6 py-4 flex items-center gap-3">
                           <div className="w-8 h-8 rounded-full flex items-center justify-center font-bold text-white text-xs bg-gradient-to-tr from-[#D99A1C] to-[#F5B025]">
@@ -506,7 +524,16 @@ export default function Staff({ staffList, setStaffList, applications }) {
                         {/* Actions Column (Edit & Delete) */}
                         <td className="px-6 py-4 text-right" onClick={(e) => e.stopPropagation()}>
                           <div className="flex items-center justify-end gap-1.5">
-                            <button
+                            <ActionButton
+                              type="button"
+                              onClick={() => navigateToStaff(staff._id || staff.id)}
+                              className="p-1.5 text-slate-500 hover:text-[#D99A1C] hover:bg-amber-50 rounded-lg transition-colors cursor-pointer"
+                              title="View Staff Details"
+                              aria-label={`View details for ${staff.name || 'staff member'}`}
+                            >
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z" /><circle cx="12" cy="12" r="3" strokeWidth="2" /></svg>
+                            </ActionButton>
+                            <ActionButton
                               type="button"
                               onClick={() => handleOpenEditModal(staff)}
                               className="p-1.5 text-slate-500 hover:text-[#D99A1C] hover:bg-amber-50 rounded-lg transition-colors cursor-pointer"
@@ -515,28 +542,28 @@ export default function Staff({ staffList, setStaffList, applications }) {
                               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                               </svg>
-                            </button>
+                            </ActionButton>
 
                             {deleteConfirmId === (staff._id || staff.id) ? (
                               <div className="flex items-center gap-1 bg-rose-50 border border-rose-200 rounded-lg p-1">
-                                <button
+                                <ActionButton
                                   type="button"
                                   onClick={() => handleDeleteStaff(staff)}
                                   disabled={isDeleting}
                                   className="px-2 py-0.5 bg-rose-600 hover:bg-rose-700 text-white font-extrabold text-[10px] rounded transition-all cursor-pointer"
                                 >
                                   {isDeleting ? '...' : 'Confirm'}
-                                </button>
-                                <button
+                                </ActionButton>
+                                <ActionButton
                                   type="button"
                                   onClick={() => setDeleteConfirmId(null)}
                                   className="px-1.5 py-0.5 text-slate-500 text-[10px] hover:text-slate-700 cursor-pointer"
                                 >
                                   Cancel
-                                </button>
+                                </ActionButton>
                               </div>
                             ) : (
-                              <button
+                              <ActionButton
                                 type="button"
                                 onClick={() => setDeleteConfirmId(staff._id || staff.id)}
                                 className="p-1.5 text-slate-500 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
@@ -545,101 +572,12 @@ export default function Staff({ staffList, setStaffList, applications }) {
                                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                                 </svg>
-                              </button>
+                              </ActionButton>
                             )}
                           </div>
                         </td>
                       </tr>
 
-                      {/* Expandable Section for staff details */}
-                      {isExpanded && (
-                        <tr>
-                          <td colSpan="10" className="bg-slate-50/50 p-6 border-t border-b border-slate-100">
-                            <div className="bg-white border border-[#E2E8F0] border-t-4 border-t-[#2563EB] rounded-xl p-5 shadow-sm space-y-4">
-                              <div className="flex flex-col md:flex-row md:items-center justify-between border-b border-slate-100 pb-3 gap-2">
-                                <div className="flex items-center gap-3">
-                                  <h3 className="text-xs font-black text-slate-900 uppercase tracking-wider">
-                                    Staff Profile Summary — {staff.name}
-                                  </h3>
-                                  <button
-                                    onClick={() => handleOpenEditModal(staff)}
-                                    className="px-2.5 py-1 text-[10px] font-bold text-[#D99A1C] hover:bg-amber-50 border border-amber-200 rounded-lg transition-all inline-flex items-center gap-1 cursor-pointer"
-                                  >
-                                    ✏️ Edit Profile
-                                  </button>
-                                </div>
-                                <p className="text-[10px] text-slate-400 font-semibold">
-                                  Joined On: {staff.dateAdded || 'N/A'}
-                                </p>
-                              </div>
-
-                              <div className="grid grid-cols-1 md:grid-cols-5 gap-4 text-[11px] font-semibold text-slate-600">
-                                <div>
-                                  <span className="text-[9px] font-extrabold uppercase text-slate-400 block tracking-wider">Designation / Role</span>
-                                  <span className="text-slate-900 font-bold text-xs">{staff.role}</span>
-                                </div>
-                                <div>
-                                  <span className="text-[9px] font-extrabold uppercase text-slate-400 block tracking-wider mb-1">Assigned Countries ({getStaffCountries(staff).length})</span>
-                                  <div className="flex flex-wrap gap-1">
-                                    {getStaffCountries(staff).map(c => (
-                                      <span key={c} className="px-2 py-0.5 bg-amber-50 border border-amber-200 text-amber-800 rounded-md text-[10px] font-black">
-                                        📍 {c}
-                                      </span>
-                                    ))}
-                                  </div>
-                                </div>
-                                <div>
-                                  <span className="text-[9px] font-extrabold uppercase text-slate-400 block tracking-wider">System Access Tier</span>
-                                  <span className="text-slate-900 font-bold text-xs">{staff.accessLevel}</span>
-                                </div>
-                                <div>
-                                  <span className="text-[9px] font-extrabold uppercase text-slate-400 block tracking-wider">Primary Email Address</span>
-                                  <span className="text-indigo-650 font-bold text-xs">{staff.email}</span>
-                                </div>
-                                <div>
-                                  <span className="text-[9px] font-extrabold uppercase text-slate-400 block tracking-wider">Password Security</span>
-                                  <span className="text-emerald-600 font-bold text-xs">✉️ {staff.passwordType || 'Configured & Active'}</span>
-                                </div>
-                              </div>
-
-                              {/* Assigned applications grid */}
-                              <div className="space-y-2 pt-2">
-                                <h4 className="text-[10px] font-black text-slate-500 uppercase tracking-wider">Assigned Application Files ({assignedApps.length})</h4>
-                                {assignedApps.length > 0 ? (
-                                  <div className="border border-slate-150 rounded-xl overflow-hidden">
-                                    <table className="w-full text-left border-collapse text-[11px]">
-                                      <thead>
-                                        <tr className="bg-slate-50 border-b border-slate-150">
-                                          <th className="px-4 py-2.5 text-slate-400 font-extrabold uppercase tracking-wider">CAMS ID</th>
-                                          <th className="px-4 py-2.5 text-slate-400 font-extrabold uppercase tracking-wider">Student Name</th>
-                                          <th className="px-4 py-2.5 text-slate-400 font-extrabold uppercase tracking-wider">University</th>
-                                          <th className="px-4 py-2.5 text-slate-400 font-extrabold uppercase tracking-wider">Program / Course</th>
-                                          <th className="px-4 py-2.5 text-slate-400 font-extrabold uppercase tracking-wider text-right">Secondary Status</th>
-                                        </tr>
-                                      </thead>
-                                      <tbody className="divide-y divide-slate-100">
-                                        {assignedApps.map((app, appIdx) => (
-                                          <tr key={appIdx} className="hover:bg-slate-50/50">
-                                            <td className="px-4 py-2.5 font-bold text-indigo-600">{app.camsId || `CAMS-${appIdx + 1000}`}</td>
-                                            <td className="px-4 py-2.5 font-bold text-slate-800">{app.studentName}</td>
-                                            <td className="px-4 py-2.5 text-slate-600">{app.universityName}</td>
-                                            <td className="px-4 py-2.5 text-slate-600">{app.courseName}</td>
-                                            <td className="px-4 py-2.5 text-right font-bold text-amber-600">{app.secondaryStatus || 'Pending'}</td>
-                                          </tr>
-                                        ))}
-                                      </tbody>
-                                    </table>
-                                  </div>
-                                ) : (
-                                  <p className="text-[11px] text-slate-400 font-medium italic bg-slate-50 p-3 rounded-lg border border-slate-100">
-                                    No active application files currently assigned to this team member.
-                                  </p>
-                                )}
-                              </div>
-                            </div>
-                          </td>
-                        </tr>
-                      )}
                     </React.Fragment>
                   );
                 })}
@@ -677,16 +615,16 @@ export default function Staff({ staffList, setStaffList, applications }) {
             </div>
 
             <div className="flex items-center gap-1.5">
-              <button
+              <ActionButton
                 disabled={currentPage === 1}
                 onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
                 className="px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-bold bg-white text-slate-600 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer"
               >
                 ◀ Prev
-              </button>
+              </ActionButton>
 
               {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
-                <button
+                <ActionButton
                   key={page}
                   onClick={() => setCurrentPage(page)}
                   className={`px-3 py-1.5 rounded-lg text-xs font-extrabold transition-all cursor-pointer ${
@@ -696,20 +634,22 @@ export default function Staff({ staffList, setStaffList, applications }) {
                   }`}
                 >
                   {page}
-                </button>
+                </ActionButton>
               ))}
 
-              <button
+              <ActionButton
                 disabled={currentPage === totalPages}
                 onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
                 className="px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-bold bg-white text-slate-600 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer"
               >
                 Next ▶
-              </button>
+              </ActionButton>
             </div>
           </div>
         )}
       </div>
+
+      </>}
 
       {/* Onboard Staff Modal */}
       {isModalOpen && createPortal(
@@ -720,15 +660,15 @@ export default function Staff({ staffList, setStaffList, applications }) {
                 <h3 className="text-xs font-black text-slate-900 uppercase tracking-wider">Onboard Admin Staff</h3>
                 <p className="text-[10px] text-slate-400 font-semibold">Onboard a new operational team member and send credentials email</p>
               </div>
-              <button
+              <ActionButton
                 onClick={() => setIsModalOpen(false)}
                 className="text-slate-400 hover:text-slate-600 font-bold cursor-pointer"
               >
                 ✕
-              </button>
+              </ActionButton>
             </div>
 
-            <form onSubmit={handleOnboardStaff} className="space-y-4">
+            <ActionForm onSubmit={handleOnboardStaff} className="space-y-4">
               <div className="space-y-1.5">
                 <label className="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">Full Name <span className="text-rose-500">*</span></label>
                 <input
@@ -813,7 +753,7 @@ export default function Staff({ staffList, setStaffList, applications }) {
                     {availableCountries.map(country => {
                       const isSelected = newStaffCountries.includes(country);
                       return (
-                        <button
+                        <ActionButton
                           key={country}
                           type="button"
                           disabled={currentUser?.role === 'Country Head'}
@@ -833,7 +773,7 @@ export default function Staff({ staffList, setStaffList, applications }) {
                           }`}
                         >
                           {isSelected ? '✓ ' : '+ '}{country}
-                        </button>
+                        </ActionButton>
                       );
                     })}
                   </div>
@@ -861,7 +801,7 @@ export default function Staff({ staffList, setStaffList, applications }) {
                 </div>
 
                 <div className="grid grid-cols-2 gap-2 text-[11px] font-bold">
-                  <button
+                  <ActionButton
                     type="button"
                     onClick={() => setPasswordMode('auto')}
                     className={`p-2 rounded-lg border text-center transition-all cursor-pointer ${passwordMode === 'auto'
@@ -870,8 +810,8 @@ export default function Staff({ staffList, setStaffList, applications }) {
                       }`}
                   >
                     ⚡ Auto-Generate & Email
-                  </button>
-                  <button
+                  </ActionButton>
+                  <ActionButton
                     type="button"
                     onClick={() => setPasswordMode('manual')}
                     className={`p-2 rounded-lg border text-center transition-all cursor-pointer ${passwordMode === 'manual'
@@ -880,7 +820,7 @@ export default function Staff({ staffList, setStaffList, applications }) {
                       }`}
                   >
                     🔑 Set Manual Password
-                  </button>
+                  </ActionButton>
                 </div>
 
                 {passwordMode === 'auto' ? (
@@ -898,35 +838,35 @@ export default function Staff({ staffList, setStaffList, applications }) {
                           placeholder="Enter initial password..."
                           className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-1.5 text-xs font-mono focus:outline-none focus:border-[#D99A1C]"
                         />
-                        <button
+                        <ActionButton
                           type="button"
                           onClick={() => setShowPassword(!showPassword)}
                           className="absolute right-2 top-1.5 text-[10px] text-slate-400 hover:text-slate-600 font-bold cursor-pointer"
                         >
                           {showPassword ? "Hide" : "Show"}
-                        </button>
+                        </ActionButton>
                       </div>
-                      <button
+                      <ActionButton
                         type="button"
                         onClick={() => setManualPassword(generateRandomPassword())}
                         className="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-extrabold text-[10px] rounded-lg transition-all whitespace-nowrap cursor-pointer"
                       >
                         🎲 Auto Fill
-                      </button>
+                      </ActionButton>
                     </div>
                   </div>
                 )}
               </div>
 
               <div className="flex justify-end gap-2 pt-2">
-                <button
+                <ActionButton
                   type="button"
                   onClick={() => setIsModalOpen(false)}
                   className="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-extrabold text-xs rounded-xl transition-all cursor-pointer"
                 >
                   Cancel
-                </button>
-                <button
+                </ActionButton>
+                <ActionButton
                   type="submit"
                   disabled={isSubmitting}
                   className="px-4 py-2 bg-[#D99A1C] hover:bg-[#F5B025] disabled:opacity-50 disabled:cursor-not-allowed text-white font-extrabold text-xs rounded-xl transition-all shadow-md cursor-pointer inline-flex items-center justify-center gap-1.5"
@@ -938,9 +878,9 @@ export default function Staff({ staffList, setStaffList, applications }) {
                     </svg>
                   )}
                   {isSubmitting ? 'Onboarding...' : 'Confirm Onboarding'}
-                </button>
+                </ActionButton>
               </div>
-            </form>
+            </ActionForm>
           </div>
         </div>,
         document.body
@@ -955,15 +895,15 @@ export default function Staff({ staffList, setStaffList, applications }) {
                 <h3 className="text-xs font-black text-slate-900 uppercase tracking-wider">Edit Staff Member</h3>
                 <p className="text-[10px] text-slate-400 font-semibold">Update account details, role permissions, or reset login password</p>
               </div>
-              <button
+              <ActionButton
                 onClick={() => setIsEditModalOpen(false)}
                 className="text-slate-400 hover:text-slate-600 font-bold cursor-pointer"
               >
                 ✕
-              </button>
+              </ActionButton>
             </div>
 
-            <form onSubmit={handleSaveEdit} className="space-y-4">
+            <ActionForm onSubmit={handleSaveEdit} className="space-y-4">
               <div className="space-y-1.5">
                 <label className="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">Full Name <span className="text-rose-500">*</span></label>
                 <input
@@ -1058,7 +998,7 @@ export default function Staff({ staffList, setStaffList, applications }) {
                   {availableCountries.map(country => {
                     const isSelected = editStaffCountries.includes(country);
                     return (
-                      <button
+                      <ActionButton
                         key={country}
                         type="button"
                         onClick={() => {
@@ -1077,7 +1017,7 @@ export default function Staff({ staffList, setStaffList, applications }) {
                         }`}
                       >
                         {isSelected ? '✓ ' : '+ '}{country}
-                      </button>
+                      </ActionButton>
                     );
                   })}
                 </div>
@@ -1114,21 +1054,21 @@ export default function Staff({ staffList, setStaffList, applications }) {
                           placeholder="Enter new secure password (min 4 chars)..."
                           className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-1.5 text-xs font-mono focus:outline-none focus:border-[#D99A1C]"
                         />
-                        <button
+                        <ActionButton
                           type="button"
                           onClick={() => setShowEditPassword(!showEditPassword)}
                           className="absolute right-2 top-1.5 text-[10px] text-slate-400 hover:text-slate-600 font-bold cursor-pointer"
                         >
                           {showEditPassword ? "Hide" : "Show"}
-                        </button>
+                        </ActionButton>
                       </div>
-                      <button
+                      <ActionButton
                         type="button"
                         onClick={() => setEditPassword(generateRandomPassword())}
                         className="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-extrabold text-[10px] rounded-lg transition-all whitespace-nowrap cursor-pointer"
                       >
                         🎲 Auto Fill
-                      </button>
+                      </ActionButton>
                     </div>
                     <p className="text-[10px] text-slate-500 font-medium">
                       An update email with the new password will be sent automatically to <strong className="text-slate-800">{editStaffEmail}</strong> upon saving.
@@ -1138,14 +1078,14 @@ export default function Staff({ staffList, setStaffList, applications }) {
               </div>
 
               <div className="flex justify-end gap-2 pt-2">
-                <button
+                <ActionButton
                   type="button"
                   onClick={() => setIsEditModalOpen(false)}
                   className="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-extrabold text-xs rounded-xl transition-all cursor-pointer"
                 >
                   Cancel
-                </button>
-                <button
+                </ActionButton>
+                <ActionButton
                   type="submit"
                   disabled={isEditSubmitting}
                   className="px-4 py-2 bg-[#D99A1C] hover:bg-[#F5B025] disabled:opacity-50 disabled:cursor-not-allowed text-white font-extrabold text-xs rounded-xl transition-all shadow-md cursor-pointer inline-flex items-center justify-center gap-1.5"
@@ -1157,9 +1097,9 @@ export default function Staff({ staffList, setStaffList, applications }) {
                     </svg>
                   )}
                   {isEditSubmitting ? 'Saving Changes...' : 'Save Changes'}
-                </button>
+                </ActionButton>
               </div>
-            </form>
+            </ActionForm>
           </div>
         </div>,
         document.body

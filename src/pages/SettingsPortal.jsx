@@ -1,3 +1,4 @@
+import { ActionButton, ActionForm } from '../components/ActionControls';
 import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import * as XLSX from 'xlsx';
@@ -973,12 +974,12 @@ export default function SettingsPortal({
                 <h2 className="text-xs font-black text-slate-900 uppercase tracking-wider">Universities Master Directory</h2>
                 <p className="text-[10px] text-slate-400 font-semibold mt-0.5">Manage partner institutions, S3 logo images, entry criteria, and academic courses.</p>
               </div>
-              <button
+              <ActionButton
                 onClick={openAddUnivModal}
                 className="bg-[#D99A1C] hover:bg-[#F5B025] text-white font-extrabold text-[10px] px-3.5 py-2 rounded-xl transition-all shadow-md uppercase tracking-wider cursor-pointer flex items-center gap-1"
               >
                 <span>+ Add University</span>
-              </button>
+              </ActionButton>
             </div>
 
             <div className="bg-white border border-[#E2E8F0] border-t-4 border-t-[#D99A1C] rounded-2xl shadow-xs overflow-hidden">
@@ -1054,27 +1055,27 @@ export default function SettingsPortal({
                           </td>
                           <td className="px-5 py-3.5 text-right">
                             <div className="flex items-center justify-end gap-1.5">
-                              <button
+                              <ActionButton
                                 onClick={() => setViewingUniv(univ)}
                                 title="View Details"
                                 className="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-[10px] rounded-lg cursor-pointer transition-colors"
                               >
                                 👁️ View
-                              </button>
-                              <button
+                              </ActionButton>
+                              <ActionButton
                                 onClick={() => openEditUnivModal(univ)}
                                 title="Edit University"
                                 className="px-2.5 py-1 bg-amber-50 hover:bg-amber-100 text-amber-800 font-bold text-[10px] rounded-lg cursor-pointer transition-colors"
                               >
                                 ✏️ Edit
-                              </button>
-                              <button
+                              </ActionButton>
+                              <ActionButton
                                 onClick={() => handleDeleteUniversity(univ)}
                                 title="Delete University"
                                 className="px-2.5 py-1 bg-rose-50 hover:bg-rose-100 text-rose-600 font-bold text-[10px] rounded-lg cursor-pointer transition-colors"
                               >
                                 🗑️ Delete
-                              </button>
+                              </ActionButton>
                             </div>
                           </td>
                         </tr>
@@ -1109,7 +1110,7 @@ export default function SettingsPortal({
 
               <div className="flex items-center gap-2">
                 {/* Single Import Excel Action */}
-                <button
+                <ActionButton
                   type="button"
                   onClick={() => setIsExcelImportModalOpen(true)}
                   disabled={!isWritable}
@@ -1117,16 +1118,16 @@ export default function SettingsPortal({
                   title="Import courses in bulk via Excel"
                 >
                   <span>📊 Import Excel</span>
-                </button>
+                </ActionButton>
 
                 {/* + Add Course Program Action */}
-                <button
+                <ActionButton
                   onClick={openAddCourseModal}
                   disabled={!isWritable}
                   className="bg-[#D99A1C] hover:bg-[#F5B025] disabled:opacity-50 text-white font-extrabold text-[10px] px-3.5 py-2 rounded-xl transition-all shadow-md uppercase tracking-wider cursor-pointer flex items-center gap-1 shrink-0 h-fit"
                 >
                   <span>+ Add Course Program</span>
-                </button>
+                </ActionButton>
               </div>
             </div>
 
@@ -1194,27 +1195,27 @@ export default function SettingsPortal({
                           </td>
                           <td className="px-5 py-3.5 text-right">
                             <div className="flex items-center justify-end gap-1.5">
-                              <button
+                              <ActionButton
                                 onClick={() => setViewingCourse(course)}
                                 title="View Details"
                                 className="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-[10px] rounded-lg cursor-pointer transition-colors"
                               >
                                 👁️ View
-                              </button>
-                              <button
+                              </ActionButton>
+                              <ActionButton
                                 onClick={() => openEditCourseModal(course)}
                                 title="Edit Course"
                                 className="px-2.5 py-1 bg-amber-50 hover:bg-amber-100 text-amber-800 font-bold text-[10px] rounded-lg cursor-pointer transition-colors"
                               >
                                 ✏️ Edit
-                              </button>
-                              <button
+                              </ActionButton>
+                              <ActionButton
                                 onClick={() => handleDeleteCourse(course)}
                                 title="Delete Course"
                                 className="px-2.5 py-1 bg-rose-50 hover:bg-rose-100 text-rose-600 font-bold text-[10px] rounded-lg cursor-pointer transition-colors"
                               >
                                 🗑️ Delete
-                              </button>
+                              </ActionButton>
                             </div>
                           </td>
                         </tr>
@@ -1246,12 +1247,12 @@ export default function SettingsPortal({
                 <h2 className="text-xs font-black text-slate-900 uppercase tracking-wider">Intake Seasons Directory</h2>
                 <p className="text-[10px] text-slate-400 font-semibold mt-0.5">Define global admission intake windows and operational target seasons.</p>
               </div>
-              <button
+              <ActionButton
                 onClick={openAddIntakeModal}
                 className="bg-[#D99A1C] hover:bg-[#F5B025] text-white font-extrabold text-[10px] px-3.5 py-2 rounded-xl transition-all shadow-md uppercase tracking-wider cursor-pointer flex items-center gap-1"
               >
                 <span>+ Add Intake Season</span>
-              </button>
+              </ActionButton>
             </div>
 
             <div className="bg-white border border-[#E2E8F0] border-t-4 border-t-[#D99A1C] rounded-2xl shadow-xs overflow-hidden">
@@ -1292,27 +1293,27 @@ export default function SettingsPortal({
                           </td>
                           <td className="px-5 py-3.5 text-right">
                             <div className="flex items-center justify-end gap-1.5">
-                              <button
+                              <ActionButton
                                 onClick={() => setViewingIntake(intake)}
                                 title="View Details"
                                 className="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-[10px] rounded-lg cursor-pointer transition-colors"
                               >
                                 👁️ View
-                              </button>
-                              <button
+                              </ActionButton>
+                              <ActionButton
                                 onClick={() => openEditIntakeModal(intake)}
                                 title="Edit Intake"
                                 className="px-2.5 py-1 bg-amber-50 hover:bg-amber-100 text-amber-800 font-bold text-[10px] rounded-lg cursor-pointer transition-colors"
                               >
                                 ✏️ Edit
-                              </button>
-                              <button
+                              </ActionButton>
+                              <ActionButton
                                 onClick={() => handleDeleteIntake(intake)}
                                 title="Delete Intake"
                                 className="px-2.5 py-1 bg-rose-50 hover:bg-rose-100 text-rose-600 font-bold text-[10px] rounded-lg cursor-pointer transition-colors"
                               >
                                 🗑️ Delete
-                              </button>
+                              </ActionButton>
                             </div>
                           </td>
                         </tr>
@@ -1341,12 +1342,12 @@ export default function SettingsPortal({
           <div className="space-y-4">
             <div className="flex justify-between items-center">
               <h2 className="text-xs font-black text-slate-900 uppercase tracking-wider">Course Documents Configuration</h2>
-              <button
+              <ActionButton
                 onClick={() => openAddModal('doc')}
                 className="bg-[#D99A1C] hover:bg-[#F5B025] text-white font-extrabold text-[10px] px-3.5 py-2 rounded-xl transition-all shadow-md uppercase tracking-wider cursor-pointer"
               >
                 Add New Document Rule
-              </button>
+              </ActionButton>
             </div>
             
             <div className="bg-white border border-[#E2E8F0] border-t-4 border-t-[#D99A1C] rounded-2xl shadow-xs overflow-hidden">
@@ -1370,12 +1371,12 @@ export default function SettingsPortal({
                       <td className="px-6 py-4 text-slate-500">{doc.minSize} MB</td>
                       <td className="px-6 py-4 text-slate-500">{doc.maxSize} MB</td>
                       <td className="px-6 py-4 text-right">
-                        <button 
+                        <ActionButton
                           onClick={() => handleDeleteDoc(doc.siNo, doc.name)}
                           className="text-rose-600 hover:text-rose-900 font-bold cursor-pointer"
                         >
                           Delete
-                        </button>
+                        </ActionButton>
                       </td>
                     </tr>
                   ))}
@@ -1401,12 +1402,12 @@ export default function SettingsPortal({
           <div className="space-y-4">
             <div className="flex justify-between items-center">
               <h2 className="text-xs font-black text-slate-900 uppercase tracking-wider">B2B Referral Agents</h2>
-              <button
+              <ActionButton
                 onClick={() => openAddModal('agent')}
                 className="bg-[#D99A1C] hover:bg-[#F5B025] text-white font-extrabold text-[10px] px-3.5 py-2 rounded-xl transition-all shadow-md uppercase tracking-wider cursor-pointer"
               >
                 Invite/Add Agent
-              </button>
+              </ActionButton>
             </div>
             
             <div className="bg-white border border-[#E2E8F0] border-t-4 border-t-[#D99A1C] rounded-2xl shadow-xs overflow-hidden">
@@ -1426,12 +1427,12 @@ export default function SettingsPortal({
                       <td className="px-6 py-4 text-slate-950 font-black">{agent.agentName}</td>
                       <td className="px-6 py-4 text-[#2563EB] font-bold">{agent.email}</td>
                       <td className="px-6 py-4 text-right">
-                        <button 
+                        <ActionButton
                           onClick={() => handleDeleteAgent(agent.siNo, agent.agentName)}
                           className="text-rose-600 hover:text-rose-900 font-bold cursor-pointer"
                         >
                           Revoke Access
-                        </button>
+                        </ActionButton>
                       </td>
                     </tr>
                   ))}
@@ -1460,12 +1461,12 @@ export default function SettingsPortal({
                 <h2 className="text-xs font-black text-slate-900 uppercase tracking-wider">Application Stages Pipeline</h2>
                 <p className="text-[10px] text-slate-400 font-semibold mt-0.5">Reorder stages or add customized milestones in the application workflow.</p>
               </div>
-              <button
+              <ActionButton
                 onClick={() => openAddModal('stage')}
                 className="bg-[#D99A1C] hover:bg-[#F5B025] text-white font-extrabold text-[10px] px-3.5 py-2 rounded-xl transition-all shadow-md uppercase tracking-wider cursor-pointer"
               >
                 Add Stage
-              </button>
+              </ActionButton>
             </div>
 
             <div className="bg-white border border-[#E2E8F0] border-t-4 border-t-[#D99A1C] rounded-2xl shadow-xs overflow-hidden">
@@ -1485,26 +1486,26 @@ export default function SettingsPortal({
                       </div>
 
                       <div className="flex items-center gap-2">
-                        <button 
+                        <ActionButton
                           onClick={() => moveStage(globalIdx, 'up')}
                           disabled={globalIdx === 0}
                           className="p-1.5 bg-white text-slate-400 hover:text-slate-950 border border-slate-200 rounded-lg hover:shadow-2xs disabled:opacity-30 disabled:pointer-events-none cursor-pointer"
                         >
                           ▲
-                        </button>
-                        <button 
+                        </ActionButton>
+                        <ActionButton
                           onClick={() => moveStage(globalIdx, 'down')}
                           disabled={globalIdx === stages.length - 1}
                           className="p-1.5 bg-white text-slate-400 hover:text-slate-950 border border-slate-200 rounded-lg hover:shadow-2xs disabled:opacity-30 disabled:pointer-events-none cursor-pointer"
                         >
                           ▼
-                        </button>
-                        <button 
+                        </ActionButton>
+                        <ActionButton
                           onClick={() => handleDeleteItem(stage, setStages, 'stage')}
                           className="p-1.5 bg-rose-50 hover:bg-rose-100 text-rose-500 rounded-lg cursor-pointer"
                         >
                           ✕
-                        </button>
+                        </ActionButton>
                       </div>
                     </div>
                   );
@@ -1561,12 +1562,12 @@ export default function SettingsPortal({
                     </div>
                   </div>
                   <div className="pt-4 border-t border-slate-50 mt-4">
-                    <button
+                    <ActionButton
                       onClick={() => setActiveSubTab && setActiveSubTab(card.id)}
                       className="w-full bg-slate-50 border border-slate-200 hover:bg-slate-100 text-slate-700 text-[10px] font-extrabold py-2 rounded-xl transition-all uppercase tracking-wider cursor-pointer"
                     >
                       Open Configuration
-                    </button>
+                    </ActionButton>
                   </div>
                 </div>
               ))}
@@ -1626,12 +1627,12 @@ export default function SettingsPortal({
             <div className="flex justify-between items-center">
               <h2 className="text-xs font-black text-slate-900 uppercase tracking-wider">{title}</h2>
               {listSetter && (
-                <button
+                <ActionButton
                   onClick={() => openAddModal(activeSubTab)}
                   className="bg-[#D99A1C] hover:bg-[#F5B025] text-white font-extrabold text-[10px] px-3.5 py-2 rounded-xl transition-all shadow-md uppercase tracking-wider cursor-pointer"
                 >
                   {addLabel}
-                </button>
+                </ActionButton>
               )}
             </div>
 
@@ -1665,20 +1666,20 @@ export default function SettingsPortal({
                       </div>
                       <div className="flex items-center gap-2">
                         {activeSubTab === 'settings-intake' && listSetter && (
-                          <button
+                          <ActionButton
                             onClick={() => openEditIntakeModal(item)}
                             className="text-indigo-500 hover:text-indigo-700 font-extrabold text-xs cursor-pointer bg-white px-2.5 py-1 border border-slate-200 rounded-lg hover:border-indigo-200 hover:bg-indigo-50/20 transition-all shadow-3xs"
                           >
                             Edit
-                          </button>
+                          </ActionButton>
                         )}
                         {listSetter && (
-                          <button
+                          <ActionButton
                             onClick={() => handleDeleteSettingItem(item, listSetter, activeSubTab.replace('settings-', ''))}
                             className="text-rose-500 hover:text-rose-700 font-extrabold text-xs cursor-pointer bg-white px-2.5 py-1 border border-slate-200 rounded-lg hover:border-rose-200 hover:bg-rose-50/20 transition-all shadow-3xs"
                           >
                             Delete
-                          </button>
+                          </ActionButton>
                         )}
                       </div>
                     </div>
@@ -1721,11 +1722,11 @@ export default function SettingsPortal({
                 {modalType === 'edit-intake' && 'Edit Intake Season'}
                 {modalType !== 'doc' && modalType !== 'agent' && modalType !== 'stage' && modalType !== 'edit-intake' && 'Add Configuration Lookup Item'}
               </h3>
-              <button onClick={() => setModalType(null)} className="text-slate-400 hover:text-slate-600 font-bold">✕</button>
+              <ActionButton onClick={() => setModalType(null)} className="text-slate-400 hover:text-slate-600 font-bold">✕</ActionButton>
             </div>
 
             {modalType === 'doc' && (
-              <form onSubmit={handleAddDocumentRule} className="space-y-4">
+              <ActionForm onSubmit={handleAddDocumentRule} className="space-y-4">
                 <div className="space-y-1.5">
                   <label className="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">Document Name</label>
                   <input
@@ -1776,8 +1777,8 @@ export default function SettingsPortal({
                 </div>
                 
                 <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
-                  <button type="button" onClick={() => setModalType(null)} className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-extrabold text-xs rounded-xl">Cancel</button>
-                  <button 
+                  <ActionButton type="button" onClick={() => setModalType(null)} className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-extrabold text-xs rounded-xl">Cancel</ActionButton>
+                  <ActionButton
                     type="submit" 
                     disabled={isSubmitting}
                     className="px-5 py-2 bg-[#D99A1C] hover:bg-[#F5B025] disabled:opacity-50 disabled:cursor-not-allowed text-white font-extrabold text-xs rounded-xl shadow-md inline-flex items-center justify-center gap-1.5"
@@ -1789,13 +1790,13 @@ export default function SettingsPortal({
                       </svg>
                     )}
                     <span>{isSubmitting ? 'Adding...' : 'Add Rule'}</span>
-                  </button>
+                  </ActionButton>
                 </div>
-              </form>
+              </ActionForm>
             )}
 
             {modalType === 'agent' && (
-              <form onSubmit={handleAddReferralAgent} className="space-y-4">
+              <ActionForm onSubmit={handleAddReferralAgent} className="space-y-4">
                 <div className="space-y-1.5">
                   <label className="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">Agent Name</label>
                   <input
@@ -1820,8 +1821,8 @@ export default function SettingsPortal({
                 </div>
                 
                 <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
-                  <button type="button" onClick={() => setModalType(null)} className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-extrabold text-xs rounded-xl">Cancel</button>
-                  <button 
+                  <ActionButton type="button" onClick={() => setModalType(null)} className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-extrabold text-xs rounded-xl">Cancel</ActionButton>
+                  <ActionButton
                     type="submit" 
                     disabled={isSubmitting}
                     className="px-5 py-2 bg-[#D99A1C] hover:bg-[#F5B025] disabled:opacity-50 disabled:cursor-not-allowed text-white font-extrabold text-xs rounded-xl shadow-md inline-flex items-center justify-center gap-1.5"
@@ -1833,13 +1834,13 @@ export default function SettingsPortal({
                       </svg>
                     )}
                     <span>{isSubmitting ? 'Adding...' : 'Add Agent'}</span>
-                  </button>
+                  </ActionButton>
                 </div>
-              </form>
+              </ActionForm>
             )}
 
             {modalType === 'stage' && (
-              <form onSubmit={(e) => handleAddSimpleItem(e, setStages, stages, 'stage')} className="space-y-4">
+              <ActionForm onSubmit={(e) => handleAddSimpleItem(e, setStages, stages, 'stage')} className="space-y-4">
                 <div className="space-y-1.5">
                   <label className="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">Stage Label</label>
                   <input
@@ -1853,8 +1854,8 @@ export default function SettingsPortal({
                 </div>
                 
                 <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
-                  <button type="button" onClick={() => setModalType(null)} className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-extrabold text-xs rounded-xl">Cancel</button>
-                  <button 
+                  <ActionButton type="button" onClick={() => setModalType(null)} className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-extrabold text-xs rounded-xl">Cancel</ActionButton>
+                  <ActionButton
                     type="submit" 
                     disabled={isSubmitting}
                     className="px-5 py-2 bg-[#D99A1C] hover:bg-[#F5B025] disabled:opacity-50 disabled:cursor-not-allowed text-white font-extrabold text-xs rounded-xl shadow-md inline-flex items-center justify-center gap-1.5"
@@ -1866,13 +1867,13 @@ export default function SettingsPortal({
                       </svg>
                     )}
                     <span>{isSubmitting ? 'Adding...' : 'Add Stage'}</span>
-                  </button>
+                  </ActionButton>
                 </div>
-              </form>
+              </ActionForm>
             )}
 
             {modalType === 'settings-university' && (
-              <form onSubmit={handleSaveUniversity} className="space-y-4 max-h-[80vh] overflow-y-auto pr-1">
+              <ActionForm onSubmit={handleSaveUniversity} className="space-y-4 max-h-[80vh] overflow-y-auto pr-1">
                 <h3 className="text-xs font-black text-slate-800 uppercase tracking-wider border-b pb-2">
                   {editingUniv ? 'Edit University Details' : 'Add New University'}
                 </h3>
@@ -2030,8 +2031,8 @@ export default function SettingsPortal({
                 </div>
                 
                 <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
-                  <button type="button" onClick={() => setModalType(null)} className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-extrabold text-xs rounded-xl">Cancel</button>
-                  <button 
+                  <ActionButton type="button" onClick={() => setModalType(null)} className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-extrabold text-xs rounded-xl">Cancel</ActionButton>
+                  <ActionButton
                     type="submit" 
                     disabled={isSubmitting}
                     className="px-5 py-2 bg-[#D99A1C] hover:bg-[#F5B025] disabled:opacity-50 disabled:cursor-not-allowed text-white font-extrabold text-xs rounded-xl shadow-md inline-flex items-center justify-center gap-1.5"
@@ -2043,13 +2044,13 @@ export default function SettingsPortal({
                       </svg>
                     )}
                     <span>{isSubmitting ? (editingUniv ? 'Saving Changes...' : 'Adding University...') : (editingUniv ? 'Save Changes' : 'Add University')}</span>
-                  </button>
+                  </ActionButton>
                 </div>
-              </form>
+              </ActionForm>
             )}
 
             {modalType === 'settings-course' && (
-              <form onSubmit={handleSaveCourse} className="space-y-4 max-h-[80vh] overflow-y-auto pr-1">
+              <ActionForm onSubmit={handleSaveCourse} className="space-y-4 max-h-[80vh] overflow-y-auto pr-1">
                 <h3 className="text-xs font-black text-slate-800 uppercase tracking-wider border-b pb-2">
                   {editingCourse ? 'Edit Course Program' : 'Add Academic Course Program'}
                 </h3>
@@ -2178,8 +2179,8 @@ export default function SettingsPortal({
                 </div>
                 
                 <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
-                  <button type="button" onClick={() => setModalType(null)} className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-extrabold text-xs rounded-xl">Cancel</button>
-                  <button 
+                  <ActionButton type="button" onClick={() => setModalType(null)} className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-extrabold text-xs rounded-xl">Cancel</ActionButton>
+                  <ActionButton
                     type="submit" 
                     disabled={isSubmitting}
                     className="px-5 py-2 bg-[#D99A1C] hover:bg-[#F5B025] disabled:opacity-50 disabled:cursor-not-allowed text-white font-extrabold text-xs rounded-xl shadow-md inline-flex items-center justify-center gap-1.5"
@@ -2191,13 +2192,13 @@ export default function SettingsPortal({
                       </svg>
                     )}
                     <span>{isSubmitting ? (editingCourse ? 'Saving Changes...' : 'Adding Course...') : (editingCourse ? 'Save Changes' : 'Add Course')}</span>
-                  </button>
+                  </ActionButton>
                 </div>
-              </form>
+              </ActionForm>
             )}
 
             {modalType === 'settings-intake' && (
-              <form onSubmit={handleSaveIntake} className="space-y-4">
+              <ActionForm onSubmit={handleSaveIntake} className="space-y-4">
                 <h3 className="text-xs font-black text-slate-800 uppercase tracking-wider border-b pb-2">
                   {editingIntake ? 'Edit Intake Season' : 'Add Intake Season'}
                 </h3>
@@ -2226,8 +2227,8 @@ export default function SettingsPortal({
                 </div>
                 
                 <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
-                  <button type="button" onClick={() => setModalType(null)} className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-extrabold text-xs rounded-xl">Cancel</button>
-                  <button 
+                  <ActionButton type="button" onClick={() => setModalType(null)} className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-extrabold text-xs rounded-xl">Cancel</ActionButton>
+                  <ActionButton
                     type="submit" 
                     disabled={isSubmitting}
                     className="px-5 py-2 bg-[#D99A1C] hover:bg-[#F5B025] disabled:opacity-50 disabled:cursor-not-allowed text-white font-extrabold text-xs rounded-xl shadow-md inline-flex items-center justify-center gap-1.5"
@@ -2239,13 +2240,13 @@ export default function SettingsPortal({
                       </svg>
                     )}
                     <span>{isSubmitting ? (editingIntake ? 'Saving Changes...' : 'Adding Intake...') : (editingIntake ? 'Save Changes' : 'Add Intake')}</span>
-                  </button>
+                  </ActionButton>
                 </div>
-              </form>
+              </ActionForm>
             )}
 
             {modalType === 'edit-intake' && (
-              <form onSubmit={handleUpdateIntake} className="space-y-4">
+              <ActionForm onSubmit={handleUpdateIntake} className="space-y-4">
                 <div className="space-y-1.5">
                   <label className="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">Intake Title</label>
                   <input
@@ -2269,8 +2270,8 @@ export default function SettingsPortal({
                 </div>
                 
                 <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
-                  <button type="button" onClick={() => setModalType(null)} className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-extrabold text-xs rounded-xl">Cancel</button>
-                  <button 
+                  <ActionButton type="button" onClick={() => setModalType(null)} className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-extrabold text-xs rounded-xl">Cancel</ActionButton>
+                  <ActionButton
                     type="submit" 
                     disabled={isSubmitting}
                     className="px-5 py-2 bg-[#D99A1C] hover:bg-[#F5B025] disabled:opacity-50 disabled:cursor-not-allowed text-white font-extrabold text-xs rounded-xl shadow-md inline-flex items-center justify-center gap-1.5"
@@ -2282,15 +2283,15 @@ export default function SettingsPortal({
                       </svg>
                     )}
                     <span>{isSubmitting ? 'Saving Changes...' : 'Save Changes'}</span>
-                  </button>
+                  </ActionButton>
                 </div>
-              </form>
+              </ActionForm>
             )}
 
             {modalType !== 'doc' && modalType !== 'agent' && modalType !== 'stage' && 
              modalType !== 'settings-university' && modalType !== 'settings-course' && modalType !== 'settings-intake' && 
              modalType !== 'edit-intake' && (
-              <form 
+              <ActionForm
                 onSubmit={(e) => {
                   let setter = null;
                   let lst = [];
@@ -2316,8 +2317,8 @@ export default function SettingsPortal({
                 </div>
                 
                 <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
-                  <button type="button" onClick={() => setModalType(null)} className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-extrabold text-xs rounded-xl">Cancel</button>
-                  <button 
+                  <ActionButton type="button" onClick={() => setModalType(null)} className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-extrabold text-xs rounded-xl">Cancel</ActionButton>
+                  <ActionButton
                     type="submit" 
                     disabled={isSubmitting}
                     className="px-5 py-2 bg-[#D99A1C] hover:bg-[#F5B025] disabled:opacity-50 disabled:cursor-not-allowed text-white font-extrabold text-xs rounded-xl shadow-md inline-flex items-center justify-center gap-1.5"
@@ -2329,9 +2330,9 @@ export default function SettingsPortal({
                       </svg>
                     )}
                     <span>{isSubmitting ? 'Adding...' : 'Add Item'}</span>
-                  </button>
+                  </ActionButton>
                 </div>
-              </form>
+              </ActionForm>
             )}
           </div>
         </div>,
@@ -2341,12 +2342,12 @@ export default function SettingsPortal({
       {viewingUniv && createPortal(
         <div className="fixed inset-0 z-[9999] bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 animate-fade-in overflow-y-auto">
           <div className="bg-white border border-slate-200 rounded-2xl max-w-2xl w-full p-6 shadow-2xl space-y-5 relative max-h-[90vh] overflow-y-auto my-auto">
-            <button
+            <ActionButton
               onClick={() => setViewingUniv(null)}
               className="absolute top-4 right-4 text-slate-400 hover:text-slate-700 text-lg font-bold w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center cursor-pointer"
             >
               ✕
-            </button>
+            </ActionButton>
 
             <div className="flex items-center gap-4 border-b pb-4">
               {viewingUniv.logoUrl ? (
@@ -2430,7 +2431,7 @@ export default function SettingsPortal({
             })()}
 
             <div className="flex justify-between items-center pt-4 border-t">
-              <button
+              <ActionButton
                 onClick={() => {
                   const target = viewingUniv;
                   setViewingUniv(null);
@@ -2439,13 +2440,13 @@ export default function SettingsPortal({
                 className="px-4 py-2 bg-amber-50 border border-amber-200 hover:bg-amber-100 text-amber-800 text-xs font-extrabold rounded-xl cursor-pointer"
               >
                 ✏️ Edit University
-              </button>
-              <button
+              </ActionButton>
+              <ActionButton
                 onClick={() => setViewingUniv(null)}
                 className="px-5 py-2 bg-[#D99A1C] hover:bg-[#F5B025] text-white text-xs font-extrabold rounded-xl shadow-md cursor-pointer"
               >
                 Close
-              </button>
+              </ActionButton>
             </div>
           </div>
         </div>,
@@ -2455,12 +2456,12 @@ export default function SettingsPortal({
       {viewingCourse && createPortal(
         <div className="fixed inset-0 z-[9999] bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fade-in overflow-y-auto">
           <div className="bg-white border border-slate-200 rounded-2xl max-w-xl w-full p-6 shadow-2xl space-y-5 relative max-h-[90vh] overflow-y-auto my-auto">
-            <button
+            <ActionButton
               onClick={() => setViewingCourse(null)}
               className="absolute top-4 right-4 text-slate-400 hover:text-slate-700 text-lg font-bold w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center cursor-pointer"
             >
               ✕
-            </button>
+            </ActionButton>
 
             <div className="border-b pb-4 space-y-1">
               <div className="flex items-center gap-2">
@@ -2518,7 +2519,7 @@ export default function SettingsPortal({
             </div>
 
             <div className="flex justify-between items-center pt-4 border-t">
-              <button
+              <ActionButton
                 onClick={() => {
                   const target = viewingCourse;
                   setViewingCourse(null);
@@ -2527,13 +2528,13 @@ export default function SettingsPortal({
                 className="px-4 py-2 bg-amber-50 border border-amber-200 hover:bg-amber-100 text-amber-800 text-xs font-extrabold rounded-xl cursor-pointer"
               >
                 ✏️ Edit Course
-              </button>
-              <button
+              </ActionButton>
+              <ActionButton
                 onClick={() => setViewingCourse(null)}
                 className="px-5 py-2 bg-[#D99A1C] hover:bg-[#F5B025] text-white text-xs font-extrabold rounded-xl shadow-md cursor-pointer"
               >
                 Close
-              </button>
+              </ActionButton>
             </div>
           </div>
         </div>,
@@ -2544,12 +2545,12 @@ export default function SettingsPortal({
       {viewingIntake && createPortal(
         <div className="fixed inset-0 z-[9999] bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fade-in overflow-y-auto">
           <div className="bg-white border border-slate-200 rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-5 relative max-h-[90vh] overflow-y-auto my-auto">
-            <button
+            <ActionButton
               onClick={() => setViewingIntake(null)}
               className="absolute top-4 right-4 text-slate-400 hover:text-slate-700 text-lg font-bold w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center cursor-pointer"
             >
               ✕
-            </button>
+            </ActionButton>
 
             <div className="border-b pb-4 flex items-center gap-3">
               <div className="w-12 h-12 rounded-xl bg-amber-100 text-amber-800 flex items-center justify-center text-xl font-bold">
@@ -2593,7 +2594,7 @@ export default function SettingsPortal({
             </div>
 
             <div className="flex justify-between items-center pt-4 border-t">
-              <button
+              <ActionButton
                 onClick={() => {
                   const target = viewingIntake;
                   setViewingIntake(null);
@@ -2602,13 +2603,13 @@ export default function SettingsPortal({
                 className="px-4 py-2 bg-amber-50 border border-amber-200 hover:bg-amber-100 text-amber-800 text-xs font-extrabold rounded-xl cursor-pointer"
               >
                 ✏️ Edit Intake
-              </button>
-              <button
+              </ActionButton>
+              <ActionButton
                 onClick={() => setViewingIntake(null)}
                 className="px-5 py-2 bg-[#D99A1C] hover:bg-[#F5B025] text-white text-xs font-extrabold rounded-xl shadow-md cursor-pointer"
               >
                 Close
-              </button>
+              </ActionButton>
             </div>
           </div>
         </div>,
@@ -2629,7 +2630,7 @@ export default function SettingsPortal({
                   Bulk upload academic programs, tuition fees, and degree structures without duplicates.
                 </p>
               </div>
-              <button
+              <ActionButton
                 type="button"
                 onClick={() => {
                   setIsExcelImportModalOpen(false);
@@ -2641,7 +2642,7 @@ export default function SettingsPortal({
                 title="Close"
               >
                 ✕
-              </button>
+              </ActionButton>
             </div>
 
             {/* Modal Body */}
@@ -2656,7 +2657,7 @@ export default function SettingsPortal({
                     Pre-formatted template with required columns: Course Title, University, Fee, Level.
                   </p>
                 </div>
-                <button
+                <ActionButton
                   type="button"
                   onClick={handleDownloadCourseTemplate}
                   disabled={isDownloadingTemplate}
@@ -2673,7 +2674,7 @@ export default function SettingsPortal({
                       <span>Download Template</span>
                     </>
                   )}
-                </button>
+                </ActionButton>
               </div>
 
               {/* 2. File Drop & Selection Zone */}
@@ -2722,7 +2723,7 @@ export default function SettingsPortal({
                         </p>
                       </div>
                     </div>
-                    <button
+                    <ActionButton
                       type="button"
                       onClick={() => {
                         setSelectedCourseFile(null);
@@ -2733,7 +2734,7 @@ export default function SettingsPortal({
                       className="px-2.5 py-1 text-[10px] font-extrabold text-slate-500 hover:text-rose-600 bg-white border border-slate-200 hover:border-rose-200 rounded-lg transition-colors cursor-pointer shrink-0"
                     >
                       Change File
-                    </button>
+                    </ActionButton>
                   </div>
                 )}
               </div>
@@ -2805,7 +2806,7 @@ export default function SettingsPortal({
 
             {/* Modal Footer Actions */}
             <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-slate-100 shrink-0">
-              <button
+              <ActionButton
                 type="button"
                 onClick={() => {
                   setIsExcelImportModalOpen(false);
@@ -2817,8 +2818,8 @@ export default function SettingsPortal({
                 className="px-4 py-2 rounded-xl text-xs font-extrabold text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer border border-slate-200"
               >
                 Cancel
-              </button>
-              <button
+              </ActionButton>
+              <ActionButton
                 type="button"
                 onClick={handleUploadCourseExcel}
                 disabled={!selectedCourseFile || isUploadingCourseExcel || !isWritable}
@@ -2835,7 +2836,7 @@ export default function SettingsPortal({
                     {excelStats.totalRows > 0 && <span>({excelStats.totalRows})</span>}
                   </>
                 )}
-              </button>
+              </ActionButton>
             </div>
           </div>
         </div>,
@@ -2856,13 +2857,13 @@ export default function SettingsPortal({
                   Detailed review of processed academic course rows from the uploaded Excel file.
                 </p>
               </div>
-              <button
+              <ActionButton
                 onClick={() => setImportSummaryModalOpen(false)}
                 className="text-slate-400 hover:text-slate-700 text-lg font-bold p-1 rounded-lg transition-colors cursor-pointer"
                 title="Close"
               >
                 ✕
-              </button>
+              </ActionButton>
             </div>
 
             {/* Metrics Cards */}
@@ -2955,13 +2956,13 @@ export default function SettingsPortal({
 
             {/* Modal Actions */}
             <div className="flex justify-end pt-3 border-t border-slate-100">
-              <button
+              <ActionButton
                 type="button"
                 onClick={() => setImportSummaryModalOpen(false)}
                 className="px-5 py-2 bg-[#D99A1C] hover:bg-[#F5B025] text-white text-xs font-extrabold rounded-xl shadow-md transition-all cursor-pointer"
               >
                 Close Summary
-              </button>
+              </ActionButton>
             </div>
           </div>
         </div>,
@@ -3002,16 +3003,16 @@ function PaginationFooter({ totalItems, currentPage, setCurrentPage, itemsPerPag
       </div>
 
       <div className="flex items-center gap-1.5">
-        <button
+        <ActionButton
           disabled={currentPage === 1}
           onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
           className="px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-bold bg-white text-slate-600 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer"
         >
           ◀ Prev
-        </button>
+        </ActionButton>
 
         {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
-          <button
+          <ActionButton
             key={page}
             onClick={() => setCurrentPage(page)}
             className={`px-3 py-1.5 rounded-lg text-xs font-extrabold transition-all cursor-pointer ${
@@ -3021,16 +3022,16 @@ function PaginationFooter({ totalItems, currentPage, setCurrentPage, itemsPerPag
             }`}
           >
             {page}
-          </button>
+          </ActionButton>
         ))}
 
-        <button
+        <ActionButton
           disabled={currentPage === totalPages}
           onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
           className="px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-bold bg-white text-slate-600 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer"
         >
           Next ▶
-        </button>
+        </ActionButton>
       </div>
     </div>
   );

@@ -1,3 +1,4 @@
+import { ActionButton } from '../components/ActionControls';
 import React, { useState, useMemo } from 'react';
 
 export default function AdminReport({ 
@@ -195,7 +196,7 @@ export default function AdminReport({
           </div>
           <p className="text-xs text-slate-500 font-medium">Query B2B referrals and filter details by university, country, and agent channel.</p>
         </div>
-        <button
+        <ActionButton
           onClick={handleExport}
           className="bg-[#D99A1C] hover:bg-[#F5B025] text-white font-extrabold text-xs px-4 py-2 rounded-xl transition-all shadow-md inline-flex items-center gap-1.5 cursor-pointer"
         >
@@ -203,7 +204,7 @@ export default function AdminReport({
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
           </svg>
           <span>Export CSV</span>
-        </button>
+        </ActionButton>
       </div>
 
       {/* Query Filters */}
@@ -274,7 +275,7 @@ export default function AdminReport({
           <div className="flex items-center gap-2">
             <span className="text-[10px] font-bold text-slate-400">Filters: Agent={selectedAgent}, Univ={selectedUniversity}, Country={selectedCountry}</span>
             {(selectedAgent !== 'All' || selectedUniversity !== 'All' || selectedCountry !== 'All') && (
-              <button
+              <ActionButton
                 type="button"
                 onClick={() => {
                   setSelectedAgent('All');
@@ -284,7 +285,7 @@ export default function AdminReport({
                 className="text-[10px] font-extrabold text-[#D99A1C] hover:underline cursor-pointer ml-1"
               >
                 Reset
-              </button>
+              </ActionButton>
             )}
           </div>
         </div>

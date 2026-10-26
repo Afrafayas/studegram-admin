@@ -1,3 +1,4 @@
+import { ActionButton, ActionForm } from '../components/ActionControls';
 import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import API from '../api/axios';
@@ -794,7 +795,7 @@ export default function BecomePartner({ clients = [], setClients, applications =
 
           {/* Premium Sub-Tab Switcher */}
           <div className="flex items-center bg-slate-800/90 border border-slate-700/80 p-1.5 rounded-2xl gap-1.5 shrink-0 shadow-inner backdrop-blur-md">
-            <button
+            <ActionButton
               onClick={handleBackToDirectory}
               className={`px-5 py-2.5 text-xs font-black rounded-xl transition-all cursor-pointer flex items-center gap-2 ${
                 subView === 'directory'
@@ -806,9 +807,9 @@ export default function BecomePartner({ clients = [], setClients, applications =
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
               </svg>
               <span>Referral Partners Directory ({partners.length})</span>
-            </button>
+            </ActionButton>
 
-            <button
+            <ActionButton
               onClick={() => {
                 setSubView('onboard');
                 setSingleViewPartner(null);
@@ -824,7 +825,7 @@ export default function BecomePartner({ clients = [], setClients, applications =
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 4v16m8-8H4" />
               </svg>
               <span>Onboard New Partner</span>
-            </button>
+            </ActionButton>
           </div>
         </div>
       </div>
@@ -837,7 +838,7 @@ export default function BecomePartner({ clients = [], setClients, applications =
             {/* Status Filter Tabs */}
             <div className="bg-slate-100/90 p-1 rounded-xl flex w-full lg:w-auto border border-slate-200/60">
               {['All', 'Pending', 'Approved'].map((status) => (
-                <button
+                <ActionButton
                   key={status}
                   onClick={() => setStatusFilter(status)}
                   className={`flex-1 lg:flex-none px-4 py-2 text-xs font-black rounded-lg transition-all cursor-pointer ${
@@ -847,7 +848,7 @@ export default function BecomePartner({ clients = [], setClients, applications =
                   }`}
                 >
                   {status === 'All' ? 'All Channels' : status === 'Pending' ? 'Pending Review' : 'Approved Active'}
-                </button>
+                </ActionButton>
               ))}
             </div>
 
@@ -876,16 +877,16 @@ export default function BecomePartner({ clients = [], setClients, applications =
                   placeholder="Search agency, code, email..."
                 />
                 {searchTerm && (
-                  <button
+                  <ActionButton
                     onClick={() => setSearchTerm('')}
                     className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600 font-bold text-xs"
                   >
                     ✕
-                  </button>
+                  </ActionButton>
                 )}
               </div>
 
-              <button
+              <ActionButton
                 onClick={() => {
                   setSubView('onboard');
                   resetOnboardingForm();
@@ -893,7 +894,7 @@ export default function BecomePartner({ clients = [], setClients, applications =
                 className="w-full sm:w-auto bg-gradient-to-r from-[#D99A1C] to-[#F5B025] hover:from-[#c28815] hover:to-[#e09e1d] text-white font-black text-xs px-4 py-2.5 rounded-xl shadow-md transition-all cursor-pointer flex items-center justify-center gap-1.5 shrink-0"
               >
                 <span>+ Onboard Agency</span>
-              </button>
+              </ActionButton>
             </div>
           </div>
 
@@ -985,7 +986,7 @@ export default function BecomePartner({ clients = [], setClients, applications =
                           </td>
                           <td className="px-6 py-4 text-right" onClick={(e) => e.stopPropagation()}>
                             <div className="flex items-center justify-end gap-2">
-                              <button
+                              <ActionButton
                                 type="button"
                                 onClick={(e) => {
                                   e.stopPropagation();
@@ -998,15 +999,15 @@ export default function BecomePartner({ clients = [], setClients, applications =
                                 title="View Full Single Page Details"
                               >
                                 <span>👁️ View Details</span>
-                              </button>
-                              <button
+                              </ActionButton>
+                              <ActionButton
                                 type="button"
                                 onClick={(e) => handleOpenEditModal(partner, e)}
                                 className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200/80 rounded-xl text-[10px] font-black transition-all cursor-pointer flex items-center gap-1 shadow-2xs"
                                 title="Edit Partner Profile Details"
                               >
                                 <span>✏️ Edit</span>
-                              </button>
+                              </ActionButton>
 
                               <span className={`px-2.5 py-1 border rounded-full text-[9px] font-black uppercase tracking-wider ${
                                 partner.status === 'Active' 
@@ -1019,7 +1020,7 @@ export default function BecomePartner({ clients = [], setClients, applications =
                               </span>
 
                               {partner.status === 'Pending' && (
-                                <button
+                                <ActionButton
                                   onClick={(e) => {
                                     e.stopPropagation();
                                     dismissedTargetRef.current = false;
@@ -1030,10 +1031,10 @@ export default function BecomePartner({ clients = [], setClients, applications =
                                   className="bg-emerald-600 hover:bg-emerald-700 text-white font-black text-[9px] px-2.5 py-1.5 rounded-lg transition-all shadow-2xs cursor-pointer uppercase"
                                 >
                                   Approve
-                                </button>
+                                </ActionButton>
                               )}
                               {partner.status === 'Active' && (
-                                <button
+                                <ActionButton
                                   onClick={(e) => {
                                     e.stopPropagation();
                                     dismissedTargetRef.current = false;
@@ -1044,10 +1045,10 @@ export default function BecomePartner({ clients = [], setClients, applications =
                                   className="bg-rose-500 hover:bg-rose-600 text-white font-black text-[9px] px-2.5 py-1.5 rounded-lg transition-all shadow-2xs cursor-pointer uppercase"
                                 >
                                   Deactivate
-                                </button>
+                                </ActionButton>
                               )}
                               {partner.status === 'Inactive' && (
-                                <button
+                                <ActionButton
                                   onClick={(e) => {
                                     e.stopPropagation();
                                     dismissedTargetRef.current = false;
@@ -1058,7 +1059,7 @@ export default function BecomePartner({ clients = [], setClients, applications =
                                   className="bg-emerald-600 hover:bg-emerald-700 text-white font-black text-[9px] px-2.5 py-1.5 rounded-lg transition-all shadow-2xs cursor-pointer uppercase"
                                 >
                                   Activate
-                                </button>
+                                </ActionButton>
                               )}
                             </div>
                           </td>
@@ -1103,16 +1104,16 @@ export default function BecomePartner({ clients = [], setClients, applications =
                 </div>
 
                 <div className="flex items-center gap-1.5">
-                  <button
+                  <ActionButton
                     disabled={currentPage === 1}
                     onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
                     className="px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-bold bg-white text-slate-600 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer"
                   >
                     ◀ Prev
-                  </button>
+                  </ActionButton>
 
                   {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
-                    <button
+                    <ActionButton
                       key={page}
                       onClick={() => setCurrentPage(page)}
                       className={`px-3 py-1.5 rounded-lg text-xs font-extrabold transition-all cursor-pointer ${
@@ -1122,16 +1123,16 @@ export default function BecomePartner({ clients = [], setClients, applications =
                       }`}
                     >
                       {page}
-                    </button>
+                    </ActionButton>
                   ))}
 
-                  <button
+                  <ActionButton
                     disabled={currentPage === totalPages}
                     onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
                     className="px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-bold bg-white text-slate-600 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer"
                   >
                     Next ▶
-                  </button>
+                  </ActionButton>
                 </div>
               </div>
             )}
@@ -1145,12 +1146,12 @@ export default function BecomePartner({ clients = [], setClients, applications =
           {/* Top Header Card */}
           <div className="bg-white border border-slate-200/90 rounded-3xl p-6 shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div className="flex items-center gap-4">
-              <button
+              <ActionButton
                 onClick={handleBackToDirectory}
                 className="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-extrabold text-xs rounded-xl transition-all flex items-center gap-1.5 cursor-pointer border border-slate-200 shadow-2xs"
               >
                 <span>← Back to Directory</span>
-              </button>
+              </ActionButton>
               <div>
                 <span className="text-[10px] font-extrabold text-[#D99A1C] uppercase tracking-wider block">Single View Dossier</span>
                 <h2 className="text-xl font-black text-slate-900 flex items-center gap-2">
@@ -1175,7 +1176,7 @@ export default function BecomePartner({ clients = [], setClients, applications =
               </span>
 
               {singleViewPartner.status === 'Pending' && (
-                <button
+                <ActionButton
                   onClick={() => {
                     setConfirmStatusModal({
                       partner: singleViewPartner,
@@ -1187,11 +1188,11 @@ export default function BecomePartner({ clients = [], setClients, applications =
                   className="px-5 py-2.5 bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-700 hover:to-emerald-600 text-white font-black text-xs rounded-xl shadow-md transition-all cursor-pointer flex items-center gap-2 uppercase tracking-wide"
                 >
                   <span>✓ Check & Approve Partner</span>
-                </button>
+                </ActionButton>
               )}
 
               {singleViewPartner.status === 'Active' && (
-                <button
+                <ActionButton
                   onClick={() => {
                     setConfirmStatusModal({
                       partner: singleViewPartner,
@@ -1203,11 +1204,11 @@ export default function BecomePartner({ clients = [], setClients, applications =
                   className="px-4 py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 font-extrabold text-xs rounded-xl transition-all cursor-pointer flex items-center gap-1.5"
                 >
                   <span>Deactivate Partner</span>
-                </button>
+                </ActionButton>
               )}
 
               {singleViewPartner.status === 'Inactive' && (
-                <button
+                <ActionButton
                   onClick={() => {
                     setConfirmStatusModal({
                       partner: singleViewPartner,
@@ -1219,15 +1220,15 @@ export default function BecomePartner({ clients = [], setClients, applications =
                   className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs rounded-xl shadow-md transition-all cursor-pointer flex items-center gap-2 uppercase"
                 >
                   <span>Re-Activate Partner</span>
-                </button>
+                </ActionButton>
               )}
 
-              <button
+              <ActionButton
                 onClick={(e) => handleOpenEditModal(singleViewPartner, e)}
                 className="px-4 py-2 bg-amber-50 hover:bg-amber-100 text-[#D99A1C] border border-amber-200/80 rounded-xl font-extrabold text-xs transition-all cursor-pointer flex items-center gap-1.5"
               >
                 <span>✏️ Edit Info</span>
-              </button>
+              </ActionButton>
             </div>
           </div>
 
@@ -1245,7 +1246,7 @@ export default function BecomePartner({ clients = [], setClients, applications =
                   </p>
                 </div>
               </div>
-              <button
+              <ActionButton
                 onClick={() => {
                   setConfirmStatusModal({
                     partner: singleViewPartner,
@@ -1257,7 +1258,7 @@ export default function BecomePartner({ clients = [], setClients, applications =
                 className="px-4 py-2 bg-[#D99A1C] hover:bg-[#F5B025] text-white font-black text-xs rounded-xl shadow-md cursor-pointer shrink-0 uppercase tracking-wider"
               >
                 ✓ Check & Approve Now
-              </button>
+              </ActionButton>
             </div>
           )}
 
@@ -1385,7 +1386,7 @@ export default function BecomePartner({ clients = [], setClients, applications =
 
                           {/* Action Controls: Expand & Download */}
                           <div className="flex items-center gap-2 pt-1">
-                            <button
+                            <ActionButton
                               type="button"
                               onClick={() => {
                                 setPreviewModalDoc({
@@ -1399,14 +1400,14 @@ export default function BecomePartner({ clients = [], setClients, applications =
                               className="flex-1 py-2 bg-white hover:bg-slate-100 text-slate-800 border border-slate-200 rounded-xl font-bold text-xs transition-all cursor-pointer flex items-center justify-center gap-1.5 shadow-2xs"
                             >
                               <span>🔍 Expand</span>
-                            </button>
-                            <button
+                            </ActionButton>
+                            <ActionButton
                               type="button"
                               onClick={() => handleDownloadDocument(docBlobUrl, `${docTitle.replace(/\s+/g, '_')}.pdf`)}
                               className="flex-1 py-2 bg-gradient-to-r from-[#D99A1C] to-[#F5B025] hover:from-[#c28815] hover:to-[#e09e1d] text-white rounded-xl font-bold text-xs transition-all cursor-pointer flex items-center justify-center gap-1.5 shadow-2xs"
                             >
                               <span>📥 Download</span>
-                            </button>
+                            </ActionButton>
                           </div>
                         </div>
                       );
@@ -1418,13 +1419,13 @@ export default function BecomePartner({ clients = [], setClients, applications =
                       📄
                     </div>
                     <p className="text-xs font-bold text-amber-900">No proof documents attached yet to this partner profile.</p>
-                    <button
+                    <ActionButton
                       type="button"
                       onClick={(e) => handleOpenEditModal(singleViewPartner, e)}
                       className="px-4 py-2 bg-[#D99A1C] hover:bg-[#F5B025] text-white rounded-xl text-xs font-black cursor-pointer shadow-xs inline-block"
                     >
                       + Attach Proof Documents Now
-                    </button>
+                    </ActionButton>
                   </div>
                 )}
               </div>
@@ -1510,16 +1511,16 @@ export default function BecomePartner({ clients = [], setClients, applications =
               </div>
 
               <div className="flex justify-center gap-3 pt-2">
-                <button
+                <ActionButton
                   onClick={() => setSubView('directory')}
                   className="bg-[#D99A1C] hover:bg-[#F5B025] text-white font-extrabold text-xs px-6 py-3 rounded-xl transition-all shadow-md cursor-pointer"
                 >
                   View in Partners Directory →
-                </button>
+                </ActionButton>
               </div>
             </div>
           ) : (
-            <form onSubmit={handleSubmit} className="space-y-6">
+            <ActionForm onSubmit={handleSubmit} className="space-y-6">
               {/* STEP 1: Select Partner Classification */}
               <div className="bg-white border border-slate-200 border-t-4 border-t-[#2563EB] rounded-3xl p-6 shadow-sm space-y-5">
                 <div className="space-y-0.5">
@@ -1640,10 +1641,10 @@ export default function BecomePartner({ clients = [], setClients, applications =
               </div>
 
               <div className="flex justify-end gap-3 bg-white border border-slate-200 p-4 rounded-2xl shadow-xs">
-                <button type="button" onClick={() => setSubView('directory')} className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-extrabold text-xs rounded-xl cursor-pointer">
+                <ActionButton type="button" onClick={() => setSubView('directory')} className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-extrabold text-xs rounded-xl cursor-pointer">
                   Cancel
-                </button>
-                <button type="submit" disabled={isSubmitting} className="px-6 py-2.5 bg-[#D99A1C] hover:bg-[#F5B025] text-white font-black text-xs rounded-xl shadow-md cursor-pointer inline-flex items-center justify-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed">
+                </ActionButton>
+                <ActionButton type="submit" disabled={isSubmitting} className="px-6 py-2.5 bg-[#D99A1C] hover:bg-[#F5B025] text-white font-black text-xs rounded-xl shadow-md cursor-pointer inline-flex items-center justify-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed">
                   {isSubmitting && (
                     <svg className="animate-spin h-3.5 w-3.5 text-white" fill="none" viewBox="0 0 24 24">
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
@@ -1651,9 +1652,9 @@ export default function BecomePartner({ clients = [], setClients, applications =
                     </svg>
                   )}
                   {isSubmitting ? 'Onboarding Partner...' : 'Confirm Partner Onboarding →'}
-                </button>
+                </ActionButton>
               </div>
-            </form>
+            </ActionForm>
           )}
         </div>
       )}
@@ -1667,16 +1668,16 @@ export default function BecomePartner({ clients = [], setClients, applications =
                 <span className="text-[10px] font-extrabold text-[#D99A1C] uppercase tracking-wider block">Admin Management</span>
                 <h3 className="text-sm font-black text-slate-900">Edit Partner Details — {editingPartner.name}</h3>
               </div>
-              <button
+              <ActionButton
                 type="button"
                 onClick={() => setEditingPartner(null)}
                 className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold flex items-center justify-center cursor-pointer"
               >
                 ✕
-              </button>
+              </ActionButton>
             </div>
 
-            <form onSubmit={handleSavePartnerEdit} className="space-y-4 text-xs font-semibold">
+            <ActionForm onSubmit={handleSavePartnerEdit} className="space-y-4 text-xs font-semibold">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-1.5">
                   <label className="block text-[10px] font-extrabold text-slate-600 uppercase tracking-wider">Contact Person Name <span className="text-rose-500">*</span></label>
@@ -1887,14 +1888,14 @@ export default function BecomePartner({ clients = [], setClients, applications =
                             </div>
                           </div>
                           <div className="flex items-center gap-1.5 shrink-0">
-                            <button
+                            <ActionButton
                               type="button"
                               onClick={() => setPreviewModalDoc({ title: docTitle, fileName: docFileName, previewUrl: docUrl, type: docType })}
                               className="px-2.5 py-1 bg-amber-50 text-[#D99A1C] border border-amber-200 rounded-lg text-[10px] font-black hover:bg-amber-100 cursor-pointer"
                             >
                               👁️ View
-                            </button>
-                            <button
+                            </ActionButton>
+                            <ActionButton
                               type="button"
                               onClick={() => {
                                 setEditingPartner(prev => ({
@@ -1906,7 +1907,7 @@ export default function BecomePartner({ clients = [], setClients, applications =
                               title="Remove Document"
                             >
                               ✕
-                            </button>
+                            </ActionButton>
                           </div>
                         </div>
                       );
@@ -1921,14 +1922,14 @@ export default function BecomePartner({ clients = [], setClients, applications =
               </div>
 
               <div className="flex justify-end gap-2 pt-3 border-t border-slate-100">
-                <button
+                <ActionButton
                   type="button"
                   onClick={() => setEditingPartner(null)}
                   className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-extrabold text-xs rounded-xl cursor-pointer"
                 >
                   Cancel
-                </button>
-                <button
+                </ActionButton>
+                <ActionButton
                   type="submit"
                   disabled={isSavingPartner}
                   className="px-5 py-2 bg-[#D99A1C] hover:bg-[#F5B025] disabled:opacity-50 disabled:cursor-not-allowed text-white font-extrabold text-xs rounded-xl shadow-md cursor-pointer inline-flex items-center justify-center gap-1.5"
@@ -1940,9 +1941,9 @@ export default function BecomePartner({ clients = [], setClients, applications =
                     </svg>
                   )}
                   {isSavingPartner ? 'Saving Changes...' : 'Save Partner Changes'}
-                </button>
+                </ActionButton>
               </div>
-            </form>
+            </ActionForm>
           </div>
         </div>,
         document.body
@@ -1958,13 +1959,13 @@ export default function BecomePartner({ clients = [], setClients, applications =
                 <h3 className="text-xs sm:text-sm font-black text-slate-900">{previewModalDoc.title}</h3>
                 <p className="text-[10px] sm:text-[11px] text-slate-400 font-semibold">{previewModalDoc.fileName}</p>
               </div>
-              <button
+              <ActionButton
                 type="button"
                 onClick={() => setPreviewModalDoc(null)}
                 className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold flex items-center justify-center transition-all cursor-pointer shrink-0"
               >
                 ✕
-              </button>
+              </ActionButton>
             </div>
 
             <div className="flex-1 overflow-auto bg-slate-50 rounded-2xl border border-slate-200 p-2 sm:p-3 flex items-center justify-center my-3 min-h-[300px]">
@@ -2001,7 +2002,7 @@ export default function BecomePartner({ clients = [], setClients, applications =
             <div className="flex justify-between items-center pt-3 border-t border-slate-100 shrink-0">
               {previewModalDoc.previewUrl ? (
                 <div className="flex items-center gap-2">
-                  <button
+                  <ActionButton
                     type="button"
                     onClick={() => {
                       if (previewModalDoc.previewUrl) {
@@ -2011,8 +2012,8 @@ export default function BecomePartner({ clients = [], setClients, applications =
                     className="px-3 py-1.5 sm:px-4 sm:py-2 bg-gradient-to-r from-[#D99A1C] to-[#F5B025] hover:from-[#c28815] hover:to-[#e09e1d] text-white font-black text-[11px] sm:text-xs rounded-xl transition-all flex items-center gap-1.5 cursor-pointer shadow-xs"
                   >
                     <span>📥 Download</span>
-                  </button>
-                  <button
+                  </ActionButton>
+                  <ActionButton
                     type="button"
                     onClick={() => {
                       if (previewModalDoc.previewUrl) {
@@ -2022,16 +2023,16 @@ export default function BecomePartner({ clients = [], setClients, applications =
                     className="px-3 py-1.5 sm:px-4 sm:py-2 bg-amber-50 hover:bg-amber-100 text-[#D99A1C] border border-amber-200 font-extrabold text-[11px] sm:text-xs rounded-xl transition-all flex items-center gap-1.5 cursor-pointer shadow-xs"
                   >
                     <span>↗ Open in New Tab</span>
-                  </button>
+                  </ActionButton>
                 </div>
               ) : <div />}
-              <button
+              <ActionButton
                 type="button"
                 onClick={() => setPreviewModalDoc(null)}
                 className="px-4 py-1.5 sm:px-5 sm:py-2 bg-slate-800 hover:bg-slate-900 text-white font-extrabold text-[11px] sm:text-xs rounded-xl shadow-md transition-all cursor-pointer"
               >
                 Close Preview
-              </button>
+              </ActionButton>
             </div>
           </div>
         </div>,
@@ -2050,7 +2051,7 @@ export default function BecomePartner({ clients = [], setClients, applications =
             className="bg-white border border-slate-200 rounded-3xl p-6 sm:p-7 max-w-md w-full shadow-2xl relative space-y-4 animate-in zoom-in-95 duration-150 text-center max-h-[90vh] overflow-y-auto my-auto"
           >
             {/* Close button */}
-            <button
+            <ActionButton
               onClick={() => {
                 if (!isProcessingStatus) setConfirmStatusModal(null);
               }}
@@ -2061,7 +2062,7 @@ export default function BecomePartner({ clients = [], setClients, applications =
               <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M6 18L18 6M6 6l12 12" />
               </svg>
-            </button>
+            </ActionButton>
 
             {/* Icon */}
             {confirmStatusModal.actionType === 'approve' ? (
@@ -2147,15 +2148,15 @@ export default function BecomePartner({ clients = [], setClients, applications =
 
             {/* Action Buttons */}
             <div className="flex items-center gap-3 pt-2">
-              <button
+              <ActionButton
                 type="button"
                 onClick={() => setConfirmStatusModal(null)}
                 disabled={isProcessingStatus}
                 className="flex-1 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition-all cursor-pointer disabled:opacity-50"
               >
                 No, Cancel
-              </button>
-              <button
+              </ActionButton>
+              <ActionButton
                 type="button"
                 onClick={handleConfirmStatusChange}
                 disabled={isProcessingStatus}
@@ -2180,7 +2181,7 @@ export default function BecomePartner({ clients = [], setClients, applications =
                     <span>{confirmStatusModal.actionType === 'approve' ? 'Yes, Approve' : confirmStatusModal.actionType === 'deactivate' ? 'Yes, Deactivate' : 'Yes, Re-Activate'}</span>
                   </>
                 )}
-              </button>
+              </ActionButton>
             </div>
           </div>
         </div>,
@@ -2211,7 +2212,7 @@ function DocumentUploadSlot({ label, description, docKey, fileObj, required, onF
             </div>
           </div>
           <div className="flex items-center gap-1.5 shrink-0">
-            <button 
+            <ActionButton
               type="button" 
               onClick={() => {
                 if (onViewFile && fileObj) {
@@ -2225,8 +2226,8 @@ function DocumentUploadSlot({ label, description, docKey, fileObj, required, onF
               title="Preview / View Uploaded Document"
             >
               <span>👁️ View Document</span>
-            </button>
-            <button type="button" onClick={() => onRemoveFile(docKey)} className="text-rose-500 font-bold text-xs p-1 hover:bg-rose-50 rounded" title="Remove Document">✕</button>
+            </ActionButton>
+            <ActionButton type="button" onClick={() => onRemoveFile(docKey)} className="text-rose-500 font-bold text-xs p-1 hover:bg-rose-50 rounded" title="Remove Document">✕</ActionButton>
           </div>
         </div>
       ) : (

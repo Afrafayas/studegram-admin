@@ -1,3 +1,4 @@
+import { getAssignedExecutiveName } from './utils/applicationAssignment';
 import React, { useState, useEffect, useRef } from 'react';
 import AdminSidebar from './components/AdminSidebar';
 import AdminHeader from './components/AdminHeader';
@@ -57,6 +58,8 @@ export default function AdminPortal({ onLogout }) {
           _id: u._id,
           name: u.name,
           email: u.email,
+          createdAt: u.createdAt,
+          updatedAt: u.updatedAt,
           phone: u.phone || '',
           role: u.role || 'Executive',
           status: u.status || 'Active',
@@ -145,7 +148,7 @@ export default function AdminPortal({ onLogout }) {
           partnerName: app.partner?.name || (typeof app.partner === 'string' ? app.partner : 'Direct'),
           partnerCompanyName: app.partner?.companyName || app.partner?.name || 'Direct',
           assignedBdm: app.partner?.companyName || app.partner?.name || 'Direct',
-          assignedExecutive: 'Rahul Krishnan',
+          assignedExecutive: getAssignedExecutiveName(app),
           statusHistory: app.statusHistory || [],
           dob: app.student?.dob ? new Date(app.student.dob).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : null,
           studentEmail: app.student?.email || null,
@@ -260,7 +263,7 @@ export default function AdminPortal({ onLogout }) {
       dateAdded: '30 Sept 2026',
       country: 'Canada',
       assignedBdm: 'Interman Agent',
-      assignedExecutive: 'Rahul Krishnan',
+      assignedExecutive: '',
       statusHistory: [],
       dob: '2001-05-15',
       studentEmail: 'dharvesh@gmail.com',
@@ -548,7 +551,7 @@ export default function AdminPortal({ onLogout }) {
           assignedTo: newApp.assignedTo || matchedStaff?.name,
           country: newApp.country || currentUser.country || 'India',
           assignedBdm: newApp.assignedBdm || (currentUser.role === 'BDM' ? currentUser.name : 'Amit Patel'),
-          assignedExecutive: newApp.assignedExecutive || 'Rahul Krishnan'
+          assignedExecutive: matchedStaff?.name || ''
         };
         
         setApplications(prev => {
@@ -591,7 +594,7 @@ export default function AdminPortal({ onLogout }) {
 
   // Scoped lists depending on the current user's role scoping rules
   const scopedApplications = applications.filter(app => 
-    checkScope(app.country, app.assignedBdm, app.assignedExecutive)
+    checkScope(app.country, app.assignedBdm, getAssignedExecutiveName(app))
   );
 
   const scopedClients = clients.filter(client => {
@@ -654,6 +657,9 @@ export default function AdminPortal({ onLogout }) {
             setActiveSubTab('study');
           }}
           onRefresh={fetchInitialData}
+          onApplicationUpdated={(appId, changes) => setApplications(prev => prev.map(app =>
+            String(app.id || app._id) === String(appId) ? { ...app, ...changes } : app
+          ))}
         />
       );
     }
@@ -794,10 +800,15 @@ export default function AdminPortal({ onLogout }) {
   }, []);
 
   const handleSelectTab = (tabId) => {
-    if (tabId === 'applications' && activeTab === 'applications') {
+    if (tabId === 'applications') {
       setSelectedAppIdForSingleView(null);
       localStorage.removeItem('studegram_admin_single_view_app_id');
       localStorage.removeItem('studegram_admin_single_view_app');
+      // Clear the URL before Applications mounts and restores a saved detail view.
+      const url = new URL(window.location.href);
+      url.searchParams.delete('appId');
+      url.searchParams.delete('applicationId');
+      window.history.replaceState(window.history.state, '', url.toString());
       window.dispatchEvent(new CustomEvent('clear_single_view_app'));
     }
     if (tabId === 'become-partner' || tabId === 'partners') {
