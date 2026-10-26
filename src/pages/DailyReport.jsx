@@ -9,20 +9,20 @@ export default function DailyReport({ applications, onNavigateToBecomePartner, o
 
   // Compute stats dynamically based on scoped applications to demonstrate RBAC scoping
   // Compute stats dynamically based on actual applications
-  const totalAppsToday = applications ? applications.length : 0;
-  const activeLeads = applications ? applications.length : 0;
+  const totalAppsToday = (applications || []).filter(app => new Date(app.createdAt || app.dateAdded).toDateString() === new Date().toDateString()).length;
+  const activeLeads = (applications || []).filter(app => !/closed|enrolled|rejected|withdrawn/i.test(app.status || app.secondaryStatus || '')).length;
   const successRate = applications && applications.length > 0 ? `${Math.round((applications.filter(a => a.secondaryStatus === 'Processed' || a.secondaryStatus === 'Offer Issued').length / applications.length) * 100)}%` : "0%";
   const pendingVerification = applications ? applications.filter(a => a.secondaryStatus === 'Pending' || a.secondaryStatus === 'Document Verification').length : 0;
 
-  const timelineData = [
-    { day: 'Wed', count: 0 },
-    { day: 'Thu', count: 0 },
-    { day: 'Fri', count: 0 },
-    { day: 'Sat', count: 0 },
-    { day: 'Sun', count: 0 },
-    { day: 'Mon', count: 0 },
-    { day: 'Tue', count: totalAppsToday },
-  ];
+  const timelineData = Array.from({ length: 7 }, (_, index) => {
+    const date = new Date();
+    date.setDate(date.getDate() - (6 - index));
+    const count = (applications || []).filter(app => {
+      const created = new Date(app.createdAt || app.dateAdded);
+      return !Number.isNaN(created.getTime()) && created.toDateString() === date.toDateString();
+    }).length;
+    return { day: date.toLocaleDateString('en-GB', { weekday: 'short' }), count };
+  });
 
   // Dynamic university breakdown
   const univCounts = {};
@@ -36,7 +36,7 @@ export default function DailyReport({ applications, onNavigateToBecomePartner, o
   const universityData = Object.keys(univCounts).map((name, idx) => ({
     name,
     count: univCounts[name],
-    pct: totalAppsToday > 0 ? Math.round((univCounts[name] / totalAppsToday) * 100) : 0,
+    pct: applications?.length > 0 ? Math.round((univCounts[name] / applications.length) * 100) : 0,
     color: idx % 2 === 0 ? 'from-indigo-500 to-cyan-400' : 'from-blue-500 to-indigo-500'
   }));
 

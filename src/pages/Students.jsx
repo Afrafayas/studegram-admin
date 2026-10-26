@@ -529,21 +529,22 @@ support@unigather.app`;
       return;
     }
     setIsSubmitting(true);
-    await new Promise(r => setTimeout(r, 400));
 
+
+    try {
+    const response = await API.post('/students', {
+      name: newStudentName, email: newStudentEmail, phone: newStudentPhone,
+      passportNo: newStudentPassport, dob: newStudentDob, referredBy: newStudentReferredBy
+    });
+    if (!response.data?.success) throw new Error(response.data?.message || 'Unable to create student.');
+    const savedStudent = response.data.data;
     const newStudent = {
-      id: Date.now(),
-      name: newStudentName,
+      ...savedStudent,
+      id: savedStudent._id,
       type: 'Student',
-      email: newStudentEmail,
-      phone: newStudentPhone,
-      passportNo: newStudentPassport || 'Pending',
-      dob: newStudentDob || '',
-      status: 'Active',
       activeApps: 0,
-      referredBy: newStudentReferredBy,
-      country: currentUser.role === 'Country Head' || currentUser.role === 'BDM' ? currentUser.country : 'India',
-      dateAdded: new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
+      country: savedStudent.country || '',
+      dateAdded: savedStudent.createdAt ? new Date(savedStudent.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : ''
     };
 
     setClients(prev => [newStudent, ...prev]);
@@ -560,6 +561,11 @@ support@unigather.app`;
     setIsModalOpen(false);
 
     toast.success(`Student ${newStudentName} successfully onboarded.`);
+    } catch (error) {
+      toast.error(error.response?.data?.message || error.message);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -713,7 +719,7 @@ support@unigather.app`;
                             </div>
                             <div>
                               <p className="text-slate-950 font-black group-hover:text-[#D99A1C] transition-colors">{student.name}</p>
-                              <p className="text-[10px] text-slate-400 font-semibold">Verification Verified</p>
+                              <p className="text-[10px] text-slate-400 font-semibold">Student record</p>
                             </div>
                           </td>
                           <td className="px-6 py-4 text-slate-500 font-mono font-bold uppercase">{student.passportNo || 'Pending'}</td>
@@ -855,7 +861,7 @@ support@unigather.app`;
           {(() => {
             const studentApps = getStudentApplications(singleViewStudent);
             const activeAppsCount = studentApps.length || singleViewStudent.activeApps || 0;
-            const studentCode = singleViewStudent.studentCode || (singleViewStudent.id ? `STD-${String(singleViewStudent.id).slice(-5)}` : 'STD-10001');
+            const studentCode = singleViewStudent.studentCode || singleViewStudent.id || singleViewStudent._id || 'Not assigned';
 
             return (
               <>
@@ -986,7 +992,7 @@ support@unigather.app`;
                         </div>
                         <div className="flex justify-between py-1 border-b border-slate-100">
                           <span className="text-slate-400 font-bold">Country / Nationality:</span>
-                          <span className="font-bold text-slate-800">📍 {singleViewStudent.country || 'India'}</span>
+                          <span className="font-bold text-slate-800">📍 {singleViewStudent.country || 'Not provided'}</span>
                         </div>
                         <div className="flex justify-between py-1 border-b border-slate-100">
                           <span className="text-slate-400 font-bold">Onboarding Date:</span>
@@ -1012,16 +1018,16 @@ support@unigather.app`;
                       <div className="flex justify-between items-center pb-2 border-b border-slate-100">
                         <span className="text-[10px] font-black uppercase tracking-widest text-[#D99A1C]">Verification Compliance</span>
                         <span className="text-[10px] font-black text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200">
-                          ✓ Verified
+                          {singleViewStudent.verificationStatus || 'Not verified'}
                         </span>
                       </div>
                       <p className="text-xs text-slate-600 font-medium leading-relaxed">
-                        Student identity records, passport verification, and referral channel data are synchronized under Unigather Education Records standards.
+                        Verification status is shown when recorded for this student.
                       </p>
                       <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 flex items-center justify-between text-xs">
                         <span className="text-slate-500 font-bold">Passport Status:</span>
                         <span className="font-black text-emerald-600">
-                          {singleViewStudent.passportNo && singleViewStudent.passportNo !== 'Pending' ? 'Verified Document' : 'Pending Upload'}
+                          {singleViewStudent.passportVerificationStatus || 'Not verified'}
                         </span>
                       </div>
                     </div>

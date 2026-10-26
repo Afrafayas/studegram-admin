@@ -199,7 +199,7 @@ export default function SettingsPortal({
     if (!isWritable) return;
     setEditingUniv(univ);
     setUnivName(univ.name || '');
-    setUnivCountry(univ.country || 'United Kingdom');
+    setUnivCountry(univ.country || '');
     setUnivCity(univ.city || '');
     setUnivRanking(univ.ranking || '');
     setUnivLogoUrl(univ.logoUrl || '');
@@ -301,7 +301,8 @@ export default function SettingsPortal({
 
     const token = localStorage.getItem('admin_token');
     try {
-      if (token && token !== 'mock-admin-token-12345') {
+      {
+if (!token) throw new Error('Please sign in to save changes.');
         const response = await API.delete(`/universities/${univId}`);
         if (!response.data?.success) {
           throw new Error(response.data?.message || 'Failed to delete university');
@@ -344,7 +345,8 @@ export default function SettingsPortal({
     try {
       if (editingUniv) {
         const univId = editingUniv._id || editingUniv.id;
-        if (token && token !== 'mock-admin-token-12345') {
+        {
+if (!token) throw new Error('Please sign in to save changes.');
           const response = await API.put(`/universities/${univId}`, univPayload);
           const resData = response.data;
           if (resData?.success) {
@@ -354,13 +356,10 @@ export default function SettingsPortal({
           } else {
             throw new Error(resData?.message || 'Failed to update university');
           }
-        } else {
-          setUniversities(prev => prev.map(u => (u._id === univId || u.id === univId) ? { ...u, ...univPayload } : u));
-          addAuditLog('EDIT_UNIVERSITY', 'Settings', univName, `Updated university: ${univName}`);
-          toast.success(`University "${univName}" updated successfully!`);
         }
       } else {
-        if (token && token !== 'mock-admin-token-12345') {
+        {
+if (!token) throw new Error('Please sign in to save changes.');
           const response = await API.post('/universities', univPayload);
           const resData = response.data;
           if (resData?.success) {
@@ -370,14 +369,6 @@ export default function SettingsPortal({
           } else {
             throw new Error(resData?.message || 'Failed to save university');
           }
-        } else {
-          const mockUniv = {
-            _id: `univ-${Date.now()}`,
-            ...univPayload
-          };
-          setUniversities(prev => [mockUniv, ...prev]);
-          addAuditLog('ADD_SETTING_UNIVERSITY', 'Settings', univName, `Added university setting: ${univName}`);
-          toast.success(`University "${univName}" created successfully!`);
         }
       }
       resetUnivForm();
@@ -433,7 +424,8 @@ export default function SettingsPortal({
 
     const token = localStorage.getItem('admin_token');
     try {
-      if (token && token !== 'mock-admin-token-12345') {
+      {
+if (!token) throw new Error('Please sign in to save changes.');
         const response = await API.delete(`/courses/${courseId}`);
         if (!response.data?.success) {
           throw new Error(response.data?.message || 'Failed to delete course');
@@ -471,7 +463,8 @@ export default function SettingsPortal({
     try {
       if (editingCourse) {
         const cId = editingCourse._id || editingCourse.id;
-        if (token && token !== 'mock-admin-token-12345') {
+        {
+if (!token) throw new Error('Please sign in to save changes.');
           const response = await API.put(`/courses/${cId}`, coursePayload);
           const resData = response.data;
           if (resData?.success) {
@@ -481,13 +474,10 @@ export default function SettingsPortal({
           } else {
             throw new Error(resData?.message || 'Failed to update course');
           }
-        } else {
-          setCourses(prev => prev.map(c => (c._id === cId || c.id === cId) ? { ...c, ...coursePayload } : c));
-          addAuditLog('EDIT_COURSE', 'Settings', courseTitle, `Updated course: ${courseTitle}`);
-          toast.success(`Academic program "${courseTitle}" updated successfully!`);
         }
       } else {
-        if (token && token !== 'mock-admin-token-12345') {
+        {
+if (!token) throw new Error('Please sign in to save changes.');
           const response = await API.post('/courses', coursePayload);
           const resData = response.data;
           if (resData?.success) {
@@ -497,11 +487,6 @@ export default function SettingsPortal({
           } else {
             throw new Error(resData?.message || 'Failed to save course');
           }
-        } else {
-          const mockCourse = { _id: `course-${Date.now()}`, ...coursePayload };
-          setCourses(prev => [mockCourse, ...prev]);
-          addAuditLog('ADD_SETTING_COURSE', 'Settings', courseTitle, `Added course setting: ${courseTitle}`);
-          toast.success(`Academic program "${courseTitle}" created successfully!`);
         }
       }
       resetCourseForm();
@@ -709,7 +694,9 @@ export default function SettingsPortal({
     const token = localStorage.getItem('admin_token');
     try {
       const isValidMongoId = intakeId && /^[a-f\d]{24}$/i.test(String(intakeId));
-      if (token && token !== 'mock-admin-token-12345' && isValidMongoId) {
+      {
+if (!token) throw new Error('Please sign in to save changes.');
+if (!isValidMongoId) throw new Error('This record has no server ID. Refresh the page and retry.');
         const response = await API.delete(`/intakes/${intakeId}`);
         if (!response.data?.success) {
           throw new Error(response.data?.message || 'Failed to delete intake');
@@ -747,7 +734,9 @@ export default function SettingsPortal({
 
         const isValidMongoId = iId && /^[a-f\d]{24}$/i.test(String(iId));
 
-        if (token && token !== 'mock-admin-token-12345' && isValidMongoId) {
+        {
+if (!token) throw new Error('Please sign in to save changes.');
+if (!isValidMongoId) throw new Error('This record has no server ID. Refresh the page and retry.');
           const response = await API.put(`/intakes/${iId}`, intakePayload);
           const resData = response.data;
           if (resData?.success) {
@@ -760,31 +749,11 @@ export default function SettingsPortal({
           } else {
             throw new Error(resData?.message || 'Failed to update intake');
           }
-        } else if (token && token !== 'mock-admin-token-12345' && !isValidMongoId) {
-          // If editing an item that was only in local state or mock string, create it in DB
-          const response = await API.post('/intakes', intakePayload);
-          const resData = response.data;
-          if (resData?.success) {
-            setIntakes(prev => prev.map(i => {
-              const currentVal = typeof i === 'object' && i !== null ? (i._id || i.title) : i;
-              return currentVal === editingIntake ? resData.data : i;
-            }));
-            addAuditLog('ADD_SETTING_INTAKE', 'Settings', trimmedTitle, `Created intake setting: ${trimmedTitle}`);
-            toast.success(`Intake season "${trimmedTitle}" updated successfully!`);
-          } else {
-            throw new Error(resData?.message || 'Failed to save intake');
-          }
-        } else {
-          // Local / mock fallback
-          setIntakes(prev => prev.map(i => {
-            const currentId = typeof i === 'object' && i !== null ? (i._id || i.id) : i;
-            return (currentId === iId || i === editingIntake) ? { ...i, ...intakePayload } : i;
-          }));
-          toast.success(`Intake season "${trimmedTitle}" updated successfully!`);
         }
       } else {
         // Create new Intake
-        if (token && token !== 'mock-admin-token-12345') {
+        {
+if (!token) throw new Error('Please sign in to save changes.');
           const response = await API.post('/intakes', intakePayload);
           const resData = response.data;
           if (resData?.success) {
@@ -794,11 +763,6 @@ export default function SettingsPortal({
           } else {
             throw new Error(resData?.message || 'Failed to save intake');
           }
-        } else {
-          const mockIntake = { _id: `intake-${Date.now()}`, ...intakePayload };
-          setIntakes(prev => [...prev, mockIntake]);
-          addAuditLog('ADD_SETTING_INTAKE', 'Settings', trimmedTitle, `Added intake setting: ${trimmedTitle}`);
-          toast.success(`Intake season "${trimmedTitle}" created successfully!`);
         }
       }
       resetIntakeForm();
@@ -862,7 +826,8 @@ export default function SettingsPortal({
     if (!window.confirm(`Are you sure you want to remove "${itemLabel || itemToDelete}"?`)) return;
 
     try {
-      if (token && token !== 'mock-admin-token-12345' && itemId) {
+      {
+if (!token) throw new Error('Please sign in to save changes.');
         let endpoint = '';
         if (typeLabel === 'university') endpoint = `/universities/${itemId}`;
         if (typeLabel === 'course') endpoint = `/courses/${itemId}`;

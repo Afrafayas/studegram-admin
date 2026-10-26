@@ -2,6 +2,7 @@ import { ActionButton, ActionForm } from '../components/ActionControls';
 import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import API from '../api/axios';
+import { resolveDocumentUrl } from '../utils/applicationDocuments';
 import { useToast } from '../context/ToastContext';
 import { useAuth } from '../context/AuthContext';
 import { getPartnerReferredStudents } from '../utils/partnerReferrals';
@@ -36,35 +37,6 @@ const getDocumentBlobUrl = (urlOrBase64, mimeType = 'application/pdf') => {
     console.error('Failed to convert base64 to Blob URL:', err);
     return urlOrBase64;
   }
-};
-
-// Helper to generate a clean visual SVG proof document blob for mock/preview documents
-const createSampleDocBlobUrl = (title, partnerName) => {
-  const cleanTitle = (title || 'Compliance Proof Document').toString().toUpperCase();
-  const cleanName = (partnerName || 'Partner Agency').toString();
-  const svgContent = `<svg xmlns="http://www.w3.org/2000/svg" width="800" height="1000" viewBox="0 0 800 1000">
-    <rect width="800" height="1000" fill="#ffffff"/>
-    <rect x="30" y="30" width="740" height="940" fill="none" stroke="#cbd5e1" stroke-width="2" rx="20"/>
-    <rect x="30" y="30" width="740" height="130" fill="#0a0a0f" rx="20"/>
-    <text x="70" y="85" fill="#d99a1c" font-family="system-ui, sans-serif" font-size="24" font-weight="900">UNIGATHER ADMIN PORTAL</text>
-    <text x="70" y="120" fill="#94a3b8" font-family="system-ui, sans-serif" font-size="14" font-weight="700">OFFICIAL PARTNER VERIFICATION &amp; COMPLIANCE DOSSIER</text>
-    <text x="70" y="210" fill="#0f172a" font-family="system-ui, sans-serif" font-size="26" font-weight="900">${cleanTitle}</text>
-    <text x="70" y="245" fill="#64748b" font-family="system-ui, sans-serif" font-size="15" font-weight="600">Attached Verification Proof for: ${cleanName}</text>
-    <line x1="70" y1="275" x2="730" y2="275" stroke="#e2e8f0" stroke-width="2"/>
-    <rect x="70" y="310" width="660" height="340" fill="#f8fafc" stroke="#e2e8f0" rx="16"/>
-    <text x="100" y="360" fill="#334155" font-family="system-ui, sans-serif" font-size="18" font-weight="800">DOCUMENT AUDIT &amp; COMPLIANCE STAMP</text>
-    <text x="100" y="400" fill="#475569" font-family="system-ui, sans-serif" font-size="14">Verification Certificate ID: STUD-DOC-${Math.floor(100000 + Math.random() * 900000)}</text>
-    <text x="100" y="430" fill="#475569" font-family="system-ui, sans-serif" font-size="14">Submitted On: ${new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}</text>
-    <text x="100" y="460" fill="#475569" font-family="system-ui, sans-serif" font-size="14">Issuer Scope: Global Educational Counsel &amp; Legal Registration</text>
-    <text x="100" y="490" fill="#475569" font-family="system-ui, sans-serif" font-size="14">Validation Status: VERIFIED &amp; COMPLIANT</text>
-    <rect x="100" y="530" width="240" height="46" fill="#ecfdf5" stroke="#10b981" stroke-width="1.5" rx="12"/>
-    <text x="125" y="560" fill="#047857" font-family="system-ui, sans-serif" font-size="15" font-weight="800">✓ VERIFIED PROOF</text>
-    <circle cx="580" cy="790" r="65" fill="#d99a1c" fill-opacity="0.12" stroke="#d99a1c" stroke-width="2" stroke-dasharray="6,4"/>
-    <text x="535" y="796" fill="#b45309" font-family="system-ui, sans-serif" font-size="17" font-weight="900">APPROVED</text>
-    <text x="70" y="930" fill="#94a3b8" font-family="system-ui, sans-serif" font-size="12">Confidential document generated for Unigather Partner Compliance Verification System.</text>
-  </svg>`;
-  const blob = new Blob([svgContent], { type: 'image/svg+xml' });
-  return URL.createObjectURL(blob);
 };
 
 const handleDownloadDocument = (docUrl, fileName) => {
@@ -450,7 +422,7 @@ export default function BecomePartner({ clients = [], setClients, applications =
       partnerType: partner.partnerType || 'Company',
       companyName: partner.companyName || partner.name || '',
       taxId: partner.taxId || '',
-      country: partner.country || 'India',
+      country: partner.country || '',
       status: partner.status || 'Active',
       documents: partner.documents || []
     });
@@ -632,13 +604,11 @@ export default function BecomePartner({ clients = [], setClients, applications =
       if (documents.addressProof) docsPayload.push({ title: 'Address Proof / Resume', fileName: documents.addressProof.name, previewUrl: documents.addressProof.previewUrl, type: documents.addressProof.type });
     }
 
-    const generatedCode = `PRT-${Math.floor(10000 + Math.random() * 90000)}`;
+
 
     try {
-      const token = localStorage.getItem('admin_token');
-      if (true) {
+      {
         const res = await API.post('/partners', {
-          password: 'Partner@123',
           name: formData.name,
           email: formData.email,
           phone: formData.phone,
@@ -653,7 +623,7 @@ export default function BecomePartner({ clients = [], setClients, applications =
         if (res.data?.success) {
           const newlyCreated = res.data.data;
           const newPartnerObj = {
-            id: newlyCreated._id || Date.now(),
+            id: newlyCreated._id,
             name: formData.name,
             type: 'Agent',
             partnerType: partnerType,
@@ -662,7 +632,7 @@ export default function BecomePartner({ clients = [], setClients, applications =
             country: formData.country,
             email: formData.email,
             phone: formData.phone,
-            partnerCode: generatedCode,
+            partnerCode: newlyCreated.partnerCode || newlyCreated._id,
             status: 'Active',
             activeApps: 0,
             documents: docsPayload,
@@ -673,39 +643,14 @@ export default function BecomePartner({ clients = [], setClients, applications =
             setClients(prev => [newPartnerObj, ...prev]);
           }
 
-          setSubmittedPartnerCode(newlyCreated._id || generatedCode);
+          setSubmittedPartnerCode(newlyCreated.partnerCode || newlyCreated._id);
           setIsSubmittedSuccess(true);
+          addAuditLog('ONBOARD_PARTNER', 'Partner', newlyCreated._id, `Onboarded ${newlyCreated.name}`);
           if (onPartnerOnboarded) onPartnerOnboarded();
           toast.success('Partner Onboarded Successfully & Added to Directory!');
         } else {
           throw new Error(res.data?.message || 'API error');
         }
-      } else {
-        const newPartnerObj = {
-          id: Date.now(),
-          name: formData.name,
-          type: 'Agent',
-          partnerType: partnerType,
-          companyName: partnerType === 'Company' ? formData.companyName : formData.name,
-          taxId: formData.taxId,
-          country: formData.country,
-          email: formData.email,
-          phone: formData.phone,
-          partnerCode: generatedCode,
-          status: 'Active',
-          activeApps: 0,
-          documents: docsPayload,
-          dateAdded: new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
-        };
-
-        if (setClients) {
-          setClients(prev => [newPartnerObj, ...prev]);
-        }
-
-        setSubmittedPartnerCode(generatedCode);
-        setIsSubmittedSuccess(true);
-        addAuditLog('ONBOARD_PARTNER', 'Partner', generatedCode, `Onboarded ${formData.name} as ${partnerType} Agent`);
-        toast.success('Partner Successfully Registered & Onboarded!');
       }
     } catch (err) {
       const errMsg = err.response?.data?.message || err.message || 'Submission error';
@@ -961,7 +906,7 @@ export default function BecomePartner({ clients = [], setClients, applications =
                             <p className="text-slate-500 text-[10px] font-medium flex items-center gap-1 mt-0.5">
                               <span>📞 {partner.phone}</span>
                               <span>•</span>
-                              <span className="font-bold text-slate-700">{partner.country || 'India'}</span>
+                              <span className="font-bold text-slate-700">{partner.country || ''}</span>
                             </p>
                           </td>
                           <td className="px-5 py-4">
@@ -1277,7 +1222,7 @@ export default function BecomePartner({ clients = [], setClients, applications =
                   </div>
                   <div className="flex justify-between py-1 border-b border-slate-100">
                     <span className="text-slate-400 font-bold">Operating Country:</span>
-                    <span className="font-bold text-slate-800">📍 {singleViewPartner.country || 'India'}</span>
+                    <span className="font-bold text-slate-800">📍 {singleViewPartner.country || ''}</span>
                   </div>
                   <div className="flex justify-between py-1 border-b border-slate-100">
                     <span className="text-slate-400 font-bold">Tax ID / GSTIN:</span>
@@ -1323,7 +1268,7 @@ export default function BecomePartner({ clients = [], setClients, applications =
                   </div>
                   {singleViewPartner.status === 'Active' ? (
                     <span className="text-[10px] font-black text-emerald-700 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200">
-                      ✓ Approved & Verified
+                      Uploaded Documents
                     </span>
                   ) : (
                     <span className="text-[10px] font-black text-amber-700 bg-amber-50 px-3 py-1 rounded-full border border-amber-200">
@@ -1340,7 +1285,8 @@ export default function BecomePartner({ clients = [], setClients, applications =
                       const docFileName = typeof doc === 'string' ? doc : (doc.fileName || doc.title || 'Attached Proof');
                       const rawUrl = typeof doc === 'object' ? doc.previewUrl : null;
                       const isImg = (typeof rawUrl === 'string' && (rawUrl.startsWith('data:image/') || docFileName.match(/\.(png|jpg|jpeg|gif|svg|webp)$/i)));
-                      const docBlobUrl = getDocumentBlobUrl(rawUrl, isImg ? 'image/png' : 'application/pdf') || createSampleDocBlobUrl(docTitle, singleViewPartner.name);
+                      const docBlobUrl = resolveDocumentUrl(rawUrl);
+                      if (!docBlobUrl) return null;
 
                       return (
                         <div key={dIdx} className="bg-slate-50 border border-slate-200 rounded-2xl p-4 space-y-3 flex flex-col justify-between shadow-2xs hover:border-[#D99A1C] transition-all">
@@ -1352,9 +1298,6 @@ export default function BecomePartner({ clients = [], setClients, applications =
                                 <p className="text-[10px] text-slate-400 font-semibold truncate">{docFileName}</p>
                               </div>
                             </div>
-                            <span className="text-[9px] font-extrabold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200 shrink-0">
-                              Verified
-                            </span>
                           </div>
 
                           {/* Inline Document Box Canvas/Iframe Viewer */}
@@ -1971,7 +1914,7 @@ export default function BecomePartner({ clients = [], setClients, applications =
                     <h4 className="text-sm font-black text-slate-900">{previewModalDoc.title}</h4>
                     <p className="text-xs font-bold text-slate-600 mt-0.5">{previewModalDoc.fileName}</p>
                     <p className="text-[11px] text-emerald-700 font-extrabold bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200 inline-block mt-2">
-                      ✓ Verified & Compliant Partner Proof
+                      Uploaded Partner Document
                     </p>
                   </div>
                 </div>

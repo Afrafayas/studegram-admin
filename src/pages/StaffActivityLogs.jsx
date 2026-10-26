@@ -544,7 +544,7 @@ export default function StaffActivityLogs() {
                             {staff.role}
                           </span>
                           <span className="text-[11px] text-slate-500 font-medium">
-                            {staff.country || 'India'}
+                            {staff.country || ''}
                           </span>
                         </div>
                       </td>
@@ -698,7 +698,7 @@ export default function StaffActivityLogs() {
                       <td className="py-3.5 px-4 text-slate-500 text-[11px]">
                         <div>
                           <span className="font-medium text-slate-700 block">{sess.device || 'Desktop'}</span>
-                          <span className="text-[10px] text-slate-400 block font-mono">IP: {sess.ipAddress || '127.0.0.1'}</span>
+                          <span className="text-[10px] text-slate-400 block font-mono">IP: {sess.ipAddress || 'Not recorded'}</span>
                         </div>
                       </td>
 

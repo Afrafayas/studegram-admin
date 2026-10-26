@@ -1,9 +1,23 @@
 import { ActionButton, ActionForm } from '../components/ActionControls';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import API from '../api/axios';
+import { useToast } from '../context/ToastContext';
 
 export default function TodoList({ todoList, setTodoList }) {
+  const toast = useToast();
   const [newTask, setNewTask] = useState('');
   const [isAdding, setIsAdding] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    API.get('/todos').then(response => {
+      if (!response.data?.success) throw new Error('Unable to load tasks.');
+      if (active) setTodoList(response.data.data.map(task => ({
+        ...task, id: task._id, task: task.title, completed: task.status === 'Completed'
+      })));
+    }).catch(error => { if (active) toast.error(error.response?.data?.message || error.message); });
+    return () => { active = false; };
+  }, [setTodoList]);
 
   const handleAddTask = async (e) => {
     e.preventDefault();
@@ -11,31 +25,40 @@ export default function TodoList({ todoList, setTodoList }) {
 
     setIsAdding(true);
     try {
-      await new Promise(r => setTimeout(r, 400));
+      const response = await API.post('/todos', { title: newTask.trim(), status: 'Pending' });
+      if (!response.data?.success) throw new Error(response.data?.message || 'Unable to save task.');
       const taskItem = {
-        id: Date.now(),
-        task: newTask.trim(),
-        completed: false
+        ...response.data.data,
+        id: response.data.data._id,
+        task: response.data.data.title,
+        completed: response.data.data.status === 'Completed'
       };
 
       setTodoList(prev => [taskItem, ...prev]);
       setNewTask('');
+    } catch (error) {
+      toast.error(error.response?.data?.message || error.message);
     } finally {
       setIsAdding(false);
     }
   };
 
-  const toggleTask = (id) => {
-    setTodoList(prev => prev.map(item => {
-      if (item.id === id) {
-        return { ...item, completed: !item.completed };
-      }
-      return item;
-    }));
+  const toggleTask = async (id) => {
+    const task = todoList.find(item => item.id === id);
+    if (!task) return;
+    try {
+      const response = await API.put(`/todos/${id}`, { status: task.completed ? 'Pending' : 'Completed' });
+      if (!response.data?.success) throw new Error('Unable to update task.');
+      setTodoList(prev => prev.map(item => item.id === id ? { ...item, completed: response.data.data.status === 'Completed' } : item));
+    } catch (error) { toast.error(error.response?.data?.message || error.message); }
   };
 
-  const deleteTask = (id) => {
-    setTodoList(prev => prev.filter(item => item.id !== id));
+  const deleteTask = async (id) => {
+    try {
+      const response = await API.delete(`/todos/${id}`);
+      if (!response.data?.success) throw new Error('Unable to delete task.');
+      setTodoList(prev => prev.filter(item => item.id !== id));
+    } catch (error) { toast.error(error.response?.data?.message || error.message); }
   };
 
   const pendingCount = todoList.filter(t => !t.completed).length;

@@ -12,7 +12,7 @@ export default function AdminReport({
   const [selectedCountry, setSelectedCountry] = useState('All');
 
   const allReportApps = useMemo(() => {
-    return (applications || []).map((app, idx) => {
+    return (applications || []).map((app) => {
       // 1. Agent channel extraction
       let agentName = 'Direct';
       if (app.partner && typeof app.partner === 'object') {
@@ -61,13 +61,13 @@ export default function AdminReport({
           if (matchedUniv?.country) {
             countryName = matchedUniv.country;
           } else {
-            countryName = 'United Kingdom';
+            countryName = 'Not provided';
           }
         }
       }
 
       return {
-        camsId: app.camsId || app._id || `CAMS${10000 + idx}`,
+        camsId: app.camsId || app._id || app.id || '',
         name: app.studentName || `${app.firstName || ''} ${app.lastName || ''}`.trim() || 'N/A',
         agent: agentName,
         university: univName,

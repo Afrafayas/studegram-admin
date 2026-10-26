@@ -2,7 +2,7 @@ import { getAssignedExecutiveName } from '../utils/applicationAssignment';
 import { ActionButton, ActionForm } from '../components/ActionControls';
 import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { useAuth, PRESET_USERS } from '../context/AuthContext';
+import { useAuth } from '../context/AuthContext';
 import ApplicationChatDrawer from '../components/ApplicationChatDrawer';
 import API from '../api/axios';
 import { useToast } from '../context/ToastContext';
@@ -155,7 +155,7 @@ export default function Applications({ applications, referralAgents = [], intake
     setEditUniversity(currentUni?._id || app.universityId || app.university?._id || app.university || '');
     setEditCourse(app.courseId || app.course?._id || app.course || '');
     setEditLevel(app.level || 'Undergraduate (UG)');
-    setEditIntake(app.intake || 'September 2026');
+    setEditIntake(app.intake || '');
     setEditStudentName(app.studentName || '');
     setEditStudentEmail(app.studentEmail || '');
     setEditStudentPhone(app.phone || '');
@@ -344,12 +344,12 @@ export default function Applications({ applications, referralAgents = [], intake
             universityName: freshApp.university?.name || 'N/A',
             courseName: freshApp.course?.title || 'N/A',
             level: freshApp.level || 'Undergraduate (UG)',
-            intake: freshApp.intake || freshApp.course?.intakes?.[0]?.title || 'September 2026',
+            intake: freshApp.intake || '',
             status: freshApp.status || 'Submitted',
             secondaryStatus: freshApp.status || 'Pending',
             paymentStatus: freshApp.paymentStatus || 'Pending',
             dateAdded: new Date(freshApp.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
-            country: freshApp.university?.country || 'India',
+            country: freshApp.university?.country || '',
             partner: freshApp.partner || null,
             partnerName: freshApp.partner?.name || 'Direct',
             partnerCompanyName: freshApp.partner?.companyName || freshApp.partner?.name || 'Direct',
@@ -783,7 +783,7 @@ export default function Applications({ applications, referralAgents = [], intake
   const [assignModalApp, setAssignModalApp] = useState(null);
   const [selectedStaffId, setSelectedStaffId] = useState('');
   const [staffOptions, setStaffOptions] = useState(() => {
-    const raw = (Array.isArray(staffList) && staffList.length > 0) ? staffList : PRESET_USERS;
+    const raw = (Array.isArray(staffList) && staffList.length > 0) ? staffList : [];
     return raw.map(s => ({
       _id: s._id || s.id || s.email,
       id: s._id || s.id || s.email,
@@ -807,7 +807,7 @@ export default function Applications({ applications, referralAgents = [], intake
       }
 
       if (isMounted) {
-        const rawStaffList = (Array.isArray(staffList) && staffList.length > 0) ? staffList : PRESET_USERS;
+        const rawStaffList = (Array.isArray(staffList) && staffList.length > 0) ? staffList : [];
         const formattedStaff = rawStaffList.map(s => ({
           _id: s._id || s.id || s.email,
           id: s._id || s.id || s.email,
@@ -1510,7 +1510,7 @@ export default function Applications({ applications, referralAgents = [], intake
                   </div>
                   <div className="flex justify-between py-1 border-b border-slate-100">
                     <span className="text-slate-400 font-bold">Country:</span>
-                    <span className="font-bold text-slate-800">📍 {singleViewApp.country || 'India'}</span>
+                    <span className="font-bold text-slate-800">📍 {singleViewApp.country || ''}</span>
                   </div>
                   <div className="flex justify-between py-1">
                     <span className="text-slate-400 font-bold">Referred By:</span>
@@ -1530,7 +1530,7 @@ export default function Applications({ applications, referralAgents = [], intake
                 <div className="space-y-3 text-xs">
                   <div className="flex justify-between py-1 border-b border-slate-100">
                     <span className="text-slate-400 font-bold">Destination Country:</span>
-                    <span className="font-bold text-slate-800">📍 {singleViewApp.country || singleViewApp.destinationCountry || singleViewApp.university?.country || 'United Kingdom'}</span>
+                    <span className="font-bold text-slate-800">📍 {singleViewApp.country || singleViewApp.destinationCountry || singleViewApp.university?.country || 'Not provided'}</span>
                   </div>
                   <div className="flex justify-between py-1 border-b border-slate-100">
                     <span className="text-slate-400 font-bold">Level of Study:</span>
@@ -1628,7 +1628,7 @@ export default function Applications({ applications, referralAgents = [], intake
                     </h3>
                   </div>
                   <span className="text-[10px] font-black text-emerald-700 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200">
-                    ✓ Attached &amp; Verified
+                    Uploaded Documents
                   </span>
                 </div>
 
@@ -1898,19 +1898,12 @@ export default function Applications({ applications, referralAgents = [], intake
                   required
                   className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs text-slate-900 font-semibold focus:outline-none focus:border-[#D99A1C] focus:ring-1 focus:ring-[#D99A1C] cursor-pointer"
                 >
-                  {(intakes && intakes.length > 0) ? (
-                    intakes.map(i => {
-                      const value = typeof i === 'object' ? i.title : i;
-                      return <option key={value} value={value}>{value}</option>;
-                    })
-                  ) : (
-                    <>
-                      <option value="September 2026">September 2026</option>
-                      <option value="January 2027">January 2027</option>
-                      <option value="May 2027">May 2027</option>
-                      <option value="September 2027">September 2027</option>
-                    </>
-                  )}
+                  <option value="">Select intake</option>
+                  {editIntake && !intakes.some(i => (typeof i === 'object' ? i.title : i) === editIntake) && <option value={editIntake}>{editIntake}</option>}
+                  {intakes.map(i => {
+                    const value = typeof i === 'object' ? i.title : i;
+                    return <option key={value} value={value}>{value}</option>;
+                  })}
                 </select>
               </div>
 

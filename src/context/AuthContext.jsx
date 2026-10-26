@@ -3,95 +3,6 @@ import API from '../api/axios';
 
 const AuthContext = createContext(null);
 
-// Preset users mapped to organizational hierarchy roles
-export const PRESET_USERS = [
-  {
-    id: 100,
-    name: 'Super Admin',
-    email: 'superadminluzid@gmail.com',
-    password: '123456',
-    role: 'Director',
-    level: 1,
-    country: 'All',
-    team: 'All',
-    phone: '+1 800 555 0199',
-    avatar: 'SA'
-  },
-  {
-    id: 101,
-    name: 'Elena Rostova',
-    email: 'director@studegram.com',
-    password: 'password123',
-    role: 'Director',
-    level: 1,
-    country: 'All', // Global scope
-    team: 'All',
-    phone: '+44 7911 123456',
-    avatar: 'ER'
-  },
-  {
-    id: 102,
-    name: 'Marcus Vance',
-    email: 'coo@studegram.com',
-    password: 'password123',
-    role: 'COO',
-    level: 2,
-    country: 'All', // Global operational scope
-    team: 'All',
-    phone: '+44 7911 654321',
-    avatar: 'MV'
-  },
-  {
-    id: 103,
-    name: 'Sarah Jenkins',
-    email: 'finance@studegram.com',
-    password: 'password123',
-    role: 'Finance',
-    level: 3,
-    country: 'All', // Global financial scope
-    team: 'All',
-    phone: '+44 7911 987654',
-    avatar: 'SJ'
-  },
-  {
-    id: 104,
-    name: 'Rajesh Kumar',
-    email: 'countryhead.in@studegram.com',
-    password: 'password123',
-    role: 'Country Head',
-    level: 4,
-    country: 'India', // Scoped to country
-    team: 'All',
-    phone: '+91 98765 43210',
-    avatar: 'RK'
-  },
-  {
-    id: 105,
-    name: 'Amit Patel',
-    email: 'bdm.india@studegram.com',
-    password: 'password123',
-    role: 'BDM',
-    level: 5,
-    country: 'India',
-    team: 'North India', // Scoped to team
-    phone: '+91 99988 77766',
-    avatar: 'AP'
-  },
-  {
-    id: 106,
-    name: 'Rahul Krishnan',
-    email: 'rahul@studegram.com',
-    password: 'password123',
-    role: 'Executive',
-    level: 6,
-    country: 'India',
-    team: 'North India',
-    bdm: 'Amit Patel', // Scoped to assigned tasks/BDM
-    phone: '+91 99988 87772',
-    avatar: 'RK'
-  }
-];
-
 // Defined permissions for each role
 const ROLE_PERMISSIONS = {
   'SuperAdmin': ['*'],
@@ -125,32 +36,25 @@ export function AuthProvider({ children }) {
     return saved ? JSON.parse(saved) : null;
   });
 
-  const [auditLogs, setAuditLogs] = useState(() => {
-    const saved = localStorage.getItem('studegram_audit_logs');
-    if (saved) return JSON.parse(saved);
-    return [
-      {
-        id: 1,
-        timestamp: new Date(Date.now() - 3600000 * 24).toISOString(),
-        userName: 'Elena Rostova',
-        userRole: 'Director',
-        action: 'SYSTEM_INIT',
-        targetType: 'System',
-        targetId: 'SYS-001',
-        details: 'System initialized with active RBAC hierarchy config.'
-      },
-      {
-        id: 2,
-        timestamp: new Date(Date.now() - 3600000 * 4).toISOString(),
-        userName: 'Marcus Vance',
-        userRole: 'COO',
-        action: 'ONBOARD_STAFF',
-        targetType: 'Staff',
-        targetId: '106',
-        details: 'Onboarded Rahul Krishnan as Executive.'
-      }
-    ];
-  });
+  const [auditLogs, setAuditLogs] = useState([]);
+
+  useEffect(() => {
+    if (!currentUser || !localStorage.getItem('admin_token')) return;
+    let active = true;
+    API.get('/activity-logs', { params: { limit: 100 } }).then(response => {
+      if (!active || !response.data?.success || !Array.isArray(response.data.data)) return;
+      const records = response.data.data.flatMap(session => (session.activities || []).map(activity => ({
+        id: activity._id,
+        timestamp: activity.timestamp,
+        userName: session.userName,
+        userRole: session.userRole,
+        action: activity.action,
+        details: activity.details
+      })));
+      setAuditLogs(records.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp)));
+    }).catch(error => console.warn('Unable to load audit records:', error.message));
+    return () => { active = false; };
+  }, [currentUser]);
 
   useEffect(() => {
     localStorage.setItem('studegram_audit_logs', JSON.stringify(auditLogs));
@@ -173,7 +77,7 @@ export function AuthProvider({ children }) {
 
     // Automatically dispatch to live staff activity logs endpoint
     const isApp = targetType === 'Application' || targetType === 'Student';
-    const category = isApp ? 'Application' : 'Other';
+    const category = isApp ? 'Application' : 'System';
     const title = String(action || 'Activity').replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
     logPortalActivity(action, title, category, detailStr, typeof window !== 'undefined' ? window.location.pathname : '');
   };
@@ -217,8 +121,8 @@ export function AuthProvider({ children }) {
           email: dbUser.email,
           role: roleName,
           level: mappedLevel,
-          country: dbUser.country || 'India',
-          team: 'All',
+          country: dbUser.country || dbUser.countries?.[0] || '',
+          team: dbUser.team || '',
           phone: dbUser.phone || '',
           avatar: dbUser.name ? dbUser.name.split(' ').map(n=>n[0]).join('') : 'U'
         };

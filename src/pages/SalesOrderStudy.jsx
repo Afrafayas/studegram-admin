@@ -20,9 +20,11 @@ export default function SalesOrderStudy({
   const [fullName, setFullName] = useState('');
   const [phoneCode, setPhoneCode] = useState('+91');
   const [phoneNumber, setPhoneNumber] = useState('');
+  const [studentEmail, setStudentEmail] = useState('');
+  const [passportNo, setPassportNo] = useState('');
   const [dob, setDob] = useState('');
   const [assignedTo, setAssignedTo] = useState(() => {
-    return staffList[0]?.id || staffList[0]?._id || staffList[0]?.name || 'Super Admin';
+    return staffList[0]?.id || staffList[0]?._id || staffList[0]?.name || '';
   });
 
   React.useEffect(() => {
@@ -53,13 +55,7 @@ export default function SalesOrderStudy({
   const availableCountries = Array.from(
     new Set([
       ...(universities || []).map(u => (typeof u === 'object' ? (u.country || '') : '').trim()).filter(Boolean),
-      'United Kingdom',
-      'Canada',
-      'United States',
-      'Australia',
-      'Ireland',
-      'Germany',
-      'New Zealand'
+
     ])
   ).sort();
 
@@ -96,7 +92,7 @@ export default function SalesOrderStudy({
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (studentSelectionMode === 'new' && (!fullName || !phoneNumber || !dob)) {
+    if (studentSelectionMode === 'new' && (!fullName || !studentEmail || !phoneNumber || !dob)) {
       toast.error("Please fill in all required fields.");
       return;
     }
@@ -152,7 +148,7 @@ export default function SalesOrderStudy({
         intakeId: intake,
         intake: iName,
         partnerId: partner || null,
-        passportNo: studentObj?.passportNo || `T${Math.floor(1000000 + Math.random() * 9000000)}`,
+        passportNo: studentObj?.passportNo || '',
         secondaryStatus: 'Pending',
         dateAdded: new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
         documents: uploadedFiles,
@@ -161,7 +157,7 @@ export default function SalesOrderStudy({
     } else {
       newApp = {
         studentName: fullName,
-        studentEmail: `${fullName.toLowerCase().replace(/\s+/g, '')}@gmail.com`,
+        studentEmail: studentEmail.trim(),
         phone: `${phoneCode} ${phoneNumber}`,
         dob,
         assignedTo: selectedStaffMember?.name || assignedTo,
@@ -174,7 +170,7 @@ export default function SalesOrderStudy({
         intakeId: intake,
         intake: iName,
         partnerId: partner || null,
-        passportNo: `T${Math.floor(1000000 + Math.random() * 9000000)}`,
+        passportNo: passportNo.trim(),
         secondaryStatus: 'Pending',
         dateAdded: new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
         documents: uploadedFiles,
@@ -194,6 +190,8 @@ export default function SalesOrderStudy({
 
     setFullName('');
     setPhoneNumber('');
+    setStudentEmail('');
+    setPassportNo('');
     setDob('');
     setPartner('');
     setSelectedStudent('');
@@ -532,10 +530,7 @@ export default function SalesOrderStudy({
                     </option>
                   ))
                 ) : (
-                  <>
-                    <option value="Super Admin">Super Admin</option>
-                    <option value="Admin 1">Admin 1</option>
-                    <option value="Admin 2">Admin 2</option>
+                  <><option value="">No staff available</option>
                   </>
                 )}
               </select>
@@ -543,7 +538,17 @@ export default function SalesOrderStudy({
           </div>
         </div>
 
-        {/* Document Upload Section */}
+        {studentSelectionMode === 'new' && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <label className="text-xs font-bold text-slate-600">Student Email *
+            <input type="email" required value={studentEmail} onChange={e => setStudentEmail(e.target.value)} className="mt-2 w-full border border-slate-200 rounded-xl p-3" />
+          </label>
+          <label className="text-xs font-bold text-slate-600">Passport Number
+            <input value={passportNo} onChange={e => setPassportNo(e.target.value)} className="mt-2 w-full border border-slate-200 rounded-xl p-3" />
+          </label>
+        </div>
+      )}
+      {/* Document Upload Section */}
           <div className="space-y-4 bg-white border border-slate-250/70 p-5 rounded-2xl">
             <h3 className="text-xs font-black text-slate-950 uppercase tracking-wider pb-1 border-b border-slate-105/60">Supporting Documents *</h3>
             

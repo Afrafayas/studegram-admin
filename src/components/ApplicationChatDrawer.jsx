@@ -2,7 +2,6 @@ import { getAssignedExecutiveName } from '../utils/applicationAssignment';
 import { ActionButton, ActionForm } from './ActionControls';
 import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { useAuth } from '../context/AuthContext';
 import API, { API_BASE_URL } from '../api/axios';
 import { useToast } from '../context/ToastContext';
 
@@ -60,7 +59,6 @@ class DrawerErrorBoundary extends React.Component {
 
 function ApplicationChatDrawerContent({ app, onClose }) {
   const toast = useToast();
-  const { currentUser } = useAuth();
   const [messages, setMessages] = useState([]);
   const [messageText, setMessageText] = useState('');
   const [selectedFiles, setSelectedFiles] = useState([]);
@@ -210,7 +208,7 @@ function ApplicationChatDrawerContent({ app, onClose }) {
         });
         
         if (!response.ok) {
-          throw new Error('Backend offline or application not found. Using local mock workspace.');
+          throw new Error('Unable to load application messages. Please retry.');
         }
         
         const resData = await response.json();
@@ -220,8 +218,8 @@ function ApplicationChatDrawerContent({ app, onClose }) {
           throw new Error(resData.message || 'Failed to fetch messages');
         }
       } catch (err) {
-        console.warn('API Chat fetch failed, falling back to localStorage:', err.message);
-        loadMockMessages();
+        setMessages([]);
+        setErrorMsg(err.message || 'Unable to load messages.');
       } finally {
         setIsLoading(false);
       }
@@ -234,54 +232,6 @@ function ApplicationChatDrawerContent({ app, onClose }) {
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, isLoading, isSending]);
-
-  // Load mock messages from localStorage or generate defaults
-  const loadMockMessages = () => {
-    const storageKey = `chat_messages_${app.camsId}`;
-    const saved = localStorage.getItem(storageKey);
-    if (saved) {
-      setMessages(JSON.parse(saved));
-    } else {
-      // Default sample flow messages for the demo
-      const defaults = [
-        {
-          _id: 'sys-1',
-          senderModel: 'User',
-          sender: { name: 'System' },
-          message: `Application initially generated in system by Agent: ${app.referredBy || 'Direct'}`,
-          isSystemLog: true,
-          attachments: [],
-          createdAt: new Date(Date.now() - 3600000 * 24).toISOString()
-        },
-        {
-          _id: 'part-1',
-          senderModel: 'Partner',
-          sender: { name: app.referredBy !== 'Direct' ? app.referredBy : 'Partner Agent' },
-          message: `Hello Support, I have uploaded the verification transcripts for student ${app.studentName}. Please verify.`,
-          isSystemLog: false,
-          attachments: [],
-          createdAt: new Date(Date.now() - 3600000 * 2).toISOString()
-        },
-        {
-          _id: 'user-1',
-          senderModel: 'User',
-          sender: { name: 'Elena Rostova' },
-          message: 'Received. Checking the transcripts now. Will let you know if additional file formats are required.',
-          isSystemLog: false,
-          attachments: [],
-          createdAt: new Date(Date.now() - 3600000).toISOString()
-        }
-      ];
-      localStorage.setItem(storageKey, JSON.stringify(defaults));
-      setMessages(defaults);
-    }
-  };
-
-  // Save current messages to localStorage mock DB
-  const saveMockMessages = (newMessages) => {
-    const storageKey = `chat_messages_${app.camsId}`;
-    localStorage.setItem(storageKey, JSON.stringify(newMessages));
-  };
 
   // Handle file select
   const handleFileChange = (e) => {
@@ -441,6 +391,7 @@ function ApplicationChatDrawerContent({ app, onClose }) {
           <>
             {/* Messages Body */}
             <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-slate-50/50 scrollbar-thin">
+              {errorMsg && <p role="alert" className="text-xs text-red-600">{errorMsg}</p>}
               {isLoading ? (
                 <div className="space-y-4 py-6">
                   {/* Skeleton loading bubbles */}
@@ -737,7 +688,7 @@ function ApplicationChatDrawerContent({ app, onClose }) {
                 </div>
                 <div className="flex justify-between">
                   <span className="text-slate-400">Location/Country:</span>
-                  <span className="text-slate-900 font-bold">{app.country || 'India'}</span>
+                  <span className="text-slate-900 font-bold">{app.country || ''}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-slate-400">Course Name:</span>

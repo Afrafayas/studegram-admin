@@ -1,0 +1,452 @@
+{
+  "passes": [
+    "admin API login and dashboard loading",
+    "student view displays actual application upload and filename",
+    "application list navigation clears prior detail view",
+    "admin failed submission retains entered email, passport and form",
+    "admin successful submission uses entered identity, upload and API intake then navigates to list",
+    "admin commissions display stored identifiers and amounts",
+    "task create, completion, navigation reload and delete use API persistence",
+    "agent API login and dashboard loading",
+    "agent Search Courses loads original API records",
+    "agent Universities loads original API records",
+    "agent Notice loads original API records",
+    "agent Webinar loads original API records",
+    "agent Role & Permissions loads original API records",
+    "course specifications open and close with original data",
+    "agent failed submission retains modal and original document",
+    "agent successful submission keeps success/close flow and refreshes application history",
+    "empty webinar collection stays empty and creates no sample records"
+  ],
+  "apiRequests": [
+    {
+      "route": "/roles",
+      "method": "GET"
+    },
+    {
+      "route": "/roles",
+      "method": "GET"
+    },
+    {
+      "route": "/auth/login",
+      "method": "POST"
+    },
+    {
+      "route": "/notifications",
+      "method": "GET"
+    },
+    {
+      "route": "/applications/recent-comments",
+      "method": "GET"
+    },
+    {
+      "route": "/intakes",
+      "method": "GET"
+    },
+    {
+      "route": "/universities",
+      "method": "GET"
+    },
+    {
+      "route": "/courses",
+      "method": "GET"
+    },
+    {
+      "route": "/partners",
+      "method": "GET"
+    },
+    {
+      "route": "/students",
+      "method": "GET"
+    },
+    {
+      "route": "/applications",
+      "method": "GET"
+    },
+    {
+      "route": "/users",
+      "method": "GET"
+    },
+    {
+      "route": "/activity-logs",
+      "method": "GET"
+    },
+    {
+      "route": "/activity-logs/heartbeat",
+      "method": "POST"
+    },
+    {
+      "route": "/notifications",
+      "method": "GET"
+    },
+    {
+      "route": "/applications/recent-comments",
+      "method": "GET"
+    },
+    {
+      "route": "/intakes",
+      "method": "GET"
+    },
+    {
+      "route": "/universities",
+      "method": "GET"
+    },
+    {
+      "route": "/courses",
+      "method": "GET"
+    },
+    {
+      "route": "/partners",
+      "method": "GET"
+    },
+    {
+      "route": "/students",
+      "method": "GET"
+    },
+    {
+      "route": "/applications",
+      "method": "GET"
+    },
+    {
+      "route": "/users",
+      "method": "GET"
+    },
+    {
+      "route": "/users/staff",
+      "method": "GET"
+    },
+    {
+      "route": "/users/staff",
+      "method": "GET"
+    },
+    {
+      "route": "/upload",
+      "method": "POST"
+    },
+    {
+      "route": "/students",
+      "method": "POST"
+    },
+    {
+      "route": "/applications",
+      "method": "POST"
+    },
+    {
+      "route": "/students",
+      "method": "POST"
+    },
+    {
+      "route": "/applications",
+      "method": "POST"
+    },
+    {
+      "route": "/intakes",
+      "method": "GET"
+    },
+    {
+      "route": "/universities",
+      "method": "GET"
+    },
+    {
+      "route": "/courses",
+      "method": "GET"
+    },
+    {
+      "route": "/partners",
+      "method": "GET"
+    },
+    {
+      "route": "/students",
+      "method": "GET"
+    },
+    {
+      "route": "/applications",
+      "method": "GET"
+    },
+    {
+      "route": "/users",
+      "method": "GET"
+    },
+    {
+      "route": "/users/staff",
+      "method": "GET"
+    },
+    {
+      "route": "/users/staff",
+      "method": "GET"
+    },
+    {
+      "route": "/commissions",
+      "method": "GET"
+    },
+    {
+      "route": "/commissions",
+      "method": "GET"
+    },
+    {
+      "route": "/commissions",
+      "method": "GET"
+    },
+    {
+      "route": "/todos",
+      "method": "GET"
+    },
+    {
+      "route": "/todos",
+      "method": "GET"
+    },
+    {
+      "route": "/todos",
+      "method": "POST"
+    },
+    {
+      "route": "/todos/cccccccccccccccccccccccc",
+      "method": "PUT"
+    },
+    {
+      "route": "/users/staff",
+      "method": "GET"
+    },
+    {
+      "route": "/users/staff",
+      "method": "GET"
+    },
+    {
+      "route": "/todos",
+      "method": "GET"
+    },
+    {
+      "route": "/todos",
+      "method": "GET"
+    },
+    {
+      "route": "/todos/cccccccccccccccccccccccc",
+      "method": "DELETE"
+    },
+    {
+      "route": "/partners/login",
+      "method": "POST"
+    },
+    {
+      "route": "/notifications",
+      "method": "GET"
+    },
+    {
+      "route": "/applications/recent-comments",
+      "method": "GET"
+    },
+    {
+      "route": "/notices",
+      "method": "GET"
+    },
+    {
+      "route": "/applications",
+      "method": "GET"
+    },
+    {
+      "route": "/commissions",
+      "method": "GET"
+    },
+    {
+      "route": "/partners/me",
+      "method": "GET"
+    },
+    {
+      "route": "/notifications",
+      "method": "GET"
+    },
+    {
+      "route": "/applications/recent-comments",
+      "method": "GET"
+    },
+    {
+      "route": "/notices",
+      "method": "GET"
+    },
+    {
+      "route": "/applications",
+      "method": "GET"
+    },
+    {
+      "route": "/commissions",
+      "method": "GET"
+    },
+    {
+      "route": "/partners/me",
+      "method": "GET"
+    },
+    {
+      "route": "/courses",
+      "method": "GET"
+    },
+    {
+      "route": "/universities",
+      "method": "GET"
+    },
+    {
+      "route": "/applications",
+      "method": "GET"
+    },
+    {
+      "route": "/commissions",
+      "method": "GET"
+    },
+    {
+      "route": "/partners/me",
+      "method": "GET"
+    },
+    {
+      "route": "/universities",
+      "method": "GET"
+    },
+    {
+      "route": "/notices",
+      "method": "GET"
+    },
+    {
+      "route": "/applications",
+      "method": "GET"
+    },
+    {
+      "route": "/commissions",
+      "method": "GET"
+    },
+    {
+      "route": "/partners/me",
+      "method": "GET"
+    },
+    {
+      "route": "/notices",
+      "method": "GET"
+    },
+    {
+      "route": "/webinars",
+      "method": "GET"
+    },
+    {
+      "route": "/applications",
+      "method": "GET"
+    },
+    {
+      "route": "/commissions",
+      "method": "GET"
+    },
+    {
+      "route": "/partners/me",
+      "method": "GET"
+    },
+    {
+      "route": "/universities",
+      "method": "GET"
+    },
+    {
+      "route": "/webinars",
+      "method": "GET"
+    },
+    {
+      "route": "/roles",
+      "method": "GET"
+    },
+    {
+      "route": "/applications",
+      "method": "GET"
+    },
+    {
+      "route": "/commissions",
+      "method": "GET"
+    },
+    {
+      "route": "/partners/me",
+      "method": "GET"
+    },
+    {
+      "route": "/roles",
+      "method": "GET"
+    },
+    {
+      "route": "/applications",
+      "method": "GET"
+    },
+    {
+      "route": "/commissions",
+      "method": "GET"
+    },
+    {
+      "route": "/partners/me",
+      "method": "GET"
+    },
+    {
+      "route": "/courses",
+      "method": "GET"
+    },
+    {
+      "route": "/students",
+      "method": "GET"
+    },
+    {
+      "route": "/universities",
+      "method": "GET"
+    },
+    {
+      "route": "/courses",
+      "method": "GET"
+    },
+    {
+      "route": "/intakes",
+      "method": "GET"
+    },
+    {
+      "route": "/upload",
+      "method": "POST"
+    },
+    {
+      "route": "/applications",
+      "method": "POST"
+    },
+    {
+      "route": "/applications",
+      "method": "POST"
+    },
+    {
+      "route": "/applications",
+      "method": "GET"
+    },
+    {
+      "route": "/applications",
+      "method": "GET"
+    },
+    {
+      "route": "/commissions",
+      "method": "GET"
+    },
+    {
+      "route": "/partners/me",
+      "method": "GET"
+    },
+    {
+      "route": "/webinars",
+      "method": "GET"
+    },
+    {
+      "route": "/applications",
+      "method": "GET"
+    },
+    {
+      "route": "/commissions",
+      "method": "GET"
+    },
+    {
+      "route": "/partners/me",
+      "method": "GET"
+    },
+    {
+      "route": "/universities",
+      "method": "GET"
+    },
+    {
+      "route": "/webinars",
+      "method": "GET"
+    }
+  ],
+  "runtimeErrors": []
+}

@@ -32,6 +32,7 @@ export default function AdminPortal({ onLogout }) {
 
   const adminToken = localStorage.getItem('admin_token');
   const [isDataSyncing, setIsDataSyncing] = useState(false);
+  const [dataLoadError, setDataLoadError] = useState('');
   const [selectedAppIdForSingleView, setSelectedAppIdForSingleView] = useState(null);
   const [selectedPartnerForSingleView, setSelectedPartnerForSingleView] = useState(null);
   const [selectedStudentForSingleView, setSelectedStudentForSingleView] = useState(null);
@@ -40,6 +41,7 @@ export default function AdminPortal({ onLogout }) {
   const fetchInitialData = async () => {
     if (!adminToken) return;
     setIsDataSyncing(true);
+    setDataLoadError('');
     try {
       // Execute all API requests concurrently in parallel
       const [intakeRes, univRes, courseRes, partnerRes, studentRes, appRes, userRes] = await Promise.all([
@@ -52,7 +54,11 @@ export default function AdminPortal({ onLogout }) {
         API.get('/users').catch(err => ({ error: err }))
       ]);
 
-      if (userRes.data?.success && Array.isArray(userRes.data.data) && userRes.data.data.length > 0) {
+      const failed = [intakeRes, univRes, courseRes, partnerRes, studentRes, appRes, userRes]
+        .some(result => result.error && result.error.response?.status !== 403);
+      if (failed) setDataLoadError('Some records could not be loaded. Please refresh to retry.');
+
+      if (userRes.data?.success && Array.isArray(userRes.data.data)) {
         const mappedUsers = userRes.data.data.map(u => ({
           id: u._id,
           _id: u._id,
@@ -63,8 +69,8 @@ export default function AdminPortal({ onLogout }) {
           phone: u.phone || '',
           role: u.role || 'Executive',
           status: u.status || 'Active',
-          country: u.country || (u.countries && u.countries[0]) || 'India',
-          countries: (Array.isArray(u.countries) && u.countries.length > 0) ? u.countries : [u.country || 'India'],
+          country: u.country || (u.countries && u.countries[0]) || '',
+          countries: (Array.isArray(u.countries) && u.countries.length > 0) ? u.countries : [u.country || ''],
           accessLevel: `${u.role} (${['SuperAdmin', 'Super Admin', 'Director', 'Admin'].includes(u.role) ? 'Full Access' : 'Read & Write'})`,
           dateAdded: new Date(u.createdAt || Date.now()).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
           passwordType: 'Configured & Active'
@@ -72,22 +78,22 @@ export default function AdminPortal({ onLogout }) {
         setStaffList(mappedUsers);
       }
 
-      if (intakeRes.data?.success && Array.isArray(intakeRes.data.data) && intakeRes.data.data.length > 0) {
+      if (intakeRes.data?.success && Array.isArray(intakeRes.data.data)) {
         setIntakes(intakeRes.data.data);
       }
 
-      if (univRes.data?.success && Array.isArray(univRes.data.data) && univRes.data.data.length > 0) {
+      if (univRes.data?.success && Array.isArray(univRes.data.data)) {
         setUniversities(univRes.data.data);
       }
 
-      if (courseRes.data?.success && Array.isArray(courseRes.data.data) && courseRes.data.data.length > 0) {
+      if (courseRes.data?.success && Array.isArray(courseRes.data.data)) {
         setCourses(courseRes.data.data);
       }
 
       let mappedAgents = [];
       if (partnerRes.data?.success && Array.isArray(partnerRes.data.data)) {
         setReferralAgents(partnerRes.data.data);
-        mappedAgents = partnerRes.data.data.map((agent, idx) => ({
+        mappedAgents = partnerRes.data.data.map((agent) => ({
           id: agent._id,
           name: agent.name,
           type: 'Agent',
@@ -97,24 +103,25 @@ export default function AdminPortal({ onLogout }) {
           partnerType: (agent.partnerType && agent.partnerType.toString().toLowerCase() === 'individual') ? 'Individual' : 'Company',
           taxId: agent.taxId || '',
           documents: Array.isArray(agent.documents) ? agent.documents : (agent.documents ? [agent.documents] : []),
-          activeApps: 0,
-          partnerCode: `PRTNR-${10001 + idx}`,
+          activeApps: (appRes.data?.data || []).filter(app => String(app.partner?._id || app.partner || '') === String(agent._id)).length,
+          partnerCode: agent.partnerCode || agent._id,
           dateAdded: new Date(agent.createdAt || Date.now()).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
-          country: agent.country || 'India',
+          country: agent.country || '',
           status: agent.status || 'Active'
         }));
       }
 
       let mappedStudents = [];
       if (studentRes.data?.success && Array.isArray(studentRes.data.data)) {
-        mappedStudents = studentRes.data.data.map((student, idx) => ({
+        mappedStudents = studentRes.data.data.map((student) => ({
+          ...student,
           id: student._id,
           name: student.name,
           type: 'Student',
           email: student.email,
           phone: student.phone || '',
-          activeApps: 0,
-          studentCode: `STD-${10001 + idx}`,
+          activeApps: (appRes.data?.data || []).filter(app => String(app.student?._id || app.student || '') === String(student._id)).length,
+          studentCode: student.studentCode || student._id,
           passportNo: student.passportNo || 'Pending',
           documents: Array.isArray(student.documents) ? student.documents : [],
           dob: student.dob || '',
@@ -122,20 +129,24 @@ export default function AdminPortal({ onLogout }) {
           referredBy: student.referredBy || 'Direct',
           partner: student.partner || null,
           partnerId: student.partner?._id || student.partner?.id || student.partner || null,
-          country: student.country || 'India',
+          country: student.country || '',
           status: student.status || 'Active'
         }));
       }
 
-      if (mappedAgents.length > 0 || mappedStudents.length > 0) {
-        setClients([...mappedAgents, ...mappedStudents]);
+      if (partnerRes.data?.success || studentRes.data?.success) {
+        setClients(previous => [
+          ...(partnerRes.data?.success ? mappedAgents : previous.filter(client => client.type === 'Agent')),
+          ...(studentRes.data?.success ? mappedStudents : previous.filter(client => client.type === 'Student'))
+        ]);
       }
 
       if (appRes.data?.success && Array.isArray(appRes.data.data)) {
-        const mapped = appRes.data.data.map((app, idx) => ({
+        const mapped = appRes.data.data.map((app) => ({
+          ...app,
           id: app._id,
           _id: app._id,
-          camsId: app.camsId || (app._id ? `CAMS-${app._id.toString().slice(-5).toUpperCase()}` : `CAMS-${10001 + idx}`),
+          camsId: app.camsId || app._id,
           studentName: app.student?.name || 'N/A',
           student: app.student || null,
           studentId: app.student?._id || app.student?.id || (typeof app.student === 'string' ? app.student : null),
@@ -143,12 +154,12 @@ export default function AdminPortal({ onLogout }) {
           universityName: app.university?.name || 'N/A',
           courseName: app.course?.title || 'N/A',
           level: app.level || 'Undergraduate (UG)',
-          intake: app.intake || app.course?.intakes?.[0]?.title || 'September 2026',
+          intake: app.intake || '',
           status: app.status || 'Submitted',
           secondaryStatus: (app.status === 'Paid Students' || app.paymentStatus === 'Paid') ? 'Paid Students' : (app.status || 'Pending'),
           paymentStatus: app.paymentStatus || 'Pending',
           dateAdded: new Date(app.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
-          country: app.university?.country || 'India',
+          country: app.university?.country || '',
           partner: app.partner || null,
           partnerName: app.partner?.name || (typeof app.partner === 'string' ? app.partner : 'Direct'),
           partnerCompanyName: app.partner?.companyName || app.partner?.name || 'Direct',
@@ -170,20 +181,11 @@ export default function AdminPortal({ onLogout }) {
         }));
         setApplications(mapped);
         localStorage.setItem('studegram_applications', JSON.stringify(mapped));
-      } else {
-        // Fallback: If backend server returns success: false or HTTP 403 for CRE role, retain cached/initial applications list
-        const saved = localStorage.getItem('studegram_applications');
-        if (saved) {
-          try {
-            const parsed = JSON.parse(saved);
-            if (Array.isArray(parsed) && parsed.length > 0) {
-              setApplications(parsed);
-            }
-          } catch (e) {}
-        }
       }
+
     } catch (err) {
-      console.warn('Backend API connection failed, using local master data store:', err.message);
+      console.warn('Unable to refresh portal data:', err.message);
+      setDataLoadError('Records could not be loaded. Please refresh to retry.');
     } finally {
       setIsDataSyncing(false);
     }
@@ -251,236 +253,28 @@ export default function AdminPortal({ onLogout }) {
     }
   } : null;
 
-  // States initialized cleanly for production / live DB data with local cache fallback
-  const DEFAULT_INITIAL_APPLICATIONS = [
-    {
-      id: 'app-default-1',
-      _id: 'app-default-1',
-      camsId: 'CAMS-10001',
-      studentName: 'Dharvesh vyas',
-      passportNo: '85523652',
-      universityName: 'University of Toronto',
-      courseName: 'Bachelor of Data Science',
-      intake: 'September 2026',
-      secondaryStatus: 'Submitted',
-      status: 'Submitted',
-      paymentStatus: 'Pending',
-      dateAdded: '30 Sept 2026',
-      country: 'Canada',
-      assignedBdm: 'Interman Agent',
-      assignedExecutive: '',
-      statusHistory: [],
-      dob: '2001-05-15',
-      studentEmail: 'dharvesh@gmail.com',
-      phone: '8907425875',
-      documents: [],
-      notes: '',
-      pickedBy: null,
-      submittedByStaff: null,
-      commissionClaimed: false,
-      commissionStatus: 'Unclaimed',
-      hasUnrepliedMessage: false,
-      lastRepliedBy: null
-    }
-  ];
-
-  const [applications, setApplications] = useState(() => {
-    const saved = localStorage.getItem('studegram_applications');
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
-      } catch (e) {}
-    }
-    return DEFAULT_INITIAL_APPLICATIONS;
-  });
-
-  const [courseDocuments, setCourseDocuments] = useState([
-    { siNo: 1, name: 'SSLC', format: '.pdf', minSize: 0.001, maxSize: 12 },
-    { siNo: 2, name: 'HSC', format: '.pdf', minSize: 0.001, maxSize: 12 },
-    { siNo: 3, name: 'Degree Certificate', format: '.pdf', minSize: 0.01, maxSize: 20 }
-  ]);
-
+  // Business records come from the API, including empty collections.
+  const [applications, setApplications] = useState([]);
+  const [courseDocuments, setCourseDocuments] = useState([]);
   const [referralAgents, setReferralAgents] = useState([]);
-
-  const [stages, setStages] = useState([
-    'Document Verification',
-    'Offer Pending',
-    'Processed',
-    'Offer Issued',
-    'Visa Pending'
-  ]);
-
-  const [universities, setUniversities] = useState([
-    {
-      _id: 'univ-1',
-      id: 'univ-1',
-      name: 'University of Hertfordshire',
-      country: 'United Kingdom',
-      city: 'Hatfield',
-      ranking: 'Top 50 UK',
-      logoUrl: '',
-      description: 'Public university in Hertfordshire, United Kingdom.',
-      requirements: ['IELTS 6.0', 'High School Diploma'],
-      status: 'Active',
-      courses: ['course-1', 'course-2']
-    },
-    {
-      _id: 'univ-2',
-      id: 'univ-2',
-      name: 'University of Toronto',
-      country: 'Canada',
-      city: 'Toronto',
-      ranking: '#21 Global',
-      logoUrl: '',
-      description: 'Leading public research university in Toronto, Ontario, Canada.',
-      requirements: ['IELTS 6.5', 'High School Diploma'],
-      status: 'Active',
-      courses: ['course-3']
-    },
-    {
-      _id: 'univ-3',
-      id: 'univ-3',
-      name: 'University of Oxford',
-      country: 'United Kingdom',
-      city: 'Oxford',
-      ranking: '#1 Global',
-      logoUrl: '',
-      description: 'World-renowned collegiate research university in Oxford, England.',
-      requirements: ['IELTS 7.5', 'GPA 3.8+'],
-      status: 'Active',
-      courses: ['course-4']
-    },
-    {
-      _id: 'univ-4',
-      id: 'univ-4',
-      name: 'University of Melbourne',
-      country: 'Australia',
-      city: 'Melbourne',
-      ranking: '#14 Global',
-      logoUrl: '',
-      description: 'Top ranked public research university in Melbourne, Australia.',
-      requirements: ['IELTS 6.5', 'Bachelor Degree'],
-      status: 'Active',
-      courses: []
-    },
-    {
-      _id: 'univ-5',
-      id: 'univ-5',
-      name: 'Harvard University',
-      country: 'United States',
-      city: 'Cambridge, MA',
-      ranking: '#4 Global',
-      logoUrl: '',
-      description: 'Private Ivy League research university in Cambridge, Massachusetts.',
-      requirements: ['SAT/GRE', 'TOEFL 100+'],
-      status: 'Active',
-      courses: []
-    }
-  ]);
-
-  const [courses, setCourses] = useState([
-    {
-      _id: 'course-1',
-      id: 'course-1',
-      title: 'MSc Data Science & Artificial Intelligence',
-      university: { name: 'University of Hertfordshire' },
-      degreeLevel: 'Master',
-      duration: '1 Year',
-      tuitionFee: '₹15,400 / year',
-      category: 'Technology',
-      description: 'Advanced postgraduate program in data analytics, machine learning, and AI application.',
-      intakes: ['September/October 2026', 'January/February 2027']
-    },
-    {
-      _id: 'course-2',
-      id: 'course-2',
-      title: 'MBA International Business Management',
-      university: { name: 'University of Hertfordshire' },
-      degreeLevel: 'Master',
-      duration: '1 Year',
-      tuitionFee: '₹16,500 / year',
-      category: 'Business',
-      description: 'Comprehensive business leadership and global trade management degree.',
-      intakes: ['September/October 2026']
-    },
-    {
-      _id: 'course-3',
-      id: 'course-3',
-      title: 'BSc Computer Science & Software Engineering',
-      university: { name: 'University of Toronto' },
-      degreeLevel: 'Bachelor',
-      duration: '4 Years',
-      tuitionFee: '₹45,000 / year',
-      category: 'Engineering',
-      description: 'Undergraduate computer science program covering algorithms, system design, and software.',
-      intakes: ['September/October 2026']
-    },
-    {
-      _id: 'course-4',
-      id: 'course-4',
-      title: 'MSc Precision Health & Biomedical Sciences',
-      university: { name: 'University of Oxford' },
-      degreeLevel: 'Master',
-      duration: '1 Year',
-      tuitionFee: '₹28,900 / year',
-      category: 'Healthcare',
-      description: 'Advanced medical science research degree focused on genomic and precision therapies.',
-      intakes: ['September/October 2026']
-    }
-  ]);
-
-  const [intakes, setIntakes] = useState([
-    'September/October 2026',
-    'January/February 2027',
-    'September 2027'
-  ]);
-
-  const [fileFormats, setFileFormats] = useState([
-    '.pdf',
-    '.docx',
-    '.jpg',
-    '.png'
-  ]);
-
-  const [qualifications, setQualifications] = useState([
-    'High School',
-    'Higher Secondary',
-    'Bachelor Degree',
-    'Master Degree'
-  ]);
-
-  const [verificationDocuments, setVerificationDocuments] = useState([
-    'Basic Passport Copy',
-    'English Proficiency Result',
-    'Academic Reference Letter',
-    'Statement of Purpose (SOP)'
-  ]);
-
-  const [stagedActions, setStagedActions] = useState([
-    'Send Automated Verification Email',
-    'Assign Visa Coordinator',
-    'Generate Admission Invoice'
-  ]);
-
+  const [stages, setStages] = useState([]);
+  const [universities, setUniversities] = useState([]);
+  const [courses, setCourses] = useState([]);
+  const [intakes, setIntakes] = useState([]);
+  const [fileFormats, setFileFormats] = useState([]);
+  const [qualifications, setQualifications] = useState([]);
+  const [verificationDocuments, setVerificationDocuments] = useState([]);
+  const [stagedActions, setStagedActions] = useState([]);
   const [todoList, setTodoList] = useState([]);
-
-  const [staffList, setStaffList] = useState([
-    { id: 100, name: 'Super Admin', role: 'Director', email: 'superadminluzid@gmail.com', phone: '+1 800 555 0199', status: 'Active', dateAdded: '01 Jan 2026', accessLevel: 'SuperAdmin (Full Access)', country: 'India' },
-    { id: 101, name: 'Elena Rostova', role: 'Director', email: 'director@studegram.com', phone: '+44 7911 123456', status: 'Active', dateAdded: '01 Jan 2026', accessLevel: 'Director (Level 1)', country: 'United Kingdom' },
-    { id: 102, name: 'Marcus Vance', role: 'COO', email: 'coo@studegram.com', phone: '+44 7911 654321', status: 'Active', dateAdded: '15 Mar 2026', accessLevel: 'COO (Level 2)', country: 'United Kingdom' },
-    { id: 103, name: 'Sarah Jenkins', role: 'Finance', email: 'finance@studegram.com', phone: '+44 7911 987654', status: 'Active', dateAdded: '10 May 2026', accessLevel: 'Finance (Level 3)', country: 'United Kingdom' },
-    { id: 104, name: 'Rajesh Kumar', role: 'Country Head', email: 'countryhead.in@studegram.com', phone: '+91 98765 43210', status: 'Active', dateAdded: '01 Apr 2026', accessLevel: 'Country Head (Level 4 - India)', country: 'India' },
-    { id: 105, name: 'Amit Patel', role: 'BDM', email: 'bdm.india@studegram.com', phone: '+91 99988 77766', status: 'Active', dateAdded: '20 Apr 2026', accessLevel: 'BDM (Level 5 - North India)', country: 'India' },
-    { id: 106, name: 'Rahul Krishnan', role: 'Executive', email: 'rahul@studegram.com', phone: '+91 99988 87772', status: 'Active', dateAdded: '01 May 2026', accessLevel: 'Executive (Level 6)', country: 'India' }
-  ]);
+  const [staffList, setStaffList] = useState([]);
 
   const [clients, setClients] = useState([]);
 
   const handleAddApplication = async (newApp) => {
     const token = localStorage.getItem('admin_token');
     try {
-      if (token && token !== 'mock-admin-token-12345') {
+      if (!token) throw new Error('Please sign in before creating an application.');
+      {
         let studentId = newApp.studentId;
 
         // Only create a new student profile if a pre-existing student ID was not passed
@@ -505,7 +299,7 @@ export default function AdminPortal({ onLogout }) {
           university: newApp.universityId,
           course: newApp.courseId,
           level: newApp.level || 'Undergraduate (UG)',
-          intake: newApp.intake || 'September 2026',
+          intake: newApp.intake || '',
           status: 'Pending',
           documents: newApp.documents || [],
           notes: newApp.notes
@@ -539,58 +333,6 @@ export default function AdminPortal({ onLogout }) {
 
         toast.success('Application successfully created in database!');
         await fetchInitialData(); // Refresh list before showing applications
-      } else {
-        // Mock fallback
-        const randomId = `CAMS${Math.floor(10000 + Math.random() * 90000)}`;
-        const matchedStaff = newApp.pickedBy || (newApp.assignedTo ? staffList.find(s => s.name === newApp.assignedTo || (s.id && String(s.id) === String(newApp.assignedTo)) || (s._id && String(s._id) === String(newApp.assignedTo))) : null);
-        const freshApp = { 
-          ...newApp, 
-          camsId: randomId,
-          pickedBy: newApp.pickedBy || (matchedStaff ? {
-            id: matchedStaff.id || matchedStaff._id,
-            name: matchedStaff.name,
-            email: matchedStaff.email || '',
-            role: matchedStaff.role || 'Staff',
-            pickedAt: new Date().toISOString()
-          } : null),
-          assignedTo: newApp.assignedTo || matchedStaff?.name,
-          country: newApp.country || currentUser.country || 'India',
-          assignedBdm: newApp.assignedBdm || (currentUser.role === 'BDM' ? currentUser.name : 'Amit Patel'),
-          assignedExecutive: matchedStaff?.name || ''
-        };
-        
-        setApplications(prev => {
-          const updated = [freshApp, ...prev];
-          localStorage.setItem('studegram_applications', JSON.stringify(updated));
-          return updated;
-        });
-
-        setClients(prev => {
-          const exists = prev.find(c => 
-            (newApp.studentId && c.id === newApp.studentId) || 
-            c.name.toLowerCase() === newApp.studentName.toLowerCase()
-          );
-          if (exists) {
-            return prev.map(c => c.id === exists.id ? { ...c, activeApps: c.activeApps + 1 } : c);
-          } else {
-            return [
-              {
-                id: Date.now(),
-                name: newApp.studentName,
-                type: 'Student',
-                email: newApp.studentEmail,
-                phone: newApp.phone || '+91 9999999999',
-                activeApps: 1,
-                passportNo: newApp.passportNo || 'Pending',
-                dob: newApp.dob || '',
-                dateAdded: newApp.dateAdded || new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
-                referredBy: newApp.partnerId ? 'Agent' : 'Direct',
-                country: newApp.country || currentUser.country || 'India'
-              },
-              ...prev
-            ];
-          }
-        });
       }
       handleSelectTab('applications');
       setActiveSubTab(null);
@@ -611,11 +353,11 @@ export default function AdminPortal({ onLogout }) {
     if (!role || ['SuperAdmin', 'Super Admin', 'Director', 'Admin', 'COO', 'Finance', 'OperationsHead'].includes(role)) return true;
     if (['CRE', 'Country Head', 'BDM'].includes(role)) {
       if (!currentUser.country || currentUser.country === 'All' || currentUser.country === 'Global') return true;
-      return (client.country || 'India').toLowerCase() === (currentUser.country || 'India').toLowerCase();
+      return (client.country || '').toLowerCase() === (currentUser.country || '').toLowerCase();
     }
     if (role === 'Executive') {
       if (!currentUser.country || currentUser.country === 'All' || currentUser.country === 'Global') return true;
-      return (client.country || 'India').toLowerCase() === (currentUser.country || 'India').toLowerCase() && client.type === 'Student';
+      return (client.country || '').toLowerCase() === (currentUser.country || '').toLowerCase() && client.type === 'Student';
     }
     return false;
   });
@@ -884,6 +626,7 @@ export default function AdminPortal({ onLogout }) {
         />
 
         <main id="admin-main-content" key={`${activeTab}-${activeSubTab}`} className="flex-1 overflow-y-auto overflow-x-hidden pb-16 animate-fade-in scroll-smooth">
+          {dataLoadError && <p role="alert" className="mx-6 mt-4 p-3 rounded-xl bg-amber-50 border border-amber-200 text-xs text-amber-800">{dataLoadError}</p>}
           {renderActiveTabContent()}
         </main>
       </div>
