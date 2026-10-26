@@ -1014,7 +1014,7 @@ support@unigather.app`;
                       </div>
                     </div>
 
-                    {/* Verification & KYC Status Card */}
+                    {/* Verification & KYC Status Card: hidden until a verification workflow records these statuses.
                     <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm space-y-3">
                       <div className="flex justify-between items-center pb-2 border-b border-slate-100">
                         <span className="text-[10px] font-black uppercase tracking-widest text-[#D99A1C]">Verification Compliance</span>
@@ -1032,6 +1032,7 @@ support@unigather.app`;
                         </span>
                       </div>
                     </div>
+                    */}
                   </div>
 
                   {/* Right Column: Associated Applications & Documents */}
