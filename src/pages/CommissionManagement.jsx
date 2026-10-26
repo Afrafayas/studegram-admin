@@ -1,3 +1,4 @@
+import { getDisplayId } from '../utils/displayId';
 import { parseFee, formatFee } from '../utils/courseFee';
 import { ActionButton } from '../components/ActionControls';
 import React, { useState, useEffect } from 'react';
@@ -30,11 +31,7 @@ export default function CommissionManagement({ clients = [], referralAgents = []
       const res = await API.get('/commissions');
       if (res.data?.success && Array.isArray(res.data.data) && res.data.data.length > 0) {
         const mapped = res.data.data.map((c) => {
-          const comId = (c.commissionId && String(c.commissionId).startsWith('COM-'))
-            ? c.commissionId
-            : (c.id && String(c.id).startsWith('COM-'))
-              ? c.id
-              : (c._id || c.id);
+          const comId = getDisplayId(c);
 
           const fee = (parseFee(c.fee || c.tuitionFee || c.courseFee) ?? 0);
           const rate = c.rate !== undefined && c.rate !== null ? Number(c.rate) : 0;
@@ -53,6 +50,7 @@ export default function CommissionManagement({ clients = [], referralAgents = []
           return {
             id: comId,
             commissionId: comId,
+            displayId: c.displayId,
             _id: c._id || c.id,
             studentName: c.studentName || c.student?.name || 'Student',
             courseName: c.courseName || c.course?.title || 'Course Program',
@@ -147,7 +145,7 @@ export default function CommissionManagement({ clients = [], referralAgents = []
         'Status'
       ];
       const rows = displayCommissions.map((c) => {
-        const comId = c.id && !/^[0-9a-fA-F]{24}$/.test(c.id) ? c.id : (c.commissionId || (c._id || c.id));
+        const comId = getDisplayId(c);
         return [
           comId,
           `"${(c.studentName || '').replace(/"/g, '""')}"`,
@@ -507,7 +505,7 @@ export default function CommissionManagement({ clients = [], referralAgents = []
                     <tr key={comm._id || comm.id || idx} className="hover:bg-slate-50/50 transition-colors">
                       <td className="px-5 py-4">
                         <span className="font-mono font-black text-xs text-[#2563EB] bg-blue-50 px-2.5 py-1 rounded-md border border-blue-200 inline-block shadow-2xs">
-                          {comm.id && !/^[0-9a-fA-F]{24}$/.test(comm.id) ? comm.id : (comm.commissionId || (c._id || c.id))}
+                          {getDisplayId(comm)}
                         </span>
                       </td>
                       <td className="px-5 py-4">

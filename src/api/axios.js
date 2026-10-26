@@ -1,3 +1,4 @@
+import { normalizeDisplayIds } from '../utils/displayId';
 import axios from 'axios';
 
 // Use the configured API, defaulting to the hosted backend. Set VITE_API_BASE_URL for local backend development.
@@ -5,7 +6,7 @@ export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL?.trim() || 'https:
 
 const API = axios.create({
   baseURL: API_BASE_URL,
-  timeout: 25000,
+  timeout: 120000, // Allow up to two minutes for uploads and slower API requests.
   headers: {
     'Content-Type': 'application/json'
   }
@@ -24,7 +25,7 @@ API.interceptors.request.use(
 );
 
 API.interceptors.response.use(
-  (response) => response,
+  (response) => { response.data = normalizeDisplayIds(response.data); return response; },
   (error) => {
     if (error.response && error.response.status === 401 && !error.config?.url?.includes('/auth/login')) {
       console.warn('Unauthorized admin request - Token expired or invalid. Prompting re-authentication.');
