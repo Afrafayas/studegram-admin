@@ -43,25 +43,6 @@ const FEATURE_ACTION_PERMISSIONS = [
   { key: 'settings:edit', label: 'Modify Portal System Settings & Options', portal: 'Admin' }
 ];
 
-const DEFAULT_PRESET_ROLES = [
-  { _id: 'r1', name: 'SuperAdmin', displayName: 'Super Admin / Director', portalType: 'Admin', description: 'Full unconstrained administrative access across all system portals and data.', permissions: ['*'], isPreset: true },
-  { _id: 'r2', name: 'Director', displayName: 'Director', portalType: 'Admin', description: 'Executive director level with full system access and audit reporting.', permissions: ['*'], isPreset: true },
-  { _id: 'r2_admin', name: 'Admin', displayName: 'Administrator', portalType: 'Admin', description: 'Full administrative access and CRUD management across all system modules.', permissions: ['*'], isPreset: true },
-  { _id: 'r3', name: 'COO', displayName: 'Chief Operating Officer (COO)', portalType: 'Admin', description: 'Operational leadership overseeing applications, partner vetting, staff and commission pipelines.', permissions: ['sidebar:daily-report', 'sidebar:applications', 'sidebar:admin-report', 'sidebar:become-partner', 'sidebar:students', 'sidebar:commissions', 'sidebar:staff', 'sidebar:settings', 'sidebar:todo-list', 'applications:view', 'applications:create', 'applications:edit', 'applications:delete', 'partners:view', 'partners:approve', 'commissions:view', 'commissions:manage', 'staff:manage'], isPreset: true },
-  { _id: 'r4', name: 'OperationsHead', displayName: 'Head of Operations', portalType: 'Admin', description: 'Manages operational application workflows, partner onboarding, and student file assignments.', permissions: ['sidebar:daily-report', 'sidebar:applications', 'sidebar:admin-report', 'sidebar:become-partner', 'sidebar:students', 'sidebar:todo-list', 'applications:view', 'applications:create', 'applications:edit', 'applications:delete', 'partners:view', 'partners:approve', 'students:manage'], isPreset: true },
-  { _id: 'r5', name: 'CRE', displayName: 'Customer Relationship Executive (CRE)', portalType: 'Admin', description: 'Manages partner agent queries, incoming registrations, and initial application screening.', permissions: ['sidebar:daily-report', 'sidebar:applications', 'sidebar:become-partner', 'sidebar:students', 'sidebar:todo-list', 'applications:view', 'applications:create', 'applications:edit', 'partners:view', 'partners:approve'], isPreset: true },
-  { _id: 'r6', name: 'Finance', displayName: 'Finance & Accounts Head', portalType: 'Admin', description: 'Dedicated financial oversight, commission calculations, payout approvals, and CSV exports.', permissions: ['sidebar:daily-report', 'sidebar:become-partner', 'sidebar:commissions', 'sidebar:todo-list', 'commissions:view', 'commissions:manage', 'commissions:export', 'partners:view'], isPreset: true },
-  { _id: 'r7', name: 'Country Head', displayName: 'Country Head', portalType: 'Admin', description: 'Regional director managing country-level application velocity and partner agencies.', permissions: ['sidebar:daily-report', 'sidebar:applications', 'sidebar:admin-report', 'sidebar:become-partner', 'sidebar:students', 'sidebar:commissions', 'sidebar:todo-list', 'applications:view', 'applications:edit', 'partners:view', 'commissions:view'], isPreset: true },
-  { _id: 'r8', name: 'BDM', displayName: 'Business Development Manager (BDM)', portalType: 'Admin', description: 'Drives partner agency relationships, onboardings, and student application conversion.', permissions: ['sidebar:daily-report', 'sidebar:applications', 'sidebar:become-partner', 'sidebar:students', 'sidebar:todo-list', 'applications:view', 'partners:view', 'students:view'], isPreset: true },
-  { _id: 'r9', name: 'Executive', displayName: 'Operations Executive', portalType: 'Admin', description: 'Frontline operational team processing student offer letters, CAS/I-20, and status updates.', permissions: ['sidebar:daily-report', 'sidebar:applications', 'sidebar:students', 'sidebar:todo-list', 'applications:view', 'applications:edit', 'students:view'], isPreset: true },
-
-  // Agent Portal Roles
-  { _id: 'r10', name: 'AgencyAdmin', displayName: 'Agent SuperAdmin (Agency Owner)', portalType: 'Agent', description: 'Primary agency administrator with total control over staff accounts, applications, and payouts.', permissions: ['sidebar:dashboard', 'sidebar:applications', 'sidebar:universities', 'sidebar:courses', 'sidebar:staff', 'sidebar:notice', 'sidebar:webinar', 'sidebar:knowledge', 'sidebar:scholarships', 'sidebar:deadlines', 'applications:create', 'applications:edit', 'applications:claim_commission', 'staff:manage'], isPreset: true },
-  { _id: 'r11', name: 'Manager', displayName: 'Agency Branch Manager', portalType: 'Agent', description: 'Manages branch counselors, application filings, and student lead follow-ups.', permissions: ['sidebar:dashboard', 'sidebar:applications', 'sidebar:universities', 'sidebar:courses', 'sidebar:notice', 'sidebar:webinar', 'sidebar:knowledge', 'sidebar:scholarships', 'sidebar:deadlines', 'applications:create', 'applications:edit'], isPreset: true },
-  { _id: 'r12', name: 'Counselor', displayName: 'Student Counselor', portalType: 'Agent', description: 'Creates student profiles, searches courses, and files application submissions.', permissions: ['sidebar:dashboard', 'sidebar:applications', 'sidebar:universities', 'sidebar:courses', 'sidebar:notice', 'applications:create'], isPreset: true },
-  { _id: 'r13', name: 'Staff', displayName: 'Agency Staff Executive', portalType: 'Agent', description: 'Standard processing staff member assisting with document uploads and application tracking.', permissions: ['sidebar:dashboard', 'sidebar:applications', 'sidebar:courses', 'applications:create'], isPreset: true }
-];
-
 export default function RoleHierarchy() {
   const toast = useToast();
   const { currentUser, auditLogs, addAuditLog } = useAuth();
@@ -70,7 +51,7 @@ export default function RoleHierarchy() {
   const [selectedRole, setSelectedRole] = useState('Director');
   
   // Database roles with instant preset fallback
-  const [roles, setRoles] = useState(DEFAULT_PRESET_ROLES);
+  const [roles, setRoles] = useState([]);
   const [isLoadingRoles, setIsLoadingRoles] = useState(false);
   const [portalFilter, setPortalFilter] = useState('All'); // 'All' | 'Admin' | 'Agent'
 
@@ -90,12 +71,8 @@ export default function RoleHierarchy() {
     setIsLoadingRoles(true);
     try {
       const res = await API.get('/roles');
-      if (res.data?.success && Array.isArray(res.data.data) && res.data.data.length > 0) {
-        // Merge DB roles with preset roles
-        const fetched = res.data.data;
-        const presetNames = new Set(fetched.map(r => r.name));
-        const missingPresets = DEFAULT_PRESET_ROLES.filter(pr => !presetNames.has(pr.name));
-        setRoles([...fetched, ...missingPresets]);
+      if (res.data?.success && Array.isArray(res.data.data)) {
+        setRoles(res.data.data);
       }
     } catch (err) {
       console.warn('Failed to fetch roles:', err.message);
@@ -332,21 +309,13 @@ export default function RoleHierarchy() {
             <div className="space-y-4">
               <h3 className="text-xs font-bold text-[#D99A1C] uppercase tracking-wider">🏛️ Admin Portal Role Hierarchy</h3>
               <div className="space-y-2">
-                {[
-                  { name: 'SuperAdmin / Director', desc: 'Global unconstrained system administration & portal configuration.' },
-                  { name: 'COO (Chief Operating Officer)', desc: 'Global operational management & staff oversight.' },
-                  { name: 'Finance & Accounts', desc: 'Financial reports, commission approvals & payout disbursements.' },
-                  { name: 'Country Head', desc: 'Regional operational lead for specific country territories.' },
-                  { name: 'BDM (Business Development Manager)', desc: 'Partner onboarding & agent relationship pipeline.' },
-                  { name: 'CRE (Customer Relationship Executive)', desc: 'Agent registration screening & initial query response.' },
-                  { name: 'Operations Executive', desc: 'Frontline application document verification and stage status updates.' }
-                ].map((r, i) => (
+                {roles.filter(role => role.portalType === 'Admin').map(role => ({ name: role.displayName || role.name, desc: role.description })).map((r, i) => (
                   <div key={i} className="p-3 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between text-xs">
                     <div>
                       <p className="font-bold text-slate-900">{r.name}</p>
                       <p className="text-[10px] text-slate-500 font-medium">{r.desc}</p>
                     </div>
-                    <span className="px-2 py-0.5 bg-slate-200 rounded text-[9px] font-bold">L{i + 1}</span>
+                    <span className="px-2 py-0.5 bg-slate-200 rounded text-[9px] font-bold">Role</span>
                   </div>
                 ))}
               </div>
@@ -355,12 +324,7 @@ export default function RoleHierarchy() {
             <div className="space-y-4">
               <h3 className="text-xs font-bold text-purple-600 uppercase tracking-wider">🏢 Agent Portal Role Hierarchy</h3>
               <div className="space-y-2">
-                {[
-                  { name: 'Agent SuperAdmin (Agency Owner)', desc: 'Full agency portal owner access, staff management & commission claims.' },
-                  { name: 'Branch Manager', desc: 'Agency branch oversight, team lead, application submissions.' },
-                  { name: 'Student Counselor', desc: 'Course search, student profile creation, application filing.' },
-                  { name: 'Agency Staff Executive', desc: 'Standard staff processing & document upload support.' }
-                ].map((r, i) => (
+                {roles.filter(role => role.portalType === 'Agent').map(role => ({ name: role.displayName || role.name, desc: role.description })).map((r, i) => (
                   <div key={i} className="p-3 bg-purple-50/50 border border-purple-200/70 rounded-xl flex items-center justify-between text-xs">
                     <div>
                       <p className="font-bold text-slate-900">{r.name}</p>

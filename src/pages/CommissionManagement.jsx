@@ -1,3 +1,4 @@
+import { parseFee, formatFee } from '../utils/courseFee';
 import { ActionButton } from '../components/ActionControls';
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
@@ -19,8 +20,8 @@ export default function CommissionManagement({ clients = [], referralAgents = []
   // Set Commission Modal state
   const [modalCommission, setModalCommission] = useState(null);
   const [commissionMode, setCommissionMode] = useState('percentage'); // 'percentage' | 'fixed'
-  const [commissionRate, setCommissionRate] = useState(10);
-  const [fixedAmountInput, setFixedAmountInput] = useState(1500);
+  const [commissionRate, setCommissionRate] = useState('');
+  const [fixedAmountInput, setFixedAmountInput] = useState('');
   const [modalNotes, setModalNotes] = useState('');
   const [isSavingModal, setIsSavingModal] = useState(false);
 
@@ -28,15 +29,15 @@ export default function CommissionManagement({ clients = [], referralAgents = []
     try {
       const res = await API.get('/commissions');
       if (res.data?.success && Array.isArray(res.data.data) && res.data.data.length > 0) {
-        const mapped = res.data.data.map((c, idx) => {
+        const mapped = res.data.data.map((c) => {
           const comId = (c.commissionId && String(c.commissionId).startsWith('COM-'))
             ? c.commissionId
             : (c.id && String(c.id).startsWith('COM-'))
               ? c.id
-              : `COM-${1001 + idx}`;
+              : (c._id || c.id);
 
-          const fee = Number(c.fee || c.tuitionFee || c.courseFee || 15000);
-          const rate = c.rate !== undefined && c.rate !== null ? Number(c.rate) : 10;
+          const fee = (parseFee(c.fee || c.tuitionFee || c.courseFee) ?? 0);
+          const rate = c.rate !== undefined && c.rate !== null ? Number(c.rate) : 0;
           const commType = c.commissionType || 'percentage';
           const fixedAmt = Number(c.fixedAmount || 0);
 
@@ -44,7 +45,7 @@ export default function CommissionManagement({ clients = [], referralAgents = []
           if (!payableAmount || payableAmount <= 0) {
             payableAmount = commType === 'fixed' && fixedAmt > 0 
               ? fixedAmt 
-              : Math.round((fee * (rate || 10)) / 100);
+              : Math.round((fee * (rate ?? 0)) / 100);
           }
 
           const universityPaid = Boolean(c.universityPaid || c.universityPaymentStatus === 'University Paid');
@@ -56,8 +57,10 @@ export default function CommissionManagement({ clients = [], referralAgents = []
             studentName: c.studentName || c.student?.name || 'Student',
             courseName: c.courseName || c.course?.title || 'Course Program',
             partnerName: c.partnerName || c.partner?.companyName || c.partner?.name || 'Partner Agency',
-            country: c.country || 'India',
+            country: c.country || '',
             fee: fee,
+            feePeriod: c.feePeriod ?? c.application?.feePeriod ?? c.application?.course?.feePeriod,
+            currency: c.currency || c.application?.currency || c.application?.course?.currency || c.course?.currency,
             rate: rate,
             commissionType: commType,
             fixedAmount: fixedAmt,
@@ -71,39 +74,8 @@ export default function CommissionManagement({ clients = [], referralAgents = []
           };
         });
         setCommissions(mapped);
-      } else {
-        // Build from applications with claimed commission
-        const claimedFromApps = applications
-          .filter(a => a.commissionClaimed || a.commissionStatus === 'Claimed' || a.commissionStatus === 'Paid')
-          .map((a, idx) => {
-            const comId = `COM-${1001 + idx}`;
-            const fee = Number(a.totalAmount || a.course?.tuitionFee || 15000);
-            const rate = a.commissionRate !== undefined && a.commissionRate !== null ? Number(a.commissionRate) : 10;
-            const commType = a.commissionType || 'percentage';
-            const payable = Number(a.commissionAmount) || Math.round((fee * (rate || 10)) / 100);
-            const uniPaid = Boolean(a.universityPaid || a.universityPaymentStatus === 'University Paid');
-
-            return {
-              id: comId,
-              commissionId: comId,
-              _id: a._id || a.id,
-              studentName: a.studentName || a.student?.name || 'Student',
-              courseName: a.courseName || a.course?.title || 'Course Program',
-              partnerName: a.partnerName || a.partner?.companyName || a.partner?.name || 'Partner Agency',
-              country: a.country || 'India',
-              fee: fee,
-              rate: rate,
-              commissionType: commType,
-              fixedAmount: 0,
-              amount: payable,
-              universityPaid: uniPaid,
-              universityPaymentStatus: uniPaid ? 'University Paid' : 'Waiting for University to Pay',
-              payoutDate: '',
-              status: a.commissionStatus === 'Paid' ? 'Paid' : 'Pending Approval',
-              notes: ''
-            };
-          });
-        setCommissions(claimedFromApps);
+      } else if (res.data?.success && Array.isArray(res.data.data)) {
+        setCommissions([]);
       }
     } catch (err) {
       console.warn('Failed to fetch commissions:', err.message);
@@ -174,8 +146,8 @@ export default function CommissionManagement({ clients = [], referralAgents = []
         'University Payment',
         'Status'
       ];
-      const rows = displayCommissions.map((c, idx) => {
-        const comId = c.id && !/^[0-9a-fA-F]{24}$/.test(c.id) ? c.id : (c.commissionId || `COM-${1001 + idx}`);
+      const rows = displayCommissions.map((c) => {
+        const comId = c.id && !/^[0-9a-fA-F]{24}$/.test(c.id) ? c.id : (c.commissionId || (c._id || c.id));
         return [
           comId,
           `"${(c.studentName || '').replace(/"/g, '""')}"`,
@@ -184,7 +156,7 @@ export default function CommissionManagement({ clients = [], referralAgents = []
           `"${(c.country || '').replace(/"/g, '""')}"`,
           c.fee || 0,
           c.commissionType || 'percentage',
-          c.rate || 10,
+          c.rate ?? 0,
           c.amount || 0,
           c.universityPaid ? 'University Paid' : 'Waiting for University to Pay',
           c.status || 'Pending Approval'
@@ -252,14 +224,14 @@ export default function CommissionManagement({ clients = [], referralAgents = []
   const openSetCommissionModal = (comm) => {
     setModalCommission(comm);
     setCommissionMode(comm.commissionType || 'percentage');
-    setCommissionRate(comm.rate !== undefined ? comm.rate : 10);
-    setFixedAmountInput(comm.fixedAmount || comm.amount || Math.round((comm.fee * 0.1)));
+    setCommissionRate(comm.rate !== undefined ? comm.rate : '');
+    setFixedAmountInput(comm.fixedAmount ?? comm.amount ?? '');
     setModalNotes(comm.notes || '');
   };
 
   // Calculate live amount for modal
   const modalCalculatedAmount = commissionMode === 'percentage'
-    ? Math.round(((modalCommission?.fee || 15000) * (Number(commissionRate) || 0)) / 100)
+    ? Math.round(((modalCommission?.fee || 0) * (Number(commissionRate) || 0)) / 100)
     : (Number(fixedAmountInput) || 0);
 
   // Save Commission from Modal
@@ -276,7 +248,7 @@ export default function CommissionManagement({ clients = [], referralAgents = []
     try {
       const payload = {
         commissionType: commissionMode,
-        rate: Number(commissionRate) || 10,
+        rate: Number(commissionRate) || 0,
         fixedAmount: Number(fixedAmountInput) || 0,
         amount: modalCalculatedAmount,
         notes: modalNotes,
@@ -295,7 +267,7 @@ export default function CommissionManagement({ clients = [], referralAgents = []
             return {
               ...c,
               commissionType: commissionMode,
-              rate: Number(commissionRate) || 10,
+              rate: Number(commissionRate) || 0,
               fixedAmount: Number(fixedAmountInput) || 0,
               amount: modalCalculatedAmount,
               notes: modalNotes,
@@ -338,7 +310,7 @@ export default function CommissionManagement({ clients = [], referralAgents = []
       const payload = {
         status: 'Paid',
         amount: comm.amount,
-        rate: comm.rate || 10,
+        rate: comm.rate ?? 0,
         commissionType: comm.commissionType || 'percentage',
         isCommissionSet: true,
         payoutDate: new Date().toISOString().split('T')[0],
@@ -475,7 +447,7 @@ export default function CommissionManagement({ clients = [], referralAgents = []
               </span>
             </div>
             <p className="text-[10px] text-slate-400 font-semibold">
-              Default commission: 10% of Tuition. Enable University Payment toggle to unlock Pay button.
+              Commission amounts and rates are set per application. Enable University Payment toggle to unlock Pay button.
             </p>
           </div>
 
@@ -535,7 +507,7 @@ export default function CommissionManagement({ clients = [], referralAgents = []
                     <tr key={comm._id || comm.id || idx} className="hover:bg-slate-50/50 transition-colors">
                       <td className="px-5 py-4">
                         <span className="font-mono font-black text-xs text-[#2563EB] bg-blue-50 px-2.5 py-1 rounded-md border border-blue-200 inline-block shadow-2xs">
-                          {comm.id && !/^[0-9a-fA-F]{24}$/.test(comm.id) ? comm.id : (comm.commissionId || `COM-${1001 + idx}`)}
+                          {comm.id && !/^[0-9a-fA-F]{24}$/.test(comm.id) ? comm.id : (comm.commissionId || (c._id || c.id))}
                         </span>
                       </td>
                       <td className="px-5 py-4">
@@ -545,7 +517,7 @@ export default function CommissionManagement({ clients = [], referralAgents = []
                         </div>
                       </td>
                       <td className="px-5 py-4 text-slate-950 font-bold">{comm.partnerName || 'Partner Agency'}</td>
-                      <td className="px-5 py-4 text-slate-600 font-semibold">₹{(comm.fee || 0).toLocaleString()}</td>
+                      <td className="px-5 py-4 text-slate-600 font-semibold">{formatFee(comm.fee, comm.currency, comm.feePeriod)}</td>
                       <td className="px-5 py-4 text-slate-500">
                         {comm.commissionType === 'fixed' ? (
                           <span className="px-2 py-0.5 rounded bg-purple-50 text-purple-700 border border-purple-200 text-[10px] font-bold">
@@ -553,7 +525,7 @@ export default function CommissionManagement({ clients = [], referralAgents = []
                           </span>
                         ) : (
                           <span className="px-2 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-200 text-[10px] font-bold">
-                            {comm.rate || 10}%
+                            {comm.rate ?? 0}%
                           </span>
                         )}
                       </td>
@@ -766,7 +738,7 @@ export default function CommissionManagement({ clients = [], referralAgents = []
               </div>
               <div>
                 <span className="text-slate-400 text-[10px] font-bold block">COURSE TUITION FEE</span>
-                <span className="font-black text-slate-900 text-sm">₹{modalCommission.fee.toLocaleString()}</span>
+                <span className="font-black text-slate-900 text-sm">{formatFee(modalCommission.fee, modalCommission.currency, modalCommission.feePeriod)}</span>
               </div>
               <div>
                 <span className="text-slate-400 text-[10px] font-bold block">UNIVERSITY STATUS</span>
@@ -814,7 +786,7 @@ export default function CommissionManagement({ clients = [], referralAgents = []
               <div className="space-y-2">
                 <div className="flex justify-between items-center">
                   <label className="text-xs font-bold text-slate-700">Commission Percentage (%)</label>
-                  <span className="text-[10px] text-slate-400 font-semibold">Default is 10%</span>
+                  <span className="text-[10px] text-slate-400 font-semibold">Enter the agreed commission rate</span>
                 </div>
                 <div className="relative">
                   <input
@@ -831,7 +803,7 @@ export default function CommissionManagement({ clients = [], referralAgents = []
                 </div>
                 <div className="p-3 bg-blue-50/70 border border-blue-200 rounded-xl flex items-center justify-between text-xs">
                   <span className="text-blue-700 font-semibold">
-                    Calculation: ₹{modalCommission.fee.toLocaleString()} × {commissionRate || 0}%
+                    Calculation: {formatFee(modalCommission.fee, modalCommission.currency, modalCommission.feePeriod)} × {commissionRate || 0}%
                   </span>
                   <span className="text-blue-900 font-black text-sm">
                     = ₹{modalCalculatedAmount.toLocaleString()}

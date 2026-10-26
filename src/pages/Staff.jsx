@@ -39,14 +39,12 @@ export default function Staff({ staffList, setStaffList, applications }) {
   const [dbAdminRoles, setDbAdminRoles] = useState([]);
 
   useEffect(() => {
-    fetch('http://localhost:5000/api/roles')
-      .then(res => res.json())
+    API.get('/roles')
+      .then(res => res.data)
       .then(data => {
         if (data?.success && Array.isArray(data.data)) {
           const filtered = data.data.filter(r => r.portalType === 'Admin');
-          if (filtered.length > 0) {
-            setDbAdminRoles(filtered);
-          }
+          setDbAdminRoles(filtered);
         }
       })
       .catch(() => {});

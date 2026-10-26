@@ -24,3 +24,6 @@ dist-ssr
 *.sw?
 backend_link
 
+# Local isolated audit/browser test artifacts
+.audit-work/
+

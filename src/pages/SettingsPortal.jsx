@@ -1,3 +1,5 @@
+import { normalizeKey, normalizeIntake, readRow, headerErrors, mapCurrency, mapFeePeriod, mapDegreeLevel, mapCategory, validFee, splitIntakes, buildLookup } from '../utils/courseImport';
+import { currencies, feeCurrency, formatFee, feePeriods, inferFeePeriod } from '../utils/courseFee';
 import { ActionButton, ActionForm } from '../components/ActionControls';
 import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
@@ -57,6 +59,8 @@ export default function SettingsPortal({
   const [courseDegreeLevel, setCourseDegreeLevel] = useState('Bachelor');
   const [courseDuration, setCourseDuration] = useState('3 Years');
   const [courseFee, setCourseFee] = useState('');
+  const [courseCurrency, setCourseCurrency] = useState('INR');
+  const [courseFeePeriod, setCourseFeePeriod] = useState('year');
   const [courseCategory, setCourseCategory] = useState('Technology');
   const [courseDescription, setCourseDescription] = useState('');
   const [editingCourse, setEditingCourse] = useState(null);
@@ -199,7 +203,7 @@ export default function SettingsPortal({
     if (!isWritable) return;
     setEditingUniv(univ);
     setUnivName(univ.name || '');
-    setUnivCountry(univ.country || 'United Kingdom');
+    setUnivCountry(univ.country || '');
     setUnivCity(univ.city || '');
     setUnivRanking(univ.ranking || '');
     setUnivLogoUrl(univ.logoUrl || '');
@@ -301,7 +305,8 @@ export default function SettingsPortal({
 
     const token = localStorage.getItem('admin_token');
     try {
-      if (token && token !== 'mock-admin-token-12345') {
+      {
+if (!token) throw new Error('Please sign in to save changes.');
         const response = await API.delete(`/universities/${univId}`);
         if (!response.data?.success) {
           throw new Error(response.data?.message || 'Failed to delete university');
@@ -344,7 +349,8 @@ export default function SettingsPortal({
     try {
       if (editingUniv) {
         const univId = editingUniv._id || editingUniv.id;
-        if (token && token !== 'mock-admin-token-12345') {
+        {
+if (!token) throw new Error('Please sign in to save changes.');
           const response = await API.put(`/universities/${univId}`, univPayload);
           const resData = response.data;
           if (resData?.success) {
@@ -354,13 +360,10 @@ export default function SettingsPortal({
           } else {
             throw new Error(resData?.message || 'Failed to update university');
           }
-        } else {
-          setUniversities(prev => prev.map(u => (u._id === univId || u.id === univId) ? { ...u, ...univPayload } : u));
-          addAuditLog('EDIT_UNIVERSITY', 'Settings', univName, `Updated university: ${univName}`);
-          toast.success(`University "${univName}" updated successfully!`);
         }
       } else {
-        if (token && token !== 'mock-admin-token-12345') {
+        {
+if (!token) throw new Error('Please sign in to save changes.');
           const response = await API.post('/universities', univPayload);
           const resData = response.data;
           if (resData?.success) {
@@ -370,14 +373,6 @@ export default function SettingsPortal({
           } else {
             throw new Error(resData?.message || 'Failed to save university');
           }
-        } else {
-          const mockUniv = {
-            _id: `univ-${Date.now()}`,
-            ...univPayload
-          };
-          setUniversities(prev => [mockUniv, ...prev]);
-          addAuditLog('ADD_SETTING_UNIVERSITY', 'Settings', univName, `Added university setting: ${univName}`);
-          toast.success(`University "${univName}" created successfully!`);
         }
       }
       resetUnivForm();
@@ -396,6 +391,8 @@ export default function SettingsPortal({
     setCourseDegreeLevel('Bachelor');
     setCourseDuration('3 Years');
     setCourseFee('');
+    setCourseCurrency('INR');
+    setCourseFeePeriod('year');
     setCourseCategory('Technology');
     setCourseDescription('');
     setCourseSelectedIntakes([]);
@@ -415,7 +412,9 @@ export default function SettingsPortal({
     setCourseUniv(typeof course.university === 'object' ? (course.university?._id || course.university?.id) : (course.university || ''));
     setCourseDegreeLevel(course.degreeLevel || 'Bachelor');
     setCourseDuration(course.duration || '');
-    setCourseFee(course.tuitionFee || '');
+    setCourseFee(course.tuitionFee ?? '');
+    setCourseCurrency(feeCurrency(course.tuitionFee, course.currency));
+    setCourseFeePeriod(inferFeePeriod(course.tuitionFee, course.feePeriod));
     setCourseCategory(course.category || 'Technology');
     setCourseDescription(course.description || '');
     setCourseSelectedIntakes(Array.isArray(course.intakes) ? course.intakes.map(i => typeof i === 'object' ? i._id : i) : []);
@@ -433,7 +432,8 @@ export default function SettingsPortal({
 
     const token = localStorage.getItem('admin_token');
     try {
-      if (token && token !== 'mock-admin-token-12345') {
+      {
+if (!token) throw new Error('Please sign in to save changes.');
         const response = await API.delete(`/courses/${courseId}`);
         if (!response.data?.success) {
           throw new Error(response.data?.message || 'Failed to delete course');
@@ -462,6 +462,8 @@ export default function SettingsPortal({
       degreeLevel: courseDegreeLevel,
       duration: courseDuration,
       tuitionFee: courseFee,
+      currency: courseCurrency,
+      feePeriod: courseFeePeriod,
       category: courseCategory,
       description: courseDescription,
       intakes: courseSelectedIntakes
@@ -471,7 +473,8 @@ export default function SettingsPortal({
     try {
       if (editingCourse) {
         const cId = editingCourse._id || editingCourse.id;
-        if (token && token !== 'mock-admin-token-12345') {
+        {
+if (!token) throw new Error('Please sign in to save changes.');
           const response = await API.put(`/courses/${cId}`, coursePayload);
           const resData = response.data;
           if (resData?.success) {
@@ -481,13 +484,10 @@ export default function SettingsPortal({
           } else {
             throw new Error(resData?.message || 'Failed to update course');
           }
-        } else {
-          setCourses(prev => prev.map(c => (c._id === cId || c.id === cId) ? { ...c, ...coursePayload } : c));
-          addAuditLog('EDIT_COURSE', 'Settings', courseTitle, `Updated course: ${courseTitle}`);
-          toast.success(`Academic program "${courseTitle}" updated successfully!`);
         }
       } else {
-        if (token && token !== 'mock-admin-token-12345') {
+        {
+if (!token) throw new Error('Please sign in to save changes.');
           const response = await API.post('/courses', coursePayload);
           const resData = response.data;
           if (resData?.success) {
@@ -497,11 +497,6 @@ export default function SettingsPortal({
           } else {
             throw new Error(resData?.message || 'Failed to save course');
           }
-        } else {
-          const mockCourse = { _id: `course-${Date.now()}`, ...coursePayload };
-          setCourses(prev => [mockCourse, ...prev]);
-          addAuditLog('ADD_SETTING_COURSE', 'Settings', courseTitle, `Added course setting: ${courseTitle}`);
-          toast.success(`Academic program "${courseTitle}" created successfully!`);
         }
       }
       resetCourseForm();
@@ -553,26 +548,29 @@ export default function SettingsPortal({
       try {
         const buffer = await file.arrayBuffer();
         const workbook = XLSX.read(buffer, { type: 'array' });
-        const sheetName = workbook.SheetNames.includes('Courses') ? 'Courses' : workbook.SheetNames[0];
+        const sheetName = workbook.SheetNames.find(name => normalizeKey(name) === 'courses') || workbook.SheetNames[0];
         const sheet = workbook.Sheets[sheetName];
+        const grid = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
+        const errors = headerErrors(grid[0] || []);
+        if (errors.length) throw new Error(errors.join('; '));
         const rows = XLSX.utils.sheet_to_json(sheet, { defval: '' });
 
         if (Array.isArray(rows) && rows.length > 0) {
+          const universityLookup = buildLookup(universities, 'name');
+          const intakeLookup = buildLookup(intakes, 'title', normalizeIntake);
+          const seen = new Set(courses.map(course => normalizeKey(course.title) + '__' + String(course.university?._id || course.university)));
           const mappedPreview = rows.map((r, i) => {
-            const title = r['Course Program Title *'] || r['Course Program Title'] || r['Course Title *'] || r['Course Title'] || r['Title'] || r['Course Name'] || `Course ${i + 1}`;
-            const univ = r['University Name *'] || r['University Name'] || r['University'] || r['Institution'] || 'N/A';
-            const level = r['Degree Level *'] || r['Degree Level'] || r['Level'] || 'Undergraduate';
-            const fee = r['Tuition Fee *'] || r['Tuition Fee'] || r['Course Fee'] || r['Fee'] || '—';
-            const duration = r['Duration'] || r['Duration (Years/Months)'] || '—';
-
+            const row = readRow(r);
+            const currency = mapCurrency(row.currency, row.tuitionFee);
+            const period = mapFeePeriod(row.feePeriod, row.tuitionFee);
+            const matches = universityLookup.get(normalizeKey(row.university)) || [];
+            const key = normalizeKey(row.title) + '__' + String(matches[0]?._id);
+            const isValid = Boolean(row.title && matches.length === 1 && currency && period !== null && validFee(row.tuitionFee) && mapDegreeLevel(row.degree) && mapCategory(row.category) && !seen.has(key) && splitIntakes(row.intakes).every(name => intakeLookup.get(normalizeIntake(name))?.length === 1));
+            if (isValid) seen.add(key);
             return {
-              id: i + 1,
-              title: String(title).trim(),
-              university: String(univ).trim(),
-              level: String(level).trim(),
-              fee: String(fee).trim(),
-              duration: String(duration).trim(),
-              isValid: Boolean(title && univ && univ !== 'N/A')
+              id: i + 1, title: row.title || 'Missing course title', university: row.university || 'Missing university',
+              level: mapDegreeLevel(row.degree) || row.degree,
+              fee: formatFee(row.tuitionFee, currency, period), duration: row.duration, isValid
             };
           });
 
@@ -587,6 +585,7 @@ export default function SettingsPortal({
         }
       } catch (err) {
         console.warn('Excel preview parse failed:', err);
+        toast.error(err.message || 'Unable to read the Excel file.');
         setExcelPreviewRows([]);
         setExcelStats({ totalRows: 0, validRows: 0 });
       } finally {
@@ -709,7 +708,9 @@ export default function SettingsPortal({
     const token = localStorage.getItem('admin_token');
     try {
       const isValidMongoId = intakeId && /^[a-f\d]{24}$/i.test(String(intakeId));
-      if (token && token !== 'mock-admin-token-12345' && isValidMongoId) {
+      {
+if (!token) throw new Error('Please sign in to save changes.');
+if (!isValidMongoId) throw new Error('This record has no server ID. Refresh the page and retry.');
         const response = await API.delete(`/intakes/${intakeId}`);
         if (!response.data?.success) {
           throw new Error(response.data?.message || 'Failed to delete intake');
@@ -747,7 +748,9 @@ export default function SettingsPortal({
 
         const isValidMongoId = iId && /^[a-f\d]{24}$/i.test(String(iId));
 
-        if (token && token !== 'mock-admin-token-12345' && isValidMongoId) {
+        {
+if (!token) throw new Error('Please sign in to save changes.');
+if (!isValidMongoId) throw new Error('This record has no server ID. Refresh the page and retry.');
           const response = await API.put(`/intakes/${iId}`, intakePayload);
           const resData = response.data;
           if (resData?.success) {
@@ -760,31 +763,11 @@ export default function SettingsPortal({
           } else {
             throw new Error(resData?.message || 'Failed to update intake');
           }
-        } else if (token && token !== 'mock-admin-token-12345' && !isValidMongoId) {
-          // If editing an item that was only in local state or mock string, create it in DB
-          const response = await API.post('/intakes', intakePayload);
-          const resData = response.data;
-          if (resData?.success) {
-            setIntakes(prev => prev.map(i => {
-              const currentVal = typeof i === 'object' && i !== null ? (i._id || i.title) : i;
-              return currentVal === editingIntake ? resData.data : i;
-            }));
-            addAuditLog('ADD_SETTING_INTAKE', 'Settings', trimmedTitle, `Created intake setting: ${trimmedTitle}`);
-            toast.success(`Intake season "${trimmedTitle}" updated successfully!`);
-          } else {
-            throw new Error(resData?.message || 'Failed to save intake');
-          }
-        } else {
-          // Local / mock fallback
-          setIntakes(prev => prev.map(i => {
-            const currentId = typeof i === 'object' && i !== null ? (i._id || i.id) : i;
-            return (currentId === iId || i === editingIntake) ? { ...i, ...intakePayload } : i;
-          }));
-          toast.success(`Intake season "${trimmedTitle}" updated successfully!`);
         }
       } else {
         // Create new Intake
-        if (token && token !== 'mock-admin-token-12345') {
+        {
+if (!token) throw new Error('Please sign in to save changes.');
           const response = await API.post('/intakes', intakePayload);
           const resData = response.data;
           if (resData?.success) {
@@ -794,11 +777,6 @@ export default function SettingsPortal({
           } else {
             throw new Error(resData?.message || 'Failed to save intake');
           }
-        } else {
-          const mockIntake = { _id: `intake-${Date.now()}`, ...intakePayload };
-          setIntakes(prev => [...prev, mockIntake]);
-          addAuditLog('ADD_SETTING_INTAKE', 'Settings', trimmedTitle, `Added intake setting: ${trimmedTitle}`);
-          toast.success(`Intake season "${trimmedTitle}" created successfully!`);
         }
       }
       resetIntakeForm();
@@ -862,7 +840,8 @@ export default function SettingsPortal({
     if (!window.confirm(`Are you sure you want to remove "${itemLabel || itemToDelete}"?`)) return;
 
     try {
-      if (token && token !== 'mock-admin-token-12345' && itemId) {
+      {
+if (!token) throw new Error('Please sign in to save changes.');
         let endpoint = '';
         if (typeLabel === 'university') endpoint = `/universities/${itemId}`;
         if (typeLabel === 'course') endpoint = `/courses/${itemId}`;
@@ -1174,7 +1153,7 @@ export default function SettingsPortal({
                           <td className="px-5 py-3.5">
                             <div className="space-y-0.5">
                               <p className="text-slate-600 text-[11px] font-semibold">{course.duration || 'N/A'}</p>
-                              {course.tuitionFee && <p className="text-emerald-700 font-extrabold text-[10px]">{course.tuitionFee}</p>}
+                              {course.tuitionFee && <p className="text-emerald-700 font-extrabold text-[10px]">{formatFee(course.tuitionFee, course.currency, course.feePeriod)}</p>}
                             </div>
                           </td>
                           <td className="px-5 py-3.5">
@@ -1711,8 +1690,8 @@ export default function SettingsPortal({
       {renderSettingsView()}
 
       {modalType && createPortal(
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-xs select-none p-4 overflow-y-auto">
-          <div className="bg-white border border-[#E2E8F0] border-t-4 border-t-[#D99A1C] rounded-2xl p-6 w-full max-w-md shadow-2xl space-y-4 animate-in zoom-in-95 duration-150 max-h-[90vh] overflow-y-auto my-auto">
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-xs select-none p-4 overflow-hidden">
+          <div className={`bg-white border border-[#E2E8F0] border-t-4 border-t-[#D99A1C] rounded-2xl p-5 sm:p-6 w-full ${modalType === 'settings-course' ? 'max-w-2xl' : 'max-w-md'} shadow-2xl space-y-4 animate-in zoom-in-95 duration-150 max-h-[calc(100dvh-2rem)] overflow-y-auto my-auto`}>
             
             <div className="flex justify-between items-center pb-2 border-b border-slate-100">
               <h3 className="text-xs font-black text-slate-950 uppercase tracking-wider">
@@ -1720,7 +1699,8 @@ export default function SettingsPortal({
                 {modalType === 'agent' && 'Invite Referral Agent Channel'}
                 {modalType === 'stage' && 'Add Application Pipeline Stage'}
                 {modalType === 'edit-intake' && 'Edit Intake Season'}
-                {modalType !== 'doc' && modalType !== 'agent' && modalType !== 'stage' && modalType !== 'edit-intake' && 'Add Configuration Lookup Item'}
+                {modalType === 'settings-course' && (editingCourse ? 'Edit Course Program' : 'Add Academic Course Program')}
+                {modalType !== 'doc' && modalType !== 'agent' && modalType !== 'stage' && modalType !== 'edit-intake' && modalType !== 'settings-course' && 'Add Configuration Lookup Item'}
               </h3>
               <ActionButton onClick={() => setModalType(null)} className="text-slate-400 hover:text-slate-600 font-bold">✕</ActionButton>
             </div>
@@ -2050,10 +2030,7 @@ export default function SettingsPortal({
             )}
 
             {modalType === 'settings-course' && (
-              <ActionForm onSubmit={handleSaveCourse} className="space-y-4 max-h-[80vh] overflow-y-auto pr-1">
-                <h3 className="text-xs font-black text-slate-800 uppercase tracking-wider border-b pb-2">
-                  {editingCourse ? 'Edit Course Program' : 'Add Academic Course Program'}
-                </h3>
+              <ActionForm onSubmit={handleSaveCourse} className="space-y-4">
 
                 <div className="space-y-1.5">
                   <label className="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">Course Program Title *</label>
@@ -2101,41 +2078,39 @@ export default function SettingsPortal({
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                  <div className="space-y-1.5">
-                    <label className="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">Duration</label>
-                    <input
-                      type="text"
-                      value={courseDuration}
-                      onChange={(e) => setCourseDuration(e.target.value)}
-                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-semibold focus:outline-none focus:bg-white focus:border-[#D99A1C]"
-                      placeholder="e.g. 1 Year / 3 Years"
-                    />
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5 min-w-0">
+                    <label htmlFor="course-duration" className="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">Duration</label>
+                    <input id="course-duration" type="text" value={courseDuration} onChange={e => setCourseDuration(e.target.value)} className="w-full min-w-0 h-10 bg-slate-50 border border-slate-200 rounded-xl px-3 text-xs font-semibold focus:outline-none focus:bg-white focus:border-[#D99A1C]" placeholder="e.g. 3 Years" />
                   </div>
-
-                  <div className="space-y-1.5">
-                    <label className="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">Tuition Fee</label>
-                    <input
-                      type="text"
-                      value={courseFee}
-                      onChange={(e) => setCourseFee(e.target.value)}
-                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-semibold focus:outline-none focus:bg-white focus:border-[#D99A1C]"
-                      placeholder="e.g. ₹28,500 / yr"
-                    />
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <label className="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">Category</label>
-                    <select
-                      value={courseCategory}
-                      onChange={(e) => setCourseCategory(e.target.value)}
-                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-semibold focus:outline-none focus:bg-white focus:border-[#D99A1C]"
-                    >
+                  <div className="space-y-1.5 min-w-0">
+                    <label htmlFor="course-category" className="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">Category</label>
+                    <select id="course-category" value={courseCategory} onChange={e => setCourseCategory(e.target.value)} className="w-full min-w-0 h-10 bg-slate-50 border border-slate-200 rounded-xl px-3 text-xs font-semibold focus:outline-none focus:bg-white focus:border-[#D99A1C]">
                       <option value="Technology">Technology & Engineering</option>
                       <option value="Business">Business & Management</option>
                       <option value="Arts">Arts & Humanities</option>
                       <option value="Science">Natural Sciences</option>
                       <option value="Health">Medicine & Health</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-[0.8fr_1fr_1.3fr] gap-2 sm:gap-3 rounded-xl border border-slate-200 bg-slate-50/50 p-3 sm:p-4">
+                  <div className="space-y-1.5 min-w-0">
+                    <label htmlFor="course-currency" className="flex items-end min-h-7 sm:min-h-0 text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">Currency</label>
+                    <select id="course-currency" value={courseCurrency} onChange={e => setCourseCurrency(e.target.value)} className="w-full min-w-0 h-10 bg-slate-50 border border-slate-200 rounded-xl px-3 text-xs font-semibold focus:outline-none focus:bg-white focus:border-[#D99A1C] !px-2">
+                      {currencies.map(code => <option key={code} value={code}>{code}</option>)}
+                    </select>
+                  </div>
+                  <div className="space-y-1.5 min-w-0">
+                    <label htmlFor="course-fee" className="flex items-end min-h-7 sm:min-h-0 text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">Tuition Fee</label>
+                    <input id="course-fee" type="text" inputMode="decimal" value={courseFee} onChange={e => setCourseFee(e.target.value)} className="w-full min-w-0 h-10 bg-slate-50 border border-slate-200 rounded-xl px-3 text-xs font-semibold focus:outline-none focus:bg-white focus:border-[#D99A1C] !px-2" placeholder="28,500" />
+                  </div>
+                  <div className="space-y-1.5 min-w-0">
+                    <label htmlFor="course-fee-period" className="flex items-end min-h-7 sm:min-h-0 text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">Fee Period</label>
+                    <select id="course-fee-period" value={courseFeePeriod} onChange={e => setCourseFeePeriod(e.target.value)} className="w-full min-w-0 h-10 bg-slate-50 border border-slate-200 rounded-xl px-3 text-xs font-semibold focus:outline-none focus:bg-white focus:border-[#D99A1C] !px-2">
+                      <option value="">Not specified</option>
+                      {feePeriods.map(period => <option key={period.value} value={period.value}>{period.label}</option>)}
                     </select>
                   </div>
                 </div>
@@ -2416,7 +2391,7 @@ export default function SettingsPortal({
                             )}
                             {courseItem.tuitionFee && (
                               <span className="bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded font-bold">
-                                {courseItem.tuitionFee}
+                                {formatFee(courseItem.tuitionFee, courseItem.currency, courseItem.feePeriod)}
                               </span>
                             )}
                           </div>
@@ -2487,7 +2462,7 @@ export default function SettingsPortal({
               </div>
               <div>
                 <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider block">Tuition Fee</span>
-                <span className="text-xs font-black text-emerald-700">{viewingCourse.tuitionFee || 'Not specified'}</span>
+                <span className="text-xs font-black text-emerald-700">{formatFee(viewingCourse.tuitionFee, viewingCourse.currency, viewingCourse.feePeriod)}</span>
               </div>
             </div>
 
@@ -2654,7 +2629,7 @@ export default function SettingsPortal({
                     <span>1.</span> Download Official Excel Template
                   </h4>
                   <p className="text-[10px] text-slate-500 font-medium">
-                    Pre-formatted template with required columns: Course Title, University, Fee, Level.
+                    Required: Course Title and University. Includes Currency, Tuition Fee and Fee Period.
                   </p>
                 </div>
                 <ActionButton
@@ -2786,7 +2761,7 @@ export default function SettingsPortal({
                                   ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
                                   : 'bg-rose-50 text-rose-700 border border-rose-200'
                               }`}>
-                                {row.isValid ? '✓ Ready' : 'Incomplete'}
+                                {row.isValid ? '✓ Ready' : 'Check row'}
                               </span>
                             </td>
                           </tr>
@@ -2797,7 +2772,7 @@ export default function SettingsPortal({
 
                   {excelPreviewRows.length > 20 && (
                     <p className="text-[10px] text-slate-400 text-center font-medium pt-1">
-                      Showing first 20 of {excelPreviewRows.length} courses. All valid rows will be imported.
+                      Showing first 20 of {excelPreviewRows.length} courses. The server validates every row against the database during import.
                     </p>
                   )}
                 </div>

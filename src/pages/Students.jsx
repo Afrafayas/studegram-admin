@@ -5,82 +5,18 @@ import { useAuth } from '../context/AuthContext';
 import ApplicationChatDrawer from '../components/ApplicationChatDrawer';
 import { useToast } from '../context/ToastContext';
 import API from '../api/axios';
-
-const getDocumentBlobUrl = (urlOrBase64, mimeType = 'application/pdf') => {
-  if (!urlOrBase64) return '';
-  if (typeof urlOrBase64 !== 'string') return '';
-  if (urlOrBase64.startsWith('blob:') || urlOrBase64.startsWith('http://') || urlOrBase64.startsWith('https://')) {
-    return urlOrBase64;
-  }
-  if (urlOrBase64.startsWith('/uploads/') || urlOrBase64.startsWith('uploads/')) {
-    const cleanPath = urlOrBase64.startsWith('/') ? urlOrBase64 : `/${urlOrBase64}`;
-    return `http://localhost:5000${cleanPath}`;
-  }
-
-  let base64 = urlOrBase64;
-  let type = mimeType;
-
-  if (urlOrBase64.startsWith('data:')) {
-    const parts = urlOrBase64.split(',');
-    const match = parts[0].match(/:(.*?);/);
-    if (match) type = match[1];
-    base64 = parts[1] || '';
-  }
-
-  try {
-    const binary = atob(base64.replace(/\s/g, ''));
-    const bytes = new Uint8Array(binary.length);
-    for (let i = 0; i < binary.length; i++) {
-      bytes[i] = binary.charCodeAt(i);
-    }
-    const blob = new Blob([bytes], { type });
-    return URL.createObjectURL(blob);
-  } catch (err) {
-    return urlOrBase64;
-  }
-};
-
-const createSampleStudentDocBlobUrl = (title, studentName, studentCode) => {
-  const cleanTitle = (title || 'Verification Document').toString().toUpperCase();
-  const cleanStudent = (studentName || 'Student Profile').toString();
-  const cleanCode = (studentCode || 'STD-10001').toString();
-  const svgContent = `<svg xmlns="http://www.w3.org/2000/svg" width="800" height="1000" viewBox="0 0 800 1000">
-    <rect width="800" height="1000" fill="#ffffff"/>
-    <rect x="30" y="30" width="740" height="940" fill="none" stroke="#cbd5e1" stroke-width="2" rx="20"/>
-    <rect x="30" y="30" width="740" height="130" fill="#0a0a0f" rx="20"/>
-    <text x="70" y="85" fill="#d99a1c" font-family="system-ui, sans-serif" font-size="24" font-weight="900">UNIGATHER STUDENT DIRECTORY</text>
-    <text x="70" y="120" fill="#94a3b8" font-family="system-ui, sans-serif" font-size="14" font-weight="700">STUDENT VERIFICATION DOSSIER — ${cleanCode}</text>
-    <text x="70" y="210" fill="#0f172a" font-family="system-ui, sans-serif" font-size="26" font-weight="900">${cleanTitle}</text>
-    <text x="70" y="245" fill="#64748b" font-family="system-ui, sans-serif" font-size="15" font-weight="600">Student: ${cleanStudent} (${cleanCode})</text>
-    <line x1="70" y1="275" x2="730" y2="275" stroke="#e2e8f0" stroke-width="2"/>
-    <rect x="70" y="310" width="660" height="340" fill="#f8fafc" stroke="#e2e8f0" rx="16"/>
-    <text x="100" y="360" fill="#334155" font-family="system-ui, sans-serif" font-size="18" font-weight="800">OFFICIAL STUDENT VERIFICATION RECORD</text>
-    <text x="100" y="400" fill="#475569" font-family="system-ui, sans-serif" font-size="14">Student Code: ${cleanCode}</text>
-    <text x="100" y="430" fill="#475569" font-family="system-ui, sans-serif" font-size="14">Verification Date: ${new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}</text>
-    <text x="100" y="460" fill="#475569" font-family="system-ui, sans-serif" font-size="14">Identity Proof Status: VERIFIED &amp; COMPLIANT</text>
-    <rect x="100" y="530" width="240" height="46" fill="#ecfdf5" stroke="#10b981" stroke-width="1.5" rx="12"/>
-    <text x="125" y="560" fill="#047857" font-family="system-ui, sans-serif" font-size="15" font-weight="800">✓ VERIFIED RECORD</text>
-    <circle cx="580" cy="790" r="65" fill="#2563eb" fill-opacity="0.1" stroke="#2563eb" stroke-width="2" stroke-dasharray="6,4"/>
-    <text x="545" y="796" fill="#1e3a8a" font-family="system-ui, sans-serif" font-size="17" font-weight="900">VERIFIED</text>
-    <text x="70" y="930" fill="#94a3b8" font-family="system-ui, sans-serif" font-size="12">Confidential student record managed under Unigather Education Portal.</text>
-  </svg>`;
-  const blob = new Blob([svgContent], { type: 'image/svg+xml' });
-  return URL.createObjectURL(blob);
-};
-
-const handleDownloadStudentDoc = (docUrl, fileName) => {
-  if (!docUrl) return;
-  const link = document.createElement('a');
-  link.href = docUrl;
-  link.download = fileName || 'student_document.pdf';
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-};
+import { resolveDocumentUrl, documentFileName, downloadApplicationDocument } from '../utils/applicationDocuments';
 
 export default function Students({ clients = [], setClients, applications = [], intakes = [], initialSelectedStudentId = null, onNavigateToApplication }) {
   const toast = useToast();
   const { currentUser, addAuditLog } = useAuth();
+  const handleDownloadStudentDoc = async (url, fileName) => {
+    try {
+      await downloadApplicationDocument(url, fileName);
+    } catch (error) {
+      toast.error(error.message || 'Unable to download the uploaded document.');
+    }
+  };
   const [selectedChatApp, setSelectedChatApp] = useState(null);
   
   const [searchTerm, setSearchTerm] = useState('');
@@ -138,8 +74,8 @@ export default function Students({ clients = [], setClients, applications = [], 
 
     return (applications || []).filter(app => {
       if (sId) {
-        const appStudentId = String(app.student?._id || app.student || '');
-        if (appStudentId && appStudentId === sId) return true;
+        const appStudentId = String(app.student?._id || app.student?.id || app.studentId || (typeof app.student === 'string' ? app.student : ''));
+        if (appStudentId) return appStudentId === sId;
       }
       if (cleanName) {
         const aName = (app.studentName || app.student?.name || '').trim().toLowerCase();
@@ -593,21 +529,22 @@ support@unigather.app`;
       return;
     }
     setIsSubmitting(true);
-    await new Promise(r => setTimeout(r, 400));
 
+
+    try {
+    const response = await API.post('/students', {
+      name: newStudentName, email: newStudentEmail, phone: newStudentPhone,
+      passportNo: newStudentPassport, dob: newStudentDob, referredBy: newStudentReferredBy
+    });
+    if (!response.data?.success) throw new Error(response.data?.message || 'Unable to create student.');
+    const savedStudent = response.data.data;
     const newStudent = {
-      id: Date.now(),
-      name: newStudentName,
+      ...savedStudent,
+      id: savedStudent._id,
       type: 'Student',
-      email: newStudentEmail,
-      phone: newStudentPhone,
-      passportNo: newStudentPassport || 'Pending',
-      dob: newStudentDob || '',
-      status: 'Active',
       activeApps: 0,
-      referredBy: newStudentReferredBy,
-      country: currentUser.role === 'Country Head' || currentUser.role === 'BDM' ? currentUser.country : 'India',
-      dateAdded: new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
+      country: savedStudent.country || '',
+      dateAdded: savedStudent.createdAt ? new Date(savedStudent.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : ''
     };
 
     setClients(prev => [newStudent, ...prev]);
@@ -624,6 +561,11 @@ support@unigather.app`;
     setIsModalOpen(false);
 
     toast.success(`Student ${newStudentName} successfully onboarded.`);
+    } catch (error) {
+      toast.error(error.response?.data?.message || error.message);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -777,7 +719,7 @@ support@unigather.app`;
                             </div>
                             <div>
                               <p className="text-slate-950 font-black group-hover:text-[#D99A1C] transition-colors">{student.name}</p>
-                              <p className="text-[10px] text-slate-400 font-semibold">Verification Verified</p>
+                              <p className="text-[10px] text-slate-400 font-semibold">Student record</p>
                             </div>
                           </td>
                           <td className="px-6 py-4 text-slate-500 font-mono font-bold uppercase">{student.passportNo || 'Pending'}</td>
@@ -919,7 +861,7 @@ support@unigather.app`;
           {(() => {
             const studentApps = getStudentApplications(singleViewStudent);
             const activeAppsCount = studentApps.length || singleViewStudent.activeApps || 0;
-            const studentCode = singleViewStudent.studentCode || (singleViewStudent.id ? `STD-${String(singleViewStudent.id).slice(-5)}` : 'STD-10001');
+            const studentCode = singleViewStudent.studentCode || singleViewStudent.id || singleViewStudent._id || 'Not assigned';
 
             return (
               <>
@@ -1050,7 +992,7 @@ support@unigather.app`;
                         </div>
                         <div className="flex justify-between py-1 border-b border-slate-100">
                           <span className="text-slate-400 font-bold">Country / Nationality:</span>
-                          <span className="font-bold text-slate-800">📍 {singleViewStudent.country || 'India'}</span>
+                          <span className="font-bold text-slate-800">📍 {singleViewStudent.country || 'Not provided'}</span>
                         </div>
                         <div className="flex justify-between py-1 border-b border-slate-100">
                           <span className="text-slate-400 font-bold">Onboarding Date:</span>
@@ -1076,16 +1018,16 @@ support@unigather.app`;
                       <div className="flex justify-between items-center pb-2 border-b border-slate-100">
                         <span className="text-[10px] font-black uppercase tracking-widest text-[#D99A1C]">Verification Compliance</span>
                         <span className="text-[10px] font-black text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200">
-                          ✓ Verified
+                          {singleViewStudent.verificationStatus || 'Not verified'}
                         </span>
                       </div>
                       <p className="text-xs text-slate-600 font-medium leading-relaxed">
-                        Student identity records, passport verification, and referral channel data are synchronized under Unigather Education Records standards.
+                        Verification status is shown when recorded for this student.
                       </p>
                       <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 flex items-center justify-between text-xs">
                         <span className="text-slate-500 font-bold">Passport Status:</span>
                         <span className="font-black text-emerald-600">
-                          {singleViewStudent.passportNo && singleViewStudent.passportNo !== 'Pending' ? 'Verified Document' : 'Pending Upload'}
+                          {singleViewStudent.passportVerificationStatus || 'Not verified'}
                         </span>
                       </div>
                     </div>
@@ -1188,30 +1130,34 @@ support@unigather.app`;
                             Submitted Verification Documents
                           </h3>
                         </div>
-                        <span className="text-[10px] font-black text-emerald-700 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200">
-                          ✓ Verified Proofs
-                        </span>
+
                       </div>
 
                       {(() => {
-                        const docsToDisplay = (singleViewStudent.documents && singleViewStudent.documents.length > 0)
-                          ? singleViewStudent.documents
-                          : [
-                              { title: 'Passport Identity Copy', fileName: `${(singleViewStudent.passportNo || 'passport').toLowerCase()}_scan.pdf` },
-                              { title: 'Academic Higher Secondary Certificate', fileName: 'higher_secondary_marksheet.pdf' },
-                              { title: 'Statement of Purpose (SOP)', fileName: 'statement_of_purpose.pdf' },
-                              { title: 'English Language Score (IELTS/PTE)', fileName: 'language_proficiency_result.pdf' }
-                            ];
+                        const uploadedDocs = [
+                          ...(Array.isArray(singleViewStudent.documents) ? singleViewStudent.documents : []),
+                          ...getStudentApplications(singleViewStudent).flatMap(app => Array.isArray(app.documents) ? app.documents : [])
+                        ];
+                        const seenUrls = new Set();
+                        const docsToDisplay = uploadedDocs.filter(doc => {
+                          const source = typeof doc === 'string' ? doc : (doc?.url || doc?.fileUrl || doc?.path || doc?.dataUrl || doc?.data || doc?.src || doc?.previewUrl);
+                          const url = resolveDocumentUrl(source);
+                          if (!url || seenUrls.has(url)) return false;
+                          seenUrls.add(url);
+                          return true;
+                        });
+                        if (!docsToDisplay.length) {
+                          return <p className="text-xs text-slate-500 py-4">No documents uploaded yet.</p>;
+                        }
 
                         return (
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             {docsToDisplay.map((doc, dIdx) => {
-                              const rawUrl = typeof doc === 'object' ? (doc.previewUrl || doc.url || doc.path || doc.fileUrl || doc.dataUrl || doc.data || doc.src) : (typeof doc === 'string' ? doc : null);
-                              const fallbackFileName = typeof rawUrl === 'string' ? rawUrl.split('/').pop().split('?')[0] : '';
-                              const docTitle = typeof doc === 'string' ? doc : (doc.name || doc.title || doc.comment || doc.fileName || `Verification Document ${dIdx + 1}`);
-                              const docFileName = typeof doc === 'string' ? doc : (doc.fileName || fallbackFileName || doc.name || doc.title || 'Document Proof');
-                              const isImg = (typeof rawUrl === 'string' && (rawUrl.startsWith('data:image/') || docFileName.match(/\.(png|jpg|jpeg|gif|svg|webp)$/i)));
-                              const docBlobUrl = getDocumentBlobUrl(rawUrl, isImg ? 'image/png' : 'application/pdf') || createSampleStudentDocBlobUrl(docTitle, singleViewStudent.name, studentCode);
+                              const rawUrl = typeof doc === 'string' ? doc : (doc.url || doc.fileUrl || doc.path || doc.dataUrl || doc.data || doc.src || doc.previewUrl);
+                              const docBlobUrl = resolveDocumentUrl(rawUrl);
+                              const docFileName = documentFileName(typeof doc === 'object' ? { ...doc, fileName: doc.fileName || doc.originalName || doc.name } : doc, docBlobUrl);
+                              const docTitle = doc.fileName || doc.originalName || doc.name || doc.title || docFileName;
+                              const isImg = /^data:image\//i.test(docBlobUrl) || /\.(png|jpg|jpeg|gif|svg|webp)$/i.test(docFileName);
 
                               return (
                                 <div key={dIdx} className="bg-slate-50 border border-slate-200 rounded-2xl p-4 space-y-3 flex flex-col justify-between shadow-2xs hover:border-[#D99A1C] transition-all">
@@ -1223,9 +1169,6 @@ support@unigather.app`;
                                         <p className="text-[10px] text-slate-400 font-semibold truncate">{docFileName}</p>
                                       </div>
                                     </div>
-                                    <span className="text-[9px] font-extrabold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200 shrink-0">
-                                      Verified
-                                    </span>
                                   </div>
 
                                   {/* Inline Document Preview Box */}
@@ -1256,7 +1199,7 @@ support@unigather.app`;
                                     </ActionButton>
                                     <ActionButton
                                       type="button"
-                                      onClick={() => handleDownloadStudentDoc(docBlobUrl, `${docTitle.replace(/\s+/g, '_')}.pdf`)}
+                                      onClick={() => handleDownloadStudentDoc(rawUrl, docFileName)}
                                       className="flex-1 py-2 bg-gradient-to-r from-[#D99A1C] to-[#F5B025] hover:from-[#c28815] hover:to-[#e09e1d] text-white rounded-xl font-bold text-xs transition-all cursor-pointer flex items-center justify-center gap-1.5 shadow-2xs"
                                     >
                                       <span>📥 Download</span>
@@ -1457,7 +1400,7 @@ support@unigather.app`;
                     type="button"
                     onClick={() => {
                       if (previewModalDoc.previewUrl) {
-                        handleDownloadStudentDoc(previewModalDoc.previewUrl, `${(previewModalDoc.title || 'student_document').replace(/\s+/g, '_')}.pdf`);
+                        handleDownloadStudentDoc(previewModalDoc.rawUrl || previewModalDoc.previewUrl, previewModalDoc.fileName);
                       }
                     }}
                     className="px-3 py-1.5 sm:px-4 sm:py-2 bg-gradient-to-r from-[#D99A1C] to-[#F5B025] hover:from-[#c28815] hover:to-[#e09e1d] text-white font-black text-[11px] sm:text-xs rounded-xl transition-all flex items-center gap-1.5 cursor-pointer shadow-xs"

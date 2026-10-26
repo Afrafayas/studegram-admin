@@ -83,7 +83,8 @@ export default function Partners({ clients, setClients }) {
     }
     const token = localStorage.getItem('admin_token');
     try {
-      if (token && token !== 'mock-admin-token-12345') {
+      {
+if (!token) throw new Error('Please sign in to save changes.');
         const response = await API.put(`/partners/${partnerId}`, { status: newStatus });
         if (response.data?.success) {
           setClients(prev => prev.map(c => (c.id === partnerId || c._id === partnerId) ? { ...c, status: newStatus } : c));
@@ -91,9 +92,6 @@ export default function Partners({ clients, setClients }) {
         } else {
           throw new Error(response.data?.message || 'Failed to update partner status');
         }
-      } else {
-        setClients(prev => prev.map(c => (c.id === partnerId || c._id === partnerId) ? { ...c, status: newStatus } : c));
-        toast.success(`Mock partner status updated to ${newStatus}.`);
       }
     } catch (err) {
       toast.error(err.message);
@@ -136,22 +134,11 @@ export default function Partners({ clients, setClients }) {
     }
     setIsInviting(true);
     try {
-      await new Promise(r => setTimeout(r, 400));
-
-      const nextCodeNum = partners.length + 101;
-      const newPartner = {
-        id: Date.now(),
-        name: newPartnerName,
-        type: 'Agent',
-        partnerType: partnerType || 'Company',
-        email: newPartnerEmail,
-        phone: newPartnerPhone,
-        partnerCode: `PRT-${nextCodeNum}`,
-        status: 'Active',
-        activeApps: 0,
-        dateAdded: new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
-      };
-
+      const response = await API.post('/partners', { name: newPartnerName, email: newPartnerEmail, phone: newPartnerPhone, partnerType });
+      if (!response.data?.success) throw new Error(response.data?.message || 'Unable to create partner.');
+      const saved = response.data.data;
+      const newPartner = { ...saved, id: saved._id, type: 'Agent', partnerCode: saved.partnerCode || saved._id,
+        dateAdded: saved.createdAt ? new Date(saved.createdAt).toLocaleDateString('en-GB') : '' };
       setClients(prev => [newPartner, ...prev]);
       
       // Reset form & close modal
@@ -161,6 +148,8 @@ export default function Partners({ clients, setClients }) {
       setIsModalOpen(false);
       
       toast.success(`Partner ${newPartnerName} successfully onboarded with Code ${newPartner.partnerCode}`);
+    } catch (error) {
+      toast.error(error.response?.data?.message || error.message);
     } finally {
       setIsInviting(false);
     }
@@ -407,7 +396,7 @@ export default function Partners({ clients, setClients }) {
                                       </div>
                                       <div>
                                         <span className="text-[9px] font-extrabold uppercase text-slate-400 block tracking-wider">Location / City</span>
-                                        <span className="text-slate-900 font-bold text-xs">{partner.city ? `${partner.city}, ` : ''}{partner.country || 'India'}</span>
+                                        <span className="text-slate-900 font-bold text-xs">{partner.city ? `${partner.city}, ` : ''}{partner.country || ''}</span>
                                       </div>
                                       <div>
                                         <span className="text-[9px] font-extrabold uppercase text-slate-400 block tracking-wider">Direct Contact Phone</span>

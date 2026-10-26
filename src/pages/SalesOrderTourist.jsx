@@ -2,11 +2,7 @@ import { ActionButton } from '../components/ActionControls';
 import React from 'react';
 
 export default function SalesOrderTourist() {
-  const packages = [
-    { id: 1, name: 'London Academic Tour', duration: '10 Days', price: '₹1,499', locations: 'London - Oxford - Cambridge', desc: 'Summer exploration package for university candidates to visit UK campuses and experience British culture.' },
-    { id: 2, name: 'Schengen Educational Exchange', duration: '14 Days', price: '₹1,850', locations: 'Paris - Brussels - Amsterdam - Berlin', desc: 'Comprehensive academic tour through major European universities and technological research hubs.' },
-    { id: 3, name: 'Swiss Hospitality Experience', duration: '7 Days', price: '₹2,100', locations: 'Zurich - Geneva - Lausanne', desc: 'Targeted insight program covering premium hospitality schools and luxury brand management institutes.' },
-  ];
+  const packages = [];
 
   return (
     <div className="flex-1 p-6 space-y-6 bg-[#F8FAFC]">
@@ -20,7 +16,8 @@ export default function SalesOrderTourist() {
 
       {/* Grid of Tourist Packages */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {packages.map((pkg) => (
+        {!packages.length && <p className="text-sm text-slate-500">No tour packages are available.</p>}
+      {packages.map((pkg) => (
           <div key={pkg.id} className={`bg-white border border-[#E2E8F0] rounded-2xl overflow-hidden flex flex-col justify-between hover:shadow-lg transition-all duration-200 group border-t-4 ${pkg.id % 2 === 1 ? 'border-t-[#D99A1C]' : 'border-t-[#2563EB]'}`}>
             <div className="h-24 bg-slate-950 p-4 flex flex-col justify-between border-b border-slate-900 text-white">
               <div className="flex justify-between items-center">

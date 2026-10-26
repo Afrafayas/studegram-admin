@@ -294,13 +294,13 @@ export default function AdminSidebar({
                       { id: 'settings-university', label: 'University' },
                       { id: 'settings-course', label: 'Course' },
                       { id: 'settings-intake', label: 'Intake' },
-                      { id: 'settings-formats', label: 'File Formats' },
-                      { id: 'settings-course-docs', label: 'Course Documents' },
-                      { id: 'settings-documents', label: 'Documents' },
-                      { id: 'settings-agent', label: 'Referral Agent' },
-                      { id: 'settings-stages', label: 'Stages' },
-                      { id: 'settings-actions', label: 'Staged Actions' },
-                      { id: 'settings-qualifications', label: 'Qualifications' },
+                      // { id: 'settings-formats', label: 'File Formats' },
+                      // { id: 'settings-course-docs', label: 'Course Documents' },
+                      // { id: 'settings-documents', label: 'Documents' },
+                      // { id: 'settings-agent', label: 'Referral Agent' },
+                      // { id: 'settings-stages', label: 'Stages' },
+                      // { id: 'settings-actions', label: 'Staged Actions' },
+                      // { id: 'settings-qualifications', label: 'Qualifications' },
                     ].map((subItem) => (
                       <ActionButton
                         key={subItem.id}

@@ -21,25 +21,6 @@ export default function AdminHeader({
   const [unreadCount, setUnreadCount] = useState(0);
   const [showNotifications, setShowNotifications] = useState(false);
 
-  const defaultNotifications = [
-    {
-      _id: 'notif-1',
-      title: 'New Agency Registration Under Review',
-      message: 'LuzidCraft (Salman) has completed registration and submitted legal documents for admin review.',
-      createdAt: new Date().toISOString(),
-      isRead: false,
-      targetTab: 'become-partner'
-    },
-    {
-      _id: 'notif-2',
-      title: 'New Student Application Submitted',
-      message: 'Rahul Sharma submitted application for MSc Data Science at University of Hertfordshire.',
-      createdAt: new Date(Date.now() - 3600000).toISOString(),
-      isRead: false,
-      targetTab: 'applications'
-    }
-  ];
-
   const fetchNotifications = async () => {
     try {
       const res = await API.get('/notifications');
@@ -540,7 +521,7 @@ export default function AdminHeader({
           </div>
 
           <div className="text-right hidden sm:block">
-            <p className="text-xs font-bold text-white">{currentUser?.name || 'Super Admin'}</p>
+            <p className="text-xs font-bold text-white">{currentUser?.name || 'User'}</p>
             <p className="text-[10px] text-[#D99A1C] font-extrabold uppercase">{currentUser?.role || 'SuperAdmin'} ({currentUser?.country || 'Global'})</p>
           </div>
 
