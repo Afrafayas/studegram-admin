@@ -274,6 +274,7 @@ export default function Applications({ applications, referralAgents = [], intake
 
   // Auto-open Single View when initialSelectedAppId or saved single view ID is provided
   useEffect(() => {
+    let cancelled = false;
     if (dismissedTargetRef.current && !initialSelectedAppId) return;
 
     const params = new URLSearchParams(window.location.search);
@@ -316,7 +317,7 @@ export default function Applications({ applications, referralAgents = [], intake
     } else if (targetId && typeof targetId === 'string' && /^[0-9a-fA-F]{24}$/.test(targetId)) {
       // Direct API fetch if not found in memory list
       API.get(`/applications/${targetId}`).then(res => {
-        if (res.data?.success && res.data.data) {
+        if (!cancelled && res.data?.success && res.data.data) {
           const freshApp = res.data.data;
           const mappedApp = {
             id: freshApp._id,
@@ -354,6 +355,7 @@ export default function Applications({ applications, referralAgents = [], intake
         }
       }).catch(err => console.warn('Could not fetch target application:', err.message));
     }
+    return () => { cancelled = true; };
   }, [initialSelectedAppId, applications]);
 
   // Keep singleViewApp in sync with latest applications list updates
@@ -366,7 +368,9 @@ export default function Applications({ applications, referralAgents = [], intake
     );
     if (updated) {
       setSingleViewApp(prev => {
-        if (!prev) return updated;
+        // Navigation may already have selected another application in this batch.
+        const selectedId = String(prev?.id || prev?._id || prev?.camsId || '').toLowerCase();
+        if (!prev || selectedId !== currentId) return prev;
         return {
           ...prev,
           ...updated,
@@ -545,40 +549,50 @@ export default function Applications({ applications, referralAgents = [], intake
   // When singleViewApp is set, sync comments & notes and fetch fresh data from backend
   const currentAppId = singleViewApp?.id || singleViewApp?._id;
   useEffect(() => {
-    if (singleViewApp) {
-      setCommentsList(buildCommentsList(singleViewApp));
-      setAppEditNotes(singleViewApp.notes || '');
-
-      const appId = singleViewApp.id || singleViewApp._id;
-      if (appId) {
-        API.get(`/applications/${appId}`).then(res => {
-          if (res.data?.success && res.data.data) {
-            const freshApp = res.data.data;
-            const updatedApp = {
-              ...singleViewApp,
-              ...freshApp,
-              id: freshApp._id || singleViewApp.id,
-              applicationComments: freshApp.applicationComments || [],
-              statusHistory: freshApp.statusHistory || singleViewApp.statusHistory || [],
-              notes: freshApp.notes !== undefined ? freshApp.notes : singleViewApp.notes
-            };
-            setSingleViewApp(prev => ({
-              ...prev,
-              applicationComments: freshApp.applicationComments || [],
-              statusHistory: freshApp.statusHistory || prev?.statusHistory || [],
-              notes: freshApp.notes !== undefined ? freshApp.notes : prev?.notes
-            }));
-            setCommentsList(buildCommentsList(updatedApp));
-            if (freshApp.notes !== undefined) {
-              setAppEditNotes(freshApp.notes);
+    let cancelled = false;
+    let requestVersion = 0;
+    setCommentsList(buildCommentsList(singleViewApp));
+    setAppEditNotes(singleViewApp?.notes || '');
+    const refreshComments = (event) => {
+      const version = ++requestVersion;
+      if (singleViewApp) {
+        const appId = singleViewApp.id || singleViewApp._id;
+        if (appId) {
+          API.get(`/applications/${appId}`).then(res => {
+            if (!cancelled && version === requestVersion && res.data?.success && res.data.data) {
+              const freshApp = res.data.data;
+              const updatedApp = {
+                ...singleViewApp,
+                ...freshApp,
+                id: freshApp._id || singleViewApp.id,
+                applicationComments: freshApp.applicationComments || [],
+                statusHistory: freshApp.statusHistory || singleViewApp.statusHistory || [],
+                notes: freshApp.notes !== undefined ? freshApp.notes : singleViewApp.notes
+              };
+              setSingleViewApp(prev => String(prev?.id || prev?._id) !== String(appId) ? prev : ({
+                ...prev,
+                applicationComments: freshApp.applicationComments || [],
+                statusHistory: freshApp.statusHistory || prev?.statusHistory || [],
+                notes: freshApp.notes !== undefined ? freshApp.notes : prev?.notes
+              }));
+              setCommentsList(buildCommentsList(updatedApp));
+              if (!event && freshApp.notes !== undefined) {
+                setAppEditNotes(freshApp.notes);
+              }
             }
-          }
-        }).catch(err => {
-          console.warn('Could not refresh application comments:', err.message);
-        });
+          }).catch(err => {
+            console.warn('Could not refresh application comments:', err.message);
+          });
+        }
       }
-    }
-  }, [currentAppId]);
+    };
+    refreshComments();
+    window.addEventListener('application_comments_updated', refreshComments);
+    return () => {
+      cancelled = true;
+      window.removeEventListener('application_comments_updated', refreshComments);
+    };
+  }, [currentAppId, initialSelectedAppId]);
 
   const handleAddComment = async (e) => {
     e.preventDefault();
