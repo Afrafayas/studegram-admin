@@ -571,6 +571,7 @@ export default function AdminPortal({ onLogout }) {
       setSelectedPartnerForSingleView(null);
       localStorage.removeItem('studegram_admin_single_view_partner_id');
       localStorage.removeItem('studegram_admin_single_view_partner');
+      localStorage.setItem('studegram_admin_partner_subview', 'directory');
       try {
         const url = new URL(window.location.href);
         url.searchParams.delete('agentId');
@@ -579,16 +580,28 @@ export default function AdminPortal({ onLogout }) {
       } catch (e) {}
       window.dispatchEvent(new CustomEvent('clear_single_view_partner'));
     }
-    if ((tabId === 'staff-activity-logs' || tabId === 'activity-logs') && (activeTab === 'staff-activity-logs' || activeTab === 'activity-logs')) {
+    if (tabId === 'staff-activity-logs' || tabId === 'activity-logs') {
       localStorage.removeItem('studegram_admin_selected_staff_id');
+      const url = new URL(window.location.href);
+      url.searchParams.delete('staffId');
+      window.history.replaceState(window.history.state, '', url.toString());
       window.dispatchEvent(new CustomEvent('clear_single_view_staff'));
     }
-    if (tabId === 'students' && activeTab === 'students') {
+    if (tabId === 'students') {
       setSelectedStudentForSingleView(null);
       localStorage.removeItem('studegram_admin_expanded_student_id');
       localStorage.removeItem('studegram_admin_single_view_student_id');
       localStorage.removeItem('studegram_admin_single_view_student');
+      const url = new URL(window.location.href);
+      url.searchParams.delete('studentId');
+      window.history.replaceState(window.history.state, '', url.toString());
       window.dispatchEvent(new CustomEvent('clear_student_expanded'));
+    }
+    if (tabId === 'staff') {
+      const url = new URL(window.location.href);
+      url.searchParams.delete('adminStaffId');
+      window.history.replaceState(window.history.state, '', url.toString());
+      window.dispatchEvent(new CustomEvent('clear_single_view_admin_staff'));
     }
     setActiveTab(tabId);
   };

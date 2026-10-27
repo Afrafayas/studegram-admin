@@ -16,8 +16,13 @@ export default function Staff({ staffList, setStaffList, applications }) {
   const [selectedStaffId, setSelectedStaffId] = useState(() => new URLSearchParams(window.location.search).get('adminStaffId'));
   useEffect(() => {
     const onPopState = () => setSelectedStaffId(new URLSearchParams(window.location.search).get('adminStaffId'));
+    const onClearSingleView = () => setSelectedStaffId(null);
     window.addEventListener('popstate', onPopState);
-    return () => window.removeEventListener('popstate', onPopState);
+    window.addEventListener('clear_single_view_admin_staff', onClearSingleView);
+    return () => {
+      window.removeEventListener('popstate', onPopState);
+      window.removeEventListener('clear_single_view_admin_staff', onClearSingleView);
+    };
   }, []);
   const navigateToStaff = (staffId) => {
     const url = new URL(window.location.href);

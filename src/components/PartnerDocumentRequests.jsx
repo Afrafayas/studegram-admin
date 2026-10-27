@@ -41,8 +41,12 @@ export default function PartnerDocumentRequests({ partnerId, onUpdate }) {
       aria-expanded={isOpen}
       aria-controls={`partner-document-requests-${partnerId}`}
       onClick={() => setIsOpen(open => !open)}
-      className="px-4 py-2.5 bg-amber-50 hover:bg-amber-100 text-[#D99A1C] border border-amber-200 rounded-xl font-extrabold text-xs transition-all"
+      className="inline-flex items-center gap-2 px-5 py-3 bg-amber-400 hover:bg-amber-500 text-slate-950 border border-amber-500 rounded-xl font-extrabold text-sm shadow-md shadow-amber-500/25 ring-2 ring-amber-200 ring-offset-2 transition-all focus-visible:outline-none focus-visible:ring-amber-600"
     >
+      <svg aria-hidden="true" className="h-5 w-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+        <path d="M14 2v6h6M12 12v3M12 18h.01" />
+      </svg>
       {isOpen ? 'Hide document requests' : 'Missing document request'}
     </ActionButton>
     {isOpen && <section id={`partner-document-requests-${partnerId}`} className="bg-white border border-slate-200 rounded-2xl p-5 space-y-4">
