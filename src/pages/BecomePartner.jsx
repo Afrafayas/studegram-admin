@@ -245,6 +245,7 @@ export default function BecomePartner({ clients = [], setClients, applications =
     const handleClearSingleViewPartner = () => {
       dismissedTargetRef.current = true;
       setSingleViewPartner(null);
+      setSubView('directory');
       localStorage.removeItem('studegram_admin_single_view_partner_id');
       localStorage.removeItem('studegram_admin_single_view_partner');
       try {
