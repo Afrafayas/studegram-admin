@@ -59,7 +59,7 @@ export default function AdminHeader({
           const isMarkedRead = Boolean(c.isRead || readIds.has(idKey));
           return {
             ...c,
-            isUnreplied: isMarkedRead ? false : c.isUnreplied,
+            isUnreplied: c.isUnreplied,
             isRead: isMarkedRead
           };
         });
@@ -92,7 +92,7 @@ export default function AdminHeader({
         const updated = prev.map(c => {
           const currentKey = c.commentId || `${c.applicationId}_${c.createdAt}`;
           return (currentKey === idKey)
-            ? { ...c, isUnreplied: false, isRead: true } 
+            ? { ...c, isRead: true } 
             : c;
         });
         const actualUnreplied = updated.filter(c => c.isUnreplied).length;
@@ -140,6 +140,8 @@ export default function AdminHeader({
     const messageLower = (n.message || '').toLowerCase();
     const typeLower = (n.type || n.category || '').toLowerCase();
     const fullText = `${titleLower} ${messageLower} ${typeLower}`;
+
+    if (['application', 'chat'].includes(typeLower)) return { tab: 'applications', subTab: null };
 
     if (
       fullText.includes('agency') || 

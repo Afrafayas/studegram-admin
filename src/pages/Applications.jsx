@@ -306,30 +306,7 @@ export default function Applications({ applications, referralAgents = [], intake
         return targetStr && (aId === targetStr || aCams === targetStr);
       });
 
-      // 2. Student Name match from targetStr
-      if (!found && targetStr) {
-        found = applications.find(a => {
-          const sName = (a.studentName || '').toLowerCase();
-          return sName && (sName.includes(targetStr) || targetStr.includes(sName));
-        });
-      }
 
-      // 3. Match from notification title & message content
-      if (!found && notifText) {
-        found = applications.find(a => {
-          const sName = (a.studentName || '').toLowerCase();
-          const aCams = (a.camsId || '').toLowerCase();
-          return (
-            (sName && notifText.includes(sName)) ||
-            (aCams && notifText.includes(aCams))
-          );
-        });
-      }
-
-      // 4. Fallback: If it's an application notification, open the first application
-      if (!found && (notifObj?.type === 'application' || notifText.includes('application'))) {
-        found = applications[0];
-      }
     }
 
     if (found) {
