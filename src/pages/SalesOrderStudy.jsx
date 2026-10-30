@@ -1,3 +1,5 @@
+import SearchableSelect from '../components/SearchableSelect';
+import ValidatedInput from '../components/ValidatedInput';
 import { ActionButton, ActionForm } from '../components/ActionControls';
 import React, { useState } from 'react';
 import API from '../api/axios';
@@ -207,7 +209,7 @@ export default function SalesOrderStudy({
   const selectedCountry = countries.find(c => c.code === phoneCode) || countries[0];
 
   return (
-    <div className="flex-1 p-6 space-y-6 bg-[#F0F2F5]">
+    <div className="flex-1 min-w-0 p-4 sm:p-6 space-y-6 bg-[#F0F2F5]">
       {/* Header with Back Arrow */}
       <div className="flex items-center gap-4 bg-white border border-[#E2E8F0] border-t-4 border-t-[#D99A1C] p-6 rounded-2xl shadow-xs">
         <ActionButton
@@ -248,13 +250,13 @@ export default function SalesOrderStudy({
             
             <div className="space-y-1.5">
               <label className="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">Application Type</label>
-              <select
+              <SearchableSelect
                 disabled
                 className="w-full bg-slate-100 border border-slate-200 rounded-xl px-3 py-2.5 text-xs font-bold text-slate-700 cursor-not-allowed"
               >
                 <option value="Study">Study (Academic)</option>
                 <option value="Tourist">Tourist (Package)</option>
-              </select>
+              </SearchableSelect>
             </div>
 
             <div className="space-y-3">
@@ -285,7 +287,7 @@ export default function SalesOrderStudy({
 
               {studentSelectionMode === 'existing' ? (
                 <div className="space-y-1.5">
-                  <select
+                  <SearchableSelect
                     required={studentSelectionMode === 'existing'}
                     value={selectedStudent}
                     onChange={(e) => setSelectedStudent(e.target.value)}
@@ -297,7 +299,7 @@ export default function SalesOrderStudy({
                         {s.name} ({s.passportNo || 'No Passport'})
                       </option>
                     ))}
-                  </select>
+                  </SearchableSelect>
                 </div>
               ) : (
                 <div className="space-y-4 bg-slate-50/50 border border-slate-100 rounded-xl p-4 shadow-3xs">
@@ -351,7 +353,7 @@ export default function SalesOrderStudy({
                         </>
                       )}
 
-                      <input
+                      <ValidatedInput validationKind="phone"
                         type="tel"
                         required={studentSelectionMode === 'new'}
                         value={phoneNumber}
@@ -384,7 +386,7 @@ export default function SalesOrderStudy({
               <label className="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">
                 Destination Country <span className="text-rose-500">*</span>
               </label>
-              <select
+              <SearchableSelect
                 value={destinationCountry}
                 onChange={(e) => {
                   setDestinationCountry(e.target.value);
@@ -398,7 +400,7 @@ export default function SalesOrderStudy({
                 {availableCountries.map(c => (
                   <option key={c} value={c}>{c}</option>
                 ))}
-              </select>
+              </SearchableSelect>
             </div>
 
             <div className="space-y-1.5">
@@ -412,7 +414,7 @@ export default function SalesOrderStudy({
                   </span>
                 )}
               </div>
-              <select
+              <SearchableSelect searchLabel="Search universities..."
                 value={university}
                 disabled={!destinationCountry}
                 onChange={(e) => {
@@ -434,7 +436,7 @@ export default function SalesOrderStudy({
                   const label = typeof u === 'object' ? u.name : u;
                   return <option key={value} value={value}>{label}</option>;
                 })}
-              </select>
+              </SearchableSelect>
               {destinationCountry && filteredUniversities.length === 0 && (
                 <p className="text-[10px] text-amber-600 font-semibold mt-1">
                   ⚠️ No partner institutions found in {destinationCountry}. Please select another country.
@@ -446,7 +448,7 @@ export default function SalesOrderStudy({
               <label className="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">
                 Academic Program <span className="text-rose-500">*</span>
               </label>
-              <select
+              <SearchableSelect searchLabel="Search courses..."
                 value={course}
                 disabled={!university}
                 onChange={(e) => setCourse(e.target.value)}
@@ -461,7 +463,7 @@ export default function SalesOrderStudy({
                   const label = typeof c === 'object' ? c.title : c;
                   return <option key={value} value={value}>{label}</option>;
                 })}
-              </select>
+              </SearchableSelect>
               {university && filteredCourses.length === 0 && (
                 <p className="text-[10px] text-amber-600 font-semibold mt-1">
                   ⚠️ No courses registered under this university.
@@ -473,7 +475,7 @@ export default function SalesOrderStudy({
               <label className="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">
                 Level of Study <span className="text-rose-500">*</span>
               </label>
-              <select
+              <SearchableSelect
                 value={level}
                 onChange={(e) => setLevel(e.target.value)}
                 required
@@ -482,12 +484,12 @@ export default function SalesOrderStudy({
                 <option value="Undergraduate (UG)">Undergraduate (UG)</option>
                 <option value="Postgraduate (PG)">Postgraduate (PG)</option>
                 <option value="PhD">PhD</option>
-              </select>
+              </SearchableSelect>
             </div>
 
             <div className="space-y-1.5">
               <label className="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">Intake Season</label>
-              <select
+              <SearchableSelect
                 value={intake}
                 onChange={(e) => setIntake(e.target.value)}
                 className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs font-semibold focus:outline-none focus:bg-white focus:ring-1 focus:ring-[#D99A1C] focus:border-[#D99A1C]"
@@ -497,12 +499,12 @@ export default function SalesOrderStudy({
                   const label = typeof i === 'object' ? i.title : i;
                   return <option key={value} value={value}>{label}</option>;
                 })}
-              </select>
+              </SearchableSelect>
             </div>
 
             <div className="space-y-1.5">
               <label className="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">B2B Referral Partner</label>
-              <select
+              <SearchableSelect
                 value={partner}
                 onChange={(e) => setPartner(e.target.value)}
                 className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs font-semibold focus:outline-none focus:bg-white focus:ring-1 focus:ring-[#D99A1C] focus:border-[#D99A1C]"
@@ -513,12 +515,12 @@ export default function SalesOrderStudy({
                   const label = typeof p === 'object' ? p.name : p.name;
                   return <option key={value} value={value}>{label}</option>;
                 })}
-              </select>
+              </SearchableSelect>
             </div>
 
             <div className="space-y-1.5">
               <label className="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">Assigned Operations Manager</label>
-              <select
+              <SearchableSelect
                 value={assignedTo}
                 onChange={(e) => setAssignedTo(e.target.value)}
                 className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs font-semibold focus:outline-none focus:bg-white focus:ring-1 focus:ring-[#D99A1C] focus:border-[#D99A1C]"
@@ -533,7 +535,7 @@ export default function SalesOrderStudy({
                   <><option value="">No staff available</option>
                   </>
                 )}
-              </select>
+              </SearchableSelect>
             </div>
           </div>
         </div>
@@ -544,7 +546,7 @@ export default function SalesOrderStudy({
             <input type="email" required value={studentEmail} onChange={e => setStudentEmail(e.target.value)} className="mt-2 w-full border border-slate-200 rounded-xl p-3" />
           </label>
           <label className="text-xs font-bold text-slate-600">Passport Number
-            <input value={passportNo} onChange={e => setPassportNo(e.target.value)} className="mt-2 w-full border border-slate-200 rounded-xl p-3" />
+            <ValidatedInput validationKind="passport" value={passportNo} onChange={e => setPassportNo(e.target.value)} className="mt-2 w-full border border-slate-200 rounded-xl p-3" />
           </label>
         </div>
       )}

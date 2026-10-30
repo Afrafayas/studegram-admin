@@ -1,3 +1,5 @@
+import SearchableSelect from '../components/SearchableSelect';
+import ValidatedInput from '../components/ValidatedInput';
 import { getDisplayId } from '../utils/displayId';
 import { ActionButton, ActionForm } from '../components/ActionControls';
 import React, { useState } from 'react';
@@ -162,9 +164,9 @@ if (!token) throw new Error('Please sign in to save changes.');
   };
 
   return (
-    <div className="flex-1 p-6 space-y-6 bg-[#F0F2F5]">
+    <div className="flex-1 min-w-0 p-4 sm:p-6 space-y-6 bg-[#F0F2F5]">
       {/* Header */}
-      <div className="flex justify-between items-center bg-white border border-[#E2E8F0] border-t-4 border-t-[#D99A1C] p-6 rounded-2xl shadow-xs">
+      <div className="flex flex-wrap gap-3 justify-between items-center bg-white border border-[#E2E8F0] border-t-4 border-t-[#D99A1C] p-6 rounded-2xl shadow-xs">
         <div className="space-y-1">
           <h1 className="text-xl font-black text-slate-900 tracking-tight">Referral Partners Directory</h1>
           <p className="text-xs text-slate-500 font-medium">Manage B2B Referral Agents, view their details and referred student applications.</p>
@@ -200,7 +202,7 @@ if (!token) throw new Error('Please sign in to save changes.');
 
         <div className="flex w-full sm:w-auto items-center gap-3">
           {/* Location Filter Dropdown */}
-          <select
+          <SearchableSelect
             value={locationFilter}
             onChange={(e) => setLocationFilter(e.target.value)}
             className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs text-slate-900 focus:outline-none focus:border-[#D99A1C] focus:ring-1 focus:ring-[#D99A1C] font-semibold cursor-pointer"
@@ -211,7 +213,7 @@ if (!token) throw new Error('Please sign in to save changes.');
             <option value="United States">United States</option>
             <option value="Australia">Australia</option>
             <option value="India">India</option>
-          </select>
+          </SearchableSelect>
 
           <div className="relative w-full sm:max-w-xs">
             <span className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-slate-400">
@@ -482,7 +484,7 @@ if (!token) throw new Error('Please sign in to save changes.');
                                   <div className="space-y-2 animate-in fade-in duration-100">
                                     <h4 className="text-[10px] font-black text-slate-500 uppercase tracking-wider">Referred Students ({referredStudents.length})</h4>
                                     {referredStudents.length > 0 ? (
-                                      <div className="border border-slate-150 rounded-xl overflow-hidden">
+                                      <div className="border border-slate-150 rounded-xl overflow-x-auto">
                                         <table className="w-full text-left border-collapse text-[11px]">
                                           <thead>
                                             <tr className="bg-slate-50 border-b border-slate-150">
@@ -578,7 +580,7 @@ if (!token) throw new Error('Please sign in to save changes.');
 
               <div className="space-y-1.5">
                 <label className="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">Phone Number</label>
-                <input
+                <ValidatedInput validationKind="phone"
                   type="tel"
                   required
                   value={newPartnerPhone}

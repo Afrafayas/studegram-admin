@@ -1,3 +1,5 @@
+import SearchableSelect from '../components/SearchableSelect';
+import ValidatedInput from '../components/ValidatedInput';
 import AdminStaffDetails from '../components/AdminStaffDetails';
 import { ActionButton, ActionForm } from '../components/ActionControls';
 import React, { useState, useEffect } from 'react';
@@ -382,10 +384,10 @@ export default function Staff({ staffList, setStaffList, applications }) {
   const getSubmittedApplications = staff => (applications || []).filter(app => matchesStaff(app.submittedByStaff, staff));
 
   return (
-    <div className="flex-1 p-6 space-y-6 bg-[#F0F2F5]">
+    <div className="flex-1 min-w-0 p-4 sm:p-6 space-y-6 bg-[#F0F2F5]">
       {selectedStaffId ? <AdminStaffDetails staff={selectedStaff} countries={selectedStaff ? (selectedStaff.countries?.length ? selectedStaff.countries : selectedStaff.country ? [selectedStaff.country] : []) : []} assignedApplications={getAssignedApplications(selectedStaff)} submittedApplications={getSubmittedApplications(selectedStaff)} onBack={() => navigateToStaff(null)} onEdit={handleOpenEditModal} /> : <>
       {/* Header */}
-      <div className="flex justify-between items-center bg-white border border-[#E2E8F0] border-t-4 border-t-[#D99A1C] p-6 rounded-2xl shadow-xs">
+      <div className="flex flex-wrap gap-3 justify-between items-center bg-white border border-[#E2E8F0] border-t-4 border-t-[#D99A1C] p-6 rounded-2xl shadow-xs">
         <div className="space-y-1">
           <h1 className="text-xl font-black text-slate-900 tracking-tight">Staff Management Directory</h1>
           <p className="text-xs text-slate-500 font-medium">Manage backend admin operations staff, edit profiles, assign active client files and configure permissions by region.</p>
@@ -402,9 +404,9 @@ export default function Staff({ staffList, setStaffList, applications }) {
       </div>
 
       {/* Search & Filters */}
-      <div className="bg-[#FFFFFF] border border-[#E2E8F0] border-t-4 border-t-[#2563EB] rounded-2xl p-5 shadow-xs flex flex-col sm:flex-row gap-4 items-center justify-between">
+      <div className="bg-[#FFFFFF] border border-[#E2E8F0] border-t-4 border-t-[#2563EB] rounded-2xl p-5 shadow-xs flex flex-col sm:flex-row sm:flex-wrap gap-4 items-center justify-between">
         <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto">
-          <div className="bg-slate-100 p-1 rounded-xl flex">
+          <div className="bg-slate-100 p-1 rounded-xl flex flex-wrap gap-1">
             {['All', 'Active', 'Inactive', 'Suspended'].map((status) => (
               <ActionButton
                 key={status}
@@ -420,7 +422,7 @@ export default function Staff({ staffList, setStaffList, applications }) {
           </div>
 
           {/* Country Filter Dropdown (Dynamic) */}
-          <select
+          <SearchableSelect
             value={countryFilter}
             onChange={(e) => setCountryFilter(e.target.value)}
             className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-[#D99A1C] focus:ring-1 focus:ring-[#D99A1C] font-extrabold cursor-pointer"
@@ -429,7 +431,7 @@ export default function Staff({ staffList, setStaffList, applications }) {
             {availableCountries.map(country => (
               <option key={country} value={country}>{country}</option>
             ))}
-          </select>
+          </SearchableSelect>
         </div>
 
         <div className="relative w-full sm:max-w-xs">
@@ -594,7 +596,7 @@ export default function Staff({ staffList, setStaffList, applications }) {
           <div className="px-6 py-4 bg-slate-50 border-t border-[#E2E8F0] flex flex-col sm:flex-row items-center justify-between gap-4">
             <div className="flex items-center gap-3">
               <span className="text-xs font-semibold text-slate-500">Rows per page:</span>
-              <select
+              <SearchableSelect
                 value={itemsPerPage}
                 onChange={(e) => {
                   setItemsPerPage(Number(e.target.value));
@@ -607,7 +609,7 @@ export default function Staff({ staffList, setStaffList, applications }) {
                 <option value={20}>20</option>
                 <option value={50}>50</option>
                 <option value={100}>100</option>
-              </select>
+              </SearchableSelect>
             </div>
 
             <div className="flex items-center gap-1.5">
@@ -677,10 +679,10 @@ export default function Staff({ staffList, setStaffList, applications }) {
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-1.5">
                   <label className="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">Designation / Role</label>
-                  <select
+                  <SearchableSelect
                     value={newStaffRole}
                     onChange={(e) => setNewStaffRole(e.target.value)}
                     className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs font-semibold focus:outline-none focus:bg-white focus:border-[#D99A1C]"
@@ -701,12 +703,12 @@ export default function Staff({ staffList, setStaffList, applications }) {
                         <option value="Executive">Executive</option>
                       </>
                     )}
-                  </select>
+                  </SearchableSelect>
                 </div>
 
                 <div className="space-y-1.5">
                   <label className="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">Access Clearance</label>
-                  <select
+                  <SearchableSelect
                     value={newStaffAccess}
                     onChange={(e) => setNewStaffAccess(e.target.value)}
                     className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs font-semibold focus:outline-none focus:bg-white focus:border-[#D99A1C]"
@@ -714,7 +716,7 @@ export default function Staff({ staffList, setStaffList, applications }) {
                     <option value="Full Access">Full Access</option>
                     <option value="Read & Write">Read & Write (Operations)</option>
                     <option value="Read Only">Read Only</option>
-                  </select>
+                  </SearchableSelect>
                 </div>
               </div>
 
@@ -730,10 +732,10 @@ export default function Staff({ staffList, setStaffList, applications }) {
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-1.5">
                   <label className="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">Phone Number <span className="text-rose-500">*</span></label>
-                  <input
+                  <ValidatedInput validationKind="phone"
                     type="tel"
                     required
                     value={newStaffPhone}
@@ -778,7 +780,7 @@ export default function Staff({ staffList, setStaffList, applications }) {
 
               <div className="space-y-1.5">
                 <label className="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">Initial Account Status</label>
-                <select
+                <SearchableSelect
                   value={newStaffStatus}
                   onChange={(e) => setNewStaffStatus(e.target.value)}
                   className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs font-semibold focus:outline-none focus:bg-white focus:border-[#D99A1C]"
@@ -786,7 +788,7 @@ export default function Staff({ staffList, setStaffList, applications }) {
                   <option value="Active">Active</option>
                   <option value="Inactive">Inactive</option>
                   <option value="Suspended">Suspended</option>
-                </select>
+                </SearchableSelect>
               </div>
 
               {/* Password Setup Section */}
@@ -911,10 +913,10 @@ export default function Staff({ staffList, setStaffList, applications }) {
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-1.5">
                   <label className="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">Designation / Role</label>
-                  <select
+                  <SearchableSelect
                     value={editStaffRole}
                     onChange={(e) => setEditStaffRole(e.target.value)}
                     className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs font-semibold focus:outline-none focus:bg-white focus:border-[#D99A1C]"
@@ -935,12 +937,12 @@ export default function Staff({ staffList, setStaffList, applications }) {
                         <option value="Executive">Executive</option>
                       </>
                     )}
-                  </select>
+                  </SearchableSelect>
                 </div>
 
                 <div className="space-y-1.5">
                   <label className="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">Access Clearance</label>
-                  <select
+                  <SearchableSelect
                     value={editStaffAccess}
                     onChange={(e) => setEditStaffAccess(e.target.value)}
                     className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs font-semibold focus:outline-none focus:bg-white focus:border-[#D99A1C]"
@@ -948,7 +950,7 @@ export default function Staff({ staffList, setStaffList, applications }) {
                     <option value="Full Access">Full Access</option>
                     <option value="Read & Write">Read & Write (Operations)</option>
                     <option value="Read Only">Read Only</option>
-                  </select>
+                  </SearchableSelect>
                 </div>
               </div>
 
@@ -963,10 +965,10 @@ export default function Staff({ staffList, setStaffList, applications }) {
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-1.5">
                   <label className="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">Phone Number</label>
-                  <input
+                  <ValidatedInput validationKind="phone"
                     type="tel"
                     value={editStaffPhone}
                     onChange={(e) => setEditStaffPhone(e.target.value)}
@@ -976,7 +978,7 @@ export default function Staff({ staffList, setStaffList, applications }) {
 
                 <div className="space-y-1.5">
                   <label className="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">Account Status</label>
-                  <select
+                  <SearchableSelect
                     value={editStaffStatus}
                     onChange={(e) => setEditStaffStatus(e.target.value)}
                     className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs font-semibold focus:outline-none focus:bg-white focus:border-[#D99A1C]"
@@ -984,7 +986,7 @@ export default function Staff({ staffList, setStaffList, applications }) {
                     <option value="Active">Active</option>
                     <option value="Inactive">Inactive</option>
                     <option value="Suspended">Suspended</option>
-                  </select>
+                  </SearchableSelect>
                 </div>
               </div>
 

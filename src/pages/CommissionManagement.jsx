@@ -1,3 +1,4 @@
+import SearchableSelect from '../components/SearchableSelect';
 import { getDisplayId } from '../utils/displayId';
 import { parseFee, formatFee } from '../utils/courseFee';
 import { ActionButton } from '../components/ActionControls';
@@ -371,9 +372,9 @@ export default function CommissionManagement({ clients = [], referralAgents = []
   const pendingAmount = scopedCommissions.filter(c => c.status === 'Pending Approval' || c.status === 'Claimed').reduce((acc, c) => acc + (c.amount || 0), 0);
 
   return (
-    <div className="flex-1 p-6 space-y-6 bg-[#F0F2F5]">
+    <div className="flex-1 min-w-0 p-4 sm:p-6 space-y-6 bg-[#F0F2F5]">
       {/* Header */}
-      <div className="flex justify-between items-center bg-white border border-[#E2E8F0] border-t-4 border-t-[#D99A1C] p-6 rounded-2xl shadow-xs">
+      <div className="flex flex-wrap gap-3 justify-between items-center bg-white border border-[#E2E8F0] border-t-4 border-t-[#D99A1C] p-6 rounded-2xl shadow-xs">
         <div className="space-y-1">
           <h1 className="text-xl font-black text-slate-900 tracking-tight">Commission Management</h1>
           <p className="text-xs text-slate-500 font-medium">
@@ -642,7 +643,7 @@ export default function CommissionManagement({ clients = [], referralAgents = []
           <div className="px-6 py-4 bg-slate-50 border-t border-[#E2E8F0] flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-[#64748B] font-semibold select-none">
             <div className="flex items-center gap-3">
               <span className="text-xs font-semibold text-slate-500">Rows per page:</span>
-              <select
+              <SearchableSelect
                 value={itemsPerPage}
                 onChange={(e) => {
                   setItemsPerPage(Number(e.target.value));
@@ -655,7 +656,7 @@ export default function CommissionManagement({ clients = [], referralAgents = []
                 <option value={20}>20</option>
                 <option value={50}>50</option>
                 <option value={100}>100</option>
-              </select>
+              </SearchableSelect>
             </div>
 
             <div className="flex items-center gap-1.5">

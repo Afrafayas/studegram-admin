@@ -55,9 +55,9 @@ export default function DailyReport({ applications, onNavigateToBecomePartner, o
 
   if (currentUser?.role === 'Finance') {
     return (
-      <div className="flex-1 p-6 space-y-6 bg-[#F8FAFC]">
+      <div className="flex-1 min-w-0 p-4 sm:p-6 space-y-6 bg-[#F8FAFC]">
         {/* Welcome Banner */}
-        <div className="flex justify-between items-center bg-white border border-[#E2E8F0] p-6 rounded-2xl shadow-xs">
+        <div className="flex flex-wrap gap-3 justify-between items-center bg-white border border-[#E2E8F0] p-6 rounded-2xl shadow-xs">
           <div className="space-y-1">
             <h1 className="text-xl font-black text-slate-900 tracking-tight">Financial Operations Console</h1>
             <p className="text-xs text-slate-500 font-semibold">
@@ -115,7 +115,7 @@ export default function DailyReport({ applications, onNavigateToBecomePartner, o
   }
 
   return (
-    <div className="flex-1 p-6 space-y-6 bg-[#F8FAFC]">
+    <div className="flex-1 min-w-0 p-4 sm:p-6 space-y-6 bg-[#F8FAFC]">
       {/* Welcome Banner */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white border border-[#E2E8F0] p-6 rounded-2xl shadow-xs">
         <div className="space-y-1">
@@ -133,7 +133,7 @@ export default function DailyReport({ applications, onNavigateToBecomePartner, o
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 4v16m8-8H4" />
             </svg>
-            <span>+ New Application</span>
+            <span>New Application</span>
           </ActionButton>
           <div className="hidden sm:flex items-center gap-2 bg-emerald-50 border border-emerald-100 px-3 py-2 rounded-xl">
             <span className="h-2 w-2 bg-[#10B981] rounded-full animate-ping"></span>
@@ -345,6 +345,7 @@ export default function DailyReport({ applications, onNavigateToBecomePartner, o
       </div>
 
       {/* Recent Activity Logs */}
+      {/*
       <div className="bg-white border border-[#E2E8F0] rounded-2xl shadow-xs overflow-hidden">
         <div className="px-6 py-4 border-b border-[#E2E8F0] flex justify-between items-center">
           <h3 className="text-xs font-black text-slate-900 uppercase tracking-wider">System Operations Log</h3>
@@ -393,6 +394,7 @@ export default function DailyReport({ applications, onNavigateToBecomePartner, o
           </div>
         </div>
       </div>
+      */}
     </div>
   );
 }

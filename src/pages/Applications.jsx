@@ -1,3 +1,5 @@
+import SearchableSelect from '../components/SearchableSelect';
+import ValidatedInput from '../components/ValidatedInput';
 import { getDisplayId } from '../utils/displayId';
 import { applicationFee } from '../utils/courseFee';
 import { getAssignedExecutiveName } from '../utils/applicationAssignment';
@@ -9,6 +11,22 @@ import ApplicationChatDrawer from '../components/ApplicationChatDrawer';
 import API from '../api/axios';
 import { useToast } from '../context/ToastContext';
 import { resolveDocumentUrl, documentFileName, downloadApplicationDocument } from '../utils/applicationDocuments';
+
+const LIST_ACTION_CLASS = 'inline-flex h-7 shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg border px-2.5 text-[10px] font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer';
+const LIST_ICON_ACTION_CLASS = 'inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer';
+
+function ListActionIcon({ action }) {
+  const paths = {
+    view: <><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z" /><circle cx="12" cy="12" r="3" /></>,
+    pick: <><path d="M9 11V5a2 2 0 0 1 4 0v5m0-2a2 2 0 0 1 4 0v3m0-1a2 2 0 0 1 4 0v4c0 4-3 7-7 7h-1c-2 0-3-1-4-2l-5-6a2 2 0 0 1 3-3l2 2" /></>,
+    assign: <><circle cx="9" cy="7" r="3" /><path d="M3 21v-3a6 6 0 0 1 12 0v3m4-13v6m-3-3h6" /></>,
+    forward: <><path d="M4 12h16m-6-6 6 6-6 6" /></>,
+    edit: <><path d="m16 3 5 5M4 20l5-1L21 7a2 2 0 0 0-5-5L4 14l-1 7 6-2" /></>,
+    update: <><path d="M20 7v5h-5M4 17v-5h5" /><path d="M6 7a7 7 0 0 1 12-1l2 3M4 15l2 3a7 7 0 0 0 12-1" /></>,
+    chat: <><path d="M21 11.5a8.5 8.5 0 0 1-8.5 8.5H4l-2 2V11.5a9.5 9.5 0 0 1 19 0Z" /><path d="M7 10h9m-9 4h6" /></>,
+  };
+  return <svg className="h-3.5 w-3.5 shrink-0" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">{paths[action]}</svg>;
+}
 
 const STATUS_STEPS = [
   'Submitted',
@@ -971,11 +989,11 @@ export default function Applications({ applications, referralAgents = [], intake
   const paginatedApps = filteredApps.slice(startIndex, startIndex + itemsPerPage);
 
   return (
-    <div className="flex-1 p-6 space-y-6 bg-[#F0F2F5]">
+    <div className="flex-1 min-w-0 p-4 sm:p-6 space-y-6 bg-[#F0F2F5]">
       {!singleViewApp ? (
         <>
           {/* Header */}
-      <div className="flex justify-between items-center bg-white border border-[#E2E8F0] border-t-4 border-t-[#D99A1C] p-6 rounded-2xl shadow-xs">
+      <div className="flex flex-wrap gap-3 justify-between items-center bg-white border border-[#E2E8F0] border-t-4 border-t-[#D99A1C] p-6 rounded-2xl shadow-xs">
         <div className="space-y-1">
           <h1 className="text-xl font-black text-slate-900 tracking-tight">Student Applications Registry</h1>
           <p className="text-xs text-slate-500 font-medium">View, search, filter B2B partner applications, and update application lifecycle status up to Closing.</p>
@@ -1019,8 +1037,8 @@ export default function Applications({ applications, referralAgents = [], intake
       )}
 
       {/* Ownership & Scoping Tabs */}
-      <div className="bg-white border border-slate-200 p-3 rounded-2xl shadow-xs flex flex-col sm:flex-row gap-3 items-center justify-between">
-        <div className="flex gap-2 w-full sm:w-auto">
+      <div className="bg-white border border-slate-200 p-3 rounded-2xl shadow-xs flex flex-col sm:flex-row sm:flex-wrap gap-3 items-center justify-between">
+        <div className="flex flex-wrap gap-2 w-full sm:w-auto">
           <ActionButton
             onClick={() => setOwnershipTab('All')}
             className={`px-4 py-2 text-xs font-black rounded-xl transition-all ${
@@ -1049,7 +1067,7 @@ export default function Applications({ applications, referralAgents = [], intake
       </div>
 
       {/* Advanced Filters */}
-      <div className="bg-white border border-[#E2E8F0] border-t-4 border-t-[#2563EB] rounded-2xl p-5 shadow-xs flex flex-col sm:flex-row gap-4 items-center justify-between">
+      <div className="bg-white border border-[#E2E8F0] border-t-4 border-t-[#2563EB] rounded-2xl p-5 shadow-xs flex flex-col sm:flex-row sm:flex-wrap gap-4 items-center justify-between">
         <div className="flex flex-wrap gap-2">
           {['All', 'Submitted', 'Under Review', 'Paid Students', 'Conditional Offer Issued', 'CAS / I-20 Issued', 'Visa Approved', 'Enrolled / Closed'].map((status) => (
             <ActionButton
@@ -1066,9 +1084,9 @@ export default function Applications({ applications, referralAgents = [], intake
           ))}
         </div>
 
-        <div className="flex w-full sm:w-auto items-center gap-3">
+        <div className="flex min-w-0 w-full sm:w-auto items-center gap-3 flex-wrap">
           {/* Filter by Intake */}
-          <select
+          <SearchableSelect
             value={intakeFilter}
             onChange={(e) => setIntakeFilter(e.target.value)}
             className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs text-slate-900 focus:outline-none focus:border-[#D99A1C] focus:ring-1 focus:ring-[#D99A1C] font-semibold cursor-pointer"
@@ -1077,10 +1095,10 @@ export default function Applications({ applications, referralAgents = [], intake
             {availableIntakes.map((intake) => (
               <option key={intake} value={intake}>{intake}</option>
             ))}
-          </select>
+          </SearchableSelect>
 
           {/* Filter by Partner */}
-          <select
+          <SearchableSelect
             value={partnerFilter}
             onChange={(e) => setPartnerFilter(e.target.value)}
             className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs text-slate-900 focus:outline-none focus:border-[#D99A1C] focus:ring-1 focus:ring-[#D99A1C] font-semibold cursor-pointer"
@@ -1094,7 +1112,7 @@ export default function Applications({ applications, referralAgents = [], intake
                 <option key={pKey} value={pName}>{pName}</option>
               );
             })}
-          </select>
+          </SearchableSelect>
 
           {/* Search bar */}
           <div className="relative w-full sm:max-w-xs">
@@ -1206,67 +1224,58 @@ export default function Applications({ applications, referralAgents = [], intake
                         {app.dateAdded}
                       </td>
                       <td className="px-6 py-4 text-right pr-6" onClick={(e) => e.stopPropagation()}>
-                        <div className="flex items-center justify-end gap-1.5 flex-wrap">
-                          <ActionButton
-                            onClick={() => handleOpenSingleView(app)}
-                            className="bg-slate-800 hover:bg-slate-900 text-white font-extrabold text-[9px] px-2.5 py-1.5 rounded-xl transition-all shadow-3xs inline-flex items-center gap-1 cursor-pointer uppercase tracking-wider"
-                            title="View Full Single Application Page"
-                          >
-                            <span>👁️ View</span>
-                          </ActionButton>
-
-                          {!isPicked(app) && (
-                            <ActionButton
-                              onClick={() => handlePickApplication(app)}
-                              className="bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-[9px] px-2.5 py-1.5 rounded-xl transition-all shadow-3xs inline-flex items-center gap-1 cursor-pointer uppercase tracking-wider"
-                              title="Pick Application to handle follow-up"
-                            >
-                              <span>✋ Pick App</span>
-                            </ActionButton>
+                        <div className="flex flex-col items-end gap-2">
+                          {(!isPicked(app) || ['SuperAdmin', 'Super Admin', 'Admin', 'Director'].includes(currentUser?.role)) && (
+                            <div className="flex items-center justify-end gap-1.5 flex-nowrap">
+                              {!isPicked(app) && (
+                                <ActionButton
+                                  onClick={() => handlePickApplication(app)}
+                                  className={LIST_ACTION_CLASS + ' border-emerald-200 bg-emerald-50 text-emerald-700 hover:border-emerald-300 hover:bg-emerald-100'}
+                                  title="Pick Application to handle follow-up"
+                                >
+                                  <ListActionIcon action="pick" /><span>Pick App</span>
+                                </ActionButton>
+                              )}
+                              {(['SuperAdmin', 'Super Admin', 'Admin', 'Director'].includes(currentUser?.role)) && (
+                                <ActionButton
+                                  onClick={() => {
+                                    setAssignModalApp(app);
+                                    setSelectedStaffId('');
+                                  }}
+                                  className={LIST_ACTION_CLASS + ' border-indigo-200 bg-indigo-50 text-indigo-700 hover:border-indigo-300 hover:bg-indigo-100'}
+                                  title="Assign Staff Member"
+                                >
+                                  <ListActionIcon action="assign" /><span>Assign Staff</span>
+                                </ActionButton>
+                              )}
+                            </div>
                           )}
-
-                          {(['SuperAdmin', 'Super Admin', 'Admin', 'Director'].includes(currentUser?.role)) && (
+                          <div className="flex items-center justify-end gap-1.5 flex-nowrap">
                             <ActionButton
-                              onClick={() => {
-                                setAssignModalApp(app);
-                                setSelectedStaffId('');
-                              }}
-                              className="bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold text-[9px] px-2.5 py-1.5 rounded-xl transition-all shadow-3xs inline-flex items-center gap-1 cursor-pointer uppercase tracking-wider"
-                              title="Assign Staff Member"
+                              onClick={() => handleOpenSingleView(app)}
+                              className={LIST_ICON_ACTION_CLASS + ' border-blue-200 bg-blue-50 text-blue-700 hover:border-blue-300 hover:bg-blue-100'}
+                              aria-label="View application"
+                              title="View application"
                             >
-                              <span>👉 Assign Staff</span>
+                              <ListActionIcon action="view" />
                             </ActionButton>
-                          )}
-
-                          {(['CRE', 'SuperAdmin', 'Super Admin', 'Admin', 'Director'].includes(currentUser?.role)) && displayStatus === 'Submitted' && (
                             <ActionButton
-                              onClick={() => handleForwardToOperations(app)}
-                              className="bg-purple-600 hover:bg-purple-700 text-white font-extrabold text-[9px] px-2.5 py-1.5 rounded-xl transition-all shadow-3xs inline-flex items-center gap-1 cursor-pointer uppercase tracking-wider"
-                              title="Forward CRE verified file to Operations Head"
+                              onClick={() => openEditModal(app)}
+                              className={LIST_ICON_ACTION_CLASS + ' border-amber-200 bg-amber-50 text-amber-700 hover:border-amber-300 hover:bg-amber-100'}
+                              aria-label="Edit application"
+                              title="Edit application"
                             >
-                              <span>➡️ Forward Ops</span>
+                              <ListActionIcon action="edit" />
                             </ActionButton>
-                          )}
-
-                          <ActionButton
-                            onClick={() => openEditModal(app)}
-                            className="bg-slate-100 hover:bg-slate-200 text-slate-800 font-extrabold text-[9px] px-2.5 py-1.5 rounded-xl transition-all shadow-3xs inline-flex items-center gap-1 cursor-pointer"
-                            title="Edit Application & University"
-                          >
-                            <span>✏️ Edit</span>
-                          </ActionButton>
-                          <ActionButton
-                            onClick={() => openStatusModal(app)}
-                            className="bg-amber-500 hover:bg-amber-600 text-white font-extrabold text-[9px] px-2.5 py-1.5 rounded-xl transition-all shadow-3xs inline-flex items-center gap-1 cursor-pointer"
-                          >
-                            <span>Update</span>
-                          </ActionButton>
-                          <ActionButton
-                            onClick={() => setSelectedChatApp(app)}
-                            className="bg-[#2563EB] hover:bg-[#1D4ED8] text-white font-extrabold text-[9px] px-2.5 py-1.5 rounded-xl transition-all shadow-3xs inline-flex items-center gap-1 cursor-pointer"
-                          >
-                            <span>Chat</span>
-                          </ActionButton>
+                            <ActionButton
+                              onClick={() => setSelectedChatApp(app)}
+                              className={LIST_ICON_ACTION_CLASS + ' border-indigo-200 bg-indigo-50 text-indigo-700 hover:border-indigo-300 hover:bg-indigo-100'}
+                              aria-label="Chat about application"
+                              title="Chat about application"
+                            >
+                              <ListActionIcon action="chat" />
+                            </ActionButton>
+                          </div>
                         </div>
                       </td>
                     </tr>
@@ -1290,7 +1299,7 @@ export default function Applications({ applications, referralAgents = [], intake
           <div className="px-6 py-4 bg-slate-50 border-t border-[#E2E8F0] flex flex-col sm:flex-row items-center justify-between gap-4">
             <div className="flex items-center gap-3">
               <span className="text-xs font-semibold text-slate-500">Rows per page:</span>
-              <select
+              <SearchableSelect
                 value={itemsPerPage}
                 onChange={(e) => {
                   setItemsPerPage(Number(e.target.value));
@@ -1303,7 +1312,7 @@ export default function Applications({ applications, referralAgents = [], intake
                 <option value={20}>20</option>
                 <option value={50}>50</option>
                 <option value={100}>100</option>
-              </select>
+              </SearchableSelect>
             </div>
 
             <div className="flex items-center gap-1.5">
@@ -1343,10 +1352,10 @@ export default function Applications({ applications, referralAgents = [], intake
       </>
       ) : (
         /* SINGLE APPLICATION VIEW PAGE */
-        <div className="space-y-6 animate-fade-in">
+        <div className="min-w-0 space-y-6 animate-fade-in [overflow-wrap:anywhere]">
           {/* Top Header & Breadcrumbs Card */}
           <div className="bg-white border border-slate-200 border-t-4 border-t-[#D99A1C] p-5 sm:p-6 rounded-3xl shadow-sm flex flex-col xl:flex-row items-start xl:items-center justify-between gap-4">
-            <div className="flex items-center gap-4">
+            <div className="flex min-w-0 flex-wrap items-center gap-4">
               <ActionButton
                 onClick={handleBackToList}
                 className="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-extrabold text-xs rounded-xl transition-all flex items-center gap-1.5 cursor-pointer border border-slate-200 shadow-2xs"
@@ -1354,7 +1363,7 @@ export default function Applications({ applications, referralAgents = [], intake
                 <span>← Back to Applications List</span>
               </ActionButton>
               <div>
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
                   <span className="text-[10px] font-extrabold text-[#D99A1C] uppercase tracking-wider">Application Detailed Dossier</span>
                   <span className="text-[10px] text-slate-400 font-bold">•</span>
                   <span className="text-[10px] text-slate-500 font-bold">
@@ -1381,16 +1390,16 @@ export default function Applications({ applications, referralAgents = [], intake
               </div>
             </div>
 
-            {/* Action Buttons Bar - Strictly in One Row for all screens */}
-            <div className="flex items-center gap-1.5 sm:gap-2 flex-nowrap overflow-x-auto no-scrollbar py-1 shrink-0 w-full xl:w-auto justify-start xl:justify-end">
+            {/* Application actions wrap to remain accessible at narrow widths. */}
+            <div className="flex min-w-0 items-center gap-2 flex-wrap py-1 w-full xl:w-auto justify-start xl:justify-end">
               {!isPicked(singleViewApp) && (
                 <ActionButton
                   onClick={() => {
                     return handlePickApplication(singleViewApp);
                   }}
-                  className="px-2.5 sm:px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-[10px] sm:text-xs rounded-xl shadow-xs transition-all cursor-pointer flex items-center gap-1.5 uppercase tracking-wider whitespace-nowrap shrink-0"
+                  className="inline-flex min-h-8 items-center justify-center gap-1.5 rounded-lg border px-3 py-1.5 text-[11px] font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 focus-visible:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap cursor-pointer border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
                 >
-                  <span>✋ Pick App</span>
+                  <ListActionIcon action="pick" /><span>Pick App</span>
                 </ActionButton>
               )}
 
@@ -1400,36 +1409,36 @@ export default function Applications({ applications, referralAgents = [], intake
                     setAssignModalApp(singleViewApp);
                     setSelectedStaffId('');
                   }}
-                  className="px-2.5 sm:px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold text-[10px] sm:text-xs rounded-xl shadow-xs transition-all cursor-pointer flex items-center gap-1.5 uppercase tracking-wider whitespace-nowrap shrink-0"
+                  className="inline-flex min-h-8 items-center justify-center gap-1.5 rounded-lg border px-3 py-1.5 text-[11px] font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 focus-visible:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap cursor-pointer border-indigo-200 bg-indigo-50 text-indigo-700 hover:bg-indigo-100"
                 >
-                  <span>👉 Assign Staff</span>
+                  <ListActionIcon action="assign" /><span>Assign Staff</span>
                 </ActionButton>
               )}
 
               <ActionButton
                 onClick={() => openEditModal(singleViewApp)}
-                className="px-2.5 sm:px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-800 font-extrabold text-[10px] sm:text-xs rounded-xl shadow-xs transition-all cursor-pointer flex items-center gap-1.5 uppercase tracking-wider whitespace-nowrap shrink-0 border border-slate-200"
+                className="inline-flex min-h-8 items-center justify-center gap-1.5 rounded-lg border px-3 py-1.5 text-[11px] font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 focus-visible:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap cursor-pointer border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100"
               >
-                <span>✏️ Edit App</span>
+                <ListActionIcon action="edit" /><span>Edit App</span>
               </ActionButton>
               <ActionButton
                 onClick={() => openStatusModal(singleViewApp)}
-                className="px-2.5 sm:px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-white font-extrabold text-[10px] sm:text-xs rounded-xl shadow-xs transition-all cursor-pointer flex items-center gap-1.5 uppercase tracking-wider whitespace-nowrap shrink-0"
+                className="inline-flex min-h-8 items-center justify-center gap-1.5 rounded-lg border px-3 py-1.5 text-[11px] font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 focus-visible:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap cursor-pointer border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100"
               >
-                <span>⚡ Update Status</span>
+                <ListActionIcon action="update" /><span>Update Status</span>
               </ActionButton>
 
               <ActionButton
                 onClick={() => setSelectedChatApp(singleViewApp)}
-                className="px-2.5 sm:px-3 py-1.5 bg-[#2563EB] hover:bg-[#1D4ED8] text-white font-extrabold text-[10px] sm:text-xs rounded-xl shadow-xs transition-all cursor-pointer flex items-center gap-1.5 uppercase tracking-wider whitespace-nowrap shrink-0"
+                className="inline-flex min-h-8 items-center justify-center gap-1.5 rounded-lg border px-3 py-1.5 text-[11px] font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 focus-visible:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap cursor-pointer border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100"
               >
-                <span>💬 Open Chat</span>
+                <ListActionIcon action="chat" /><span>Open Chat</span>
               </ActionButton>
 
               <ActionButton
                 onClick={handleSaveApplicationData}
                 disabled={isSavingApp}
-                className="px-2.5 sm:px-3 py-1.5 bg-[#0A0A0F] hover:bg-slate-800 text-white font-black text-[10px] sm:text-xs rounded-xl shadow-xs transition-all cursor-pointer inline-flex items-center justify-center gap-1.5 uppercase tracking-wider disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap shrink-0"
+                className="inline-flex min-h-8 items-center justify-center gap-1.5 rounded-lg border px-3 py-1.5 text-[11px] font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 focus-visible:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap cursor-pointer border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100"
               >
                 {isSavingApp && (
                   <svg className="animate-spin h-3.5 w-3.5 text-current shrink-0" fill="none" viewBox="0 0 24 24">
@@ -1444,7 +1453,7 @@ export default function Applications({ applications, referralAgents = [], intake
 
           {/* Stage Timeline Card */}
           <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm space-y-3">
-            <div className="flex justify-between items-center pb-2 border-b border-slate-100">
+            <div className="flex flex-wrap gap-2 justify-between items-center pb-2 border-b border-slate-100">
               <span className="text-[10px] font-black uppercase tracking-widest text-[#D99A1C]">Application Progress Lifecycle</span>
               <span className="text-xs font-black text-emerald-600 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200 uppercase">
                 Current Stage: {singleViewApp.secondaryStatus || singleViewApp.status || 'Submitted'}
@@ -1497,19 +1506,19 @@ export default function Applications({ applications, referralAgents = [], intake
                 </div>
 
                 <div className="space-y-3 text-xs">
-                  <div className="flex justify-between py-1 border-b border-slate-100">
+                  <div className="flex flex-wrap gap-x-3 gap-y-1 justify-between py-1 border-b border-slate-100">
                     <span className="text-slate-400 font-bold">Phone Line:</span>
                     <span className="font-bold text-slate-800">{singleViewApp.phone || 'N/A'}</span>
                   </div>
-                  <div className="flex justify-between py-1 border-b border-slate-100">
+                  <div className="flex flex-wrap gap-x-3 gap-y-1 justify-between py-1 border-b border-slate-100">
                     <span className="text-slate-400 font-bold">Date of Birth:</span>
                     <span className="font-bold text-slate-800">{singleViewApp.dob || 'N/A'}</span>
                   </div>
-                  <div className="flex justify-between py-1 border-b border-slate-100">
+                  <div className="flex flex-wrap gap-x-3 gap-y-1 justify-between py-1 border-b border-slate-100">
                     <span className="text-slate-400 font-bold">Country:</span>
                     <span className="font-bold text-slate-800">📍 {singleViewApp.country || ''}</span>
                   </div>
-                  <div className="flex justify-between py-1">
+                  <div className="flex flex-wrap gap-x-3 gap-y-1 justify-between py-1">
                     <span className="text-slate-400 font-bold">Referred By:</span>
                     <span className="font-bold text-indigo-600">{singleViewApp.assignedBdm || 'Direct Application'}</span>
                   </div>
@@ -1525,31 +1534,31 @@ export default function Applications({ applications, referralAgents = [], intake
                 </div>
 
                 <div className="space-y-3 text-xs">
-                  <div className="flex justify-between py-1 border-b border-slate-100">
+                  <div className="flex flex-wrap gap-x-3 gap-y-1 justify-between py-1 border-b border-slate-100">
                     <span className="text-slate-400 font-bold">Destination Country:</span>
                     <span className="font-bold text-slate-800">📍 {singleViewApp.country || singleViewApp.destinationCountry || singleViewApp.university?.country || 'Not provided'}</span>
                   </div>
-                  <div className="flex justify-between py-1 border-b border-slate-100">
+                  <div className="flex flex-wrap gap-x-3 gap-y-1 justify-between py-1 border-b border-slate-100">
                     <span className="text-slate-400 font-bold">Level of Study:</span>
                     <span className="font-bold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded border border-indigo-200">{singleViewApp.level || 'Undergraduate (UG)'}</span>
                   </div>
-                  <div className="flex justify-between py-1 border-b border-slate-100">
+                  <div className="flex flex-wrap gap-x-3 gap-y-1 justify-between py-1 border-b border-slate-100">
                     <span className="text-slate-400 font-bold">Intake Season:</span>
                     <span className="font-bold text-slate-900 bg-amber-50 px-2 py-0.5 rounded border border-amber-200">{singleViewApp.intake}</span>
                   </div>
-                  <div className="flex justify-between py-1 border-b border-slate-100">
+                  <div className="flex flex-wrap gap-x-3 gap-y-1 justify-between py-1 border-b border-slate-100">
                     <span className="text-slate-400 font-bold">Tuition Fees:</span>
                     <span className="font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
                       {applicationFee(singleViewApp)}
                     </span>
                   </div>
-                  <div className="flex justify-between py-1 border-b border-slate-100">
+                  <div className="flex flex-wrap gap-x-3 gap-y-1 justify-between py-1 border-b border-slate-100">
                     <span className="text-slate-400 font-bold">Referral Partner / Source:</span>
                     <span className="font-bold text-indigo-600">
                       {singleViewApp.referredBy || singleViewApp.partnerName || singleViewApp.partner?.name || singleViewApp.assignedBdm || 'Direct Applicant'}
                     </span>
                   </div>
-                  <div className="flex justify-between py-1 border-b border-slate-100">
+                  <div className="flex flex-wrap gap-x-3 gap-y-1 justify-between py-1 border-b border-slate-100">
                     <span className="text-slate-400 font-bold">Assigned Executive:</span>
                     <span className="font-bold text-slate-800">{getAssignedExecutiveName(singleViewApp) || 'Unassigned'}</span>
                   </div>
@@ -1813,7 +1822,7 @@ export default function Applications({ applications, referralAgents = [], intake
                 <label className="block text-[10px] font-extrabold text-slate-600 uppercase tracking-wider">
                   Destination Country <span className="text-rose-500">*</span>
                 </label>
-                <select
+                <SearchableSelect
                   value={editCountry}
                   onChange={(e) => {
                     setEditCountry(e.target.value);
@@ -1827,7 +1836,7 @@ export default function Applications({ applications, referralAgents = [], intake
                   {availableCountries.map(c => (
                     <option key={c} value={c}>{c}</option>
                   ))}
-                </select>
+                </SearchableSelect>
               </div>
 
               {/* Destination University (filtered by Country) */}
@@ -1842,7 +1851,7 @@ export default function Applications({ applications, referralAgents = [], intake
                     </span>
                   )}
                 </div>
-                <select
+                <SearchableSelect searchLabel="Search universities..."
                   value={editUniversity}
                   disabled={!editCountry}
                   onChange={(e) => {
@@ -1864,7 +1873,7 @@ export default function Applications({ applications, referralAgents = [], intake
                     const label = typeof u === 'object' ? u.name : u;
                     return <option key={value} value={value}>{label}</option>;
                   })}
-                </select>
+                </SearchableSelect>
                 {editCountry && editFilteredUniversities.length === 0 && (
                   <p className="text-[10px] text-amber-600 font-semibold mt-1">
                     ⚠️ No partner institutions found in {editCountry}. Please select another country.
@@ -1877,7 +1886,7 @@ export default function Applications({ applications, referralAgents = [], intake
                 <label className="block text-[10px] font-extrabold text-slate-600 uppercase tracking-wider">
                   Academic Program <span className="text-rose-500">*</span>
                 </label>
-                <select
+                <SearchableSelect searchLabel="Search courses..."
                   value={editCourse}
                   disabled={!editUniversity}
                   onChange={(e) => setEditCourse(e.target.value)}
@@ -1892,7 +1901,7 @@ export default function Applications({ applications, referralAgents = [], intake
                     const label = typeof c === 'object' ? c.title : c;
                     return <option key={value} value={value}>{label}</option>;
                   })}
-                </select>
+                </SearchableSelect>
               </div>
 
               {/* Intake Season */}
@@ -1900,7 +1909,7 @@ export default function Applications({ applications, referralAgents = [], intake
                 <label className="block text-[10px] font-extrabold text-slate-600 uppercase tracking-wider">
                   Intake Season *
                 </label>
-                <select
+                <SearchableSelect
                   value={editIntake}
                   onChange={(e) => setEditIntake(e.target.value)}
                   required
@@ -1912,7 +1921,7 @@ export default function Applications({ applications, referralAgents = [], intake
                     const value = typeof i === 'object' ? i.title : i;
                     return <option key={value} value={value}>{value}</option>;
                   })}
-                </select>
+                </SearchableSelect>
               </div>
 
               {/* Level of Study */}
@@ -1920,7 +1929,7 @@ export default function Applications({ applications, referralAgents = [], intake
                 <label className="block text-[10px] font-extrabold text-slate-600 uppercase tracking-wider">
                   Level of Study *
                 </label>
-                <select
+                <SearchableSelect
                   value={editLevel}
                   onChange={(e) => setEditLevel(e.target.value)}
                   required
@@ -1929,7 +1938,7 @@ export default function Applications({ applications, referralAgents = [], intake
                   <option value="Undergraduate (UG)">Undergraduate (UG)</option>
                   <option value="Postgraduate (PG)">Postgraduate (PG)</option>
                   <option value="PhD">PhD</option>
-                </select>
+                </SearchableSelect>
               </div>
 
               {/* Student Details */}
@@ -1945,7 +1954,7 @@ export default function Applications({ applications, referralAgents = [], intake
                 </div>
                 <div className="space-y-1">
                   <label className="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">Phone</label>
-                  <input
+                  <ValidatedInput validationKind="phone"
                     type="text"
                     value={editStudentPhone}
                     onChange={(e) => setEditStudentPhone(e.target.value)}
@@ -2017,7 +2026,7 @@ export default function Applications({ applications, referralAgents = [], intake
             <ActionForm onSubmit={handleStatusUpdateSubmit} className="space-y-4">
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1">Select Stage / Status</label>
-                <select
+                <SearchableSelect
                   value={selectedStatus}
                   onChange={(e) => setSelectedStatus(e.target.value)}
                   className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs text-slate-900 font-extrabold focus:outline-none focus:border-[#D99A1C] focus:ring-1 focus:ring-[#D99A1C] cursor-pointer"
@@ -2025,7 +2034,7 @@ export default function Applications({ applications, referralAgents = [], intake
                   {STATUS_STEPS.map((s) => (
                     <option key={s} value={s}>{s}</option>
                   ))}
-                </select>
+                </SearchableSelect>
               </div>
 
               <div>
@@ -2087,7 +2096,7 @@ export default function Applications({ applications, referralAgents = [], intake
             <ActionForm onSubmit={handleAssignSubmit} className="space-y-4">
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1">Select Handling Staff Member</label>
-                <select
+                <SearchableSelect
                   required
                   value={selectedStaffId}
                   onChange={(e) => setSelectedStaffId(e.target.value)}
@@ -2099,7 +2108,7 @@ export default function Applications({ applications, referralAgents = [], intake
                       {staff.name} ({staff.role}) - {staff.email}
                     </option>
                   ))}
-                </select>
+                </SearchableSelect>
               </div>
 
               <div className="flex items-center justify-end gap-3 pt-2">

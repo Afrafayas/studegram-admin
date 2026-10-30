@@ -1,3 +1,4 @@
+import SearchableSelect from '../components/SearchableSelect';
 import { ActionButton, ActionForm } from '../components/ActionControls';
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
@@ -166,7 +167,7 @@ export default function RoleHierarchy() {
   const filteredRoles = roles.filter(r => portalFilter === 'All' || r.portalType === portalFilter);
 
   return (
-    <div className="flex-1 p-6 space-y-6 bg-[#F0F2F5]">
+    <div className="flex-1 min-w-0 p-4 sm:p-6 space-y-6 bg-[#F0F2F5]">
       {/* Header */}
       <div className="bg-white border border-[#E2E8F0] border-t-4 border-t-[#D99A1C] p-6 rounded-2xl shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="space-y-1">
@@ -345,7 +346,7 @@ export default function RoleHierarchy() {
           <h2 className="text-xs font-black text-slate-950 uppercase tracking-widest border-b border-slate-100 pb-3">
             Live System RBAC Audit Logs
           </h2>
-          <div className="border border-slate-200 rounded-xl overflow-hidden">
+          <div className="border border-slate-200 rounded-xl overflow-x-auto">
             <table className="w-full text-left border-collapse text-xs">
               <thead>
                 <tr className="bg-slate-50 border-b border-slate-200 text-[10px] font-extrabold uppercase text-slate-400">
@@ -418,14 +419,14 @@ export default function RoleHierarchy() {
 
                 <div className="space-y-1">
                   <label className="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">Target Portal *</label>
-                  <select
+                  <SearchableSelect
                     value={roleForm.portalType}
                     onChange={(e) => setRoleForm({ ...roleForm, portalType: e.target.value })}
                     className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold text-slate-900 focus:outline-none focus:border-[#D99A1C]"
                   >
                     <option value="Admin">🏛️ Admin Portal</option>
                     <option value="Agent">🏢 Agent Portal</option>
-                  </select>
+                  </SearchableSelect>
                 </div>
 
                 <div className="space-y-1 md:col-span-2">

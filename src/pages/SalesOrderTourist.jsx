@@ -5,9 +5,9 @@ export default function SalesOrderTourist() {
   const packages = [];
 
   return (
-    <div className="flex-1 p-6 space-y-6 bg-[#F8FAFC]">
+    <div className="flex-1 min-w-0 p-4 sm:p-6 space-y-6 bg-[#F8FAFC]">
       {/* Header */}
-      <div className="flex justify-between items-center bg-white border border-[#E2E8F0] p-6 rounded-2xl shadow-xs">
+      <div className="flex flex-wrap gap-3 justify-between items-center bg-white border border-[#E2E8F0] p-6 rounded-2xl shadow-xs">
         <div className="space-y-1">
           <h1 className="text-xl font-black text-slate-900 tracking-tight">Tourist Packages</h1>
           <p className="text-xs text-slate-500 font-medium">B2B academic study tours and cultural exploration programs for prospective students.</p>
