@@ -950,7 +950,7 @@ if (!token) throw new Error('Please sign in to save changes.');
 
         return (
           <div className="space-y-4">
-            <div className="flex justify-between items-center">
+            <div className="flex flex-wrap gap-3 justify-between items-center">
               <div>
                 <h2 className="text-xs font-black text-slate-900 uppercase tracking-wider">Universities Master Directory</h2>
                 <p className="text-[10px] text-slate-400 font-semibold mt-0.5">Manage partner institutions, S3 logo images, entry criteria, and academic courses.</p>
@@ -964,7 +964,7 @@ if (!token) throw new Error('Please sign in to save changes.');
             </div>
 
             <div className="bg-white border border-[#E2E8F0] border-t-4 border-t-[#D99A1C] rounded-2xl shadow-xs overflow-hidden">
-              <table className="w-full text-left border-collapse">
+              <div className="w-full min-w-0 overflow-x-auto"><table className="w-full text-left border-collapse">
                 <thead>
                   <tr className="bg-slate-50 border-b border-[#E2E8F0]">
                     <th className="px-5 py-3 text-slate-400 text-[10px] font-extrabold uppercase tracking-wider">University</th>
@@ -1065,7 +1065,7 @@ if (!token) throw new Error('Please sign in to save changes.');
                     })
                   )}
                 </tbody>
-              </table>
+              </table></div>
               <PaginationFooter
                 totalItems={universities.length}
                 currentPage={currentPage}
@@ -1114,7 +1114,7 @@ if (!token) throw new Error('Please sign in to save changes.');
             </div>
 
             <div className="bg-white border border-[#E2E8F0] border-t-4 border-t-[#D99A1C] rounded-2xl shadow-xs overflow-hidden">
-              <table className="w-full text-left border-collapse">
+              <div className="w-full min-w-0 overflow-x-auto"><table className="w-full text-left border-collapse">
                 <thead>
                   <tr className="bg-slate-50 border-b border-[#E2E8F0]">
                     <th className="px-5 py-3 text-slate-400 text-[10px] font-extrabold uppercase tracking-wider">Course Title</th>
@@ -1205,7 +1205,7 @@ if (!token) throw new Error('Please sign in to save changes.');
                     })
                   )}
                 </tbody>
-              </table>
+              </table></div>
               <PaginationFooter
                 totalItems={courses.length}
                 currentPage={currentPage}
@@ -1224,7 +1224,7 @@ if (!token) throw new Error('Please sign in to save changes.');
 
         return (
           <div className="space-y-4">
-            <div className="flex justify-between items-center">
+            <div className="flex flex-wrap gap-3 justify-between items-center">
               <div>
                 <h2 className="text-xs font-black text-slate-900 uppercase tracking-wider">Intake Seasons Directory</h2>
                 <p className="text-[10px] text-slate-400 font-semibold mt-0.5">Define global admission intake windows and operational target seasons.</p>
@@ -1238,7 +1238,7 @@ if (!token) throw new Error('Please sign in to save changes.');
             </div>
 
             <div className="bg-white border border-[#E2E8F0] border-t-4 border-t-[#D99A1C] rounded-2xl shadow-xs overflow-hidden">
-              <table className="w-full text-left border-collapse">
+              <div className="w-full min-w-0 overflow-x-auto"><table className="w-full text-left border-collapse">
                 <thead>
                   <tr className="bg-slate-50 border-b border-[#E2E8F0]">
                     <th className="px-5 py-3 text-slate-400 text-[10px] font-extrabold uppercase tracking-wider">Intake Season Title</th>
@@ -1303,7 +1303,7 @@ if (!token) throw new Error('Please sign in to save changes.');
                     })
                   )}
                 </tbody>
-              </table>
+              </table></div>
               <PaginationFooter
                 totalItems={intakes.length}
                 currentPage={currentPage}
@@ -1322,7 +1322,7 @@ if (!token) throw new Error('Please sign in to save changes.');
 
         return (
           <div className="space-y-4">
-            <div className="flex justify-between items-center">
+            <div className="flex flex-wrap gap-3 justify-between items-center">
               <h2 className="text-xs font-black text-slate-900 uppercase tracking-wider">Course Documents Configuration</h2>
               <ActionButton
                 onClick={() => openAddModal('doc')}
@@ -1333,7 +1333,7 @@ if (!token) throw new Error('Please sign in to save changes.');
             </div>
             
             <div className="bg-white border border-[#E2E8F0] border-t-4 border-t-[#D99A1C] rounded-2xl shadow-xs overflow-hidden">
-              <table className="w-full text-left border-collapse">
+              <div className="w-full min-w-0 overflow-x-auto"><table className="w-full text-left border-collapse">
                 <thead>
                   <tr className="bg-slate-50 border-b border-[#E2E8F0]">
                     <th className="px-6 py-3 text-slate-400 text-[10px] font-extrabold uppercase tracking-wider w-[80px]">SI.NO.</th>
@@ -1363,7 +1363,7 @@ if (!token) throw new Error('Please sign in to save changes.');
                     </tr>
                   ))}
                 </tbody>
-              </table>
+              </table></div>
               <PaginationFooter
                 totalItems={courseDocuments.length}
                 currentPage={currentPage}
@@ -1382,7 +1382,7 @@ if (!token) throw new Error('Please sign in to save changes.');
 
         return (
           <div className="space-y-4">
-            <div className="flex justify-between items-center">
+            <div className="flex flex-wrap gap-3 justify-between items-center">
               <h2 className="text-xs font-black text-slate-900 uppercase tracking-wider">B2B Referral Agents</h2>
               <ActionButton
                 onClick={() => openAddModal('agent')}
@@ -1393,7 +1393,7 @@ if (!token) throw new Error('Please sign in to save changes.');
             </div>
             
             <div className="bg-white border border-[#E2E8F0] border-t-4 border-t-[#D99A1C] rounded-2xl shadow-xs overflow-hidden">
-              <table className="w-full text-left border-collapse">
+              <div className="w-full min-w-0 overflow-x-auto"><table className="w-full text-left border-collapse">
                 <thead>
                   <tr className="bg-slate-50 border-b border-[#E2E8F0]">
                     <th className="px-6 py-3 text-slate-400 text-[10px] font-extrabold uppercase tracking-wider w-[80px]">SI.NO.</th>
@@ -1419,7 +1419,7 @@ if (!token) throw new Error('Please sign in to save changes.');
                     </tr>
                   ))}
                 </tbody>
-              </table>
+              </table></div>
               <PaginationFooter
                 totalItems={referralAgents.length}
                 currentPage={currentPage}
@@ -1438,7 +1438,7 @@ if (!token) throw new Error('Please sign in to save changes.');
 
         return (
           <div className="space-y-4">
-            <div className="flex justify-between items-center">
+            <div className="flex flex-wrap gap-3 justify-between items-center">
               <div>
                 <h2 className="text-xs font-black text-slate-900 uppercase tracking-wider">Application Stages Pipeline</h2>
                 <p className="text-[10px] text-slate-400 font-semibold mt-0.5">Reorder stages or add customized milestones in the application workflow.</p>
@@ -1606,7 +1606,7 @@ if (!token) throw new Error('Please sign in to save changes.');
 
         return (
           <div className="space-y-4">
-            <div className="flex justify-between items-center">
+            <div className="flex flex-wrap gap-3 justify-between items-center">
               <h2 className="text-xs font-black text-slate-900 uppercase tracking-wider">{title}</h2>
               {listSetter && (
                 <ActionButton
@@ -1734,7 +1734,7 @@ if (!token) throw new Error('Please sign in to save changes.');
                     <option value=".png">.png (PNG Image)</option>
                   </SearchableSelect>
                 </div>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-1.5">
                     <label className="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">Min Size (MB)</label>
                     <input
@@ -2081,7 +2081,7 @@ if (!token) throw new Error('Please sign in to save changes.');
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div className="space-y-1.5 min-w-0">
                     <label htmlFor="course-duration" className="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">Duration</label>
                     <input id="course-duration" type="text" value={courseDuration} onChange={e => setCourseDuration(e.target.value)} className="w-full min-w-0 h-10 bg-slate-50 border border-slate-200 rounded-xl px-3 text-xs font-semibold focus:outline-none focus:bg-white focus:border-[#D99A1C]" placeholder="e.g. 3 Years" />
@@ -2458,7 +2458,7 @@ if (!token) throw new Error('Please sign in to save changes.');
               </p>
             </div>
 
-            <div className="grid grid-cols-2 gap-3 bg-slate-50 p-3 rounded-xl border border-slate-200">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-slate-50 p-3 rounded-xl border border-slate-200">
               <div>
                 <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider block">Duration</span>
                 <span className="text-xs font-bold text-slate-800">{viewingCourse.duration || 'Not specified'}</span>
@@ -2736,7 +2736,7 @@ if (!token) throw new Error('Please sign in to save changes.');
                     </span>
                   </div>
 
-                  <div className="max-h-48 overflow-y-auto border border-slate-100 rounded-xl overflow-hidden scrollbar-thin">
+                  <div className="max-h-48 overflow-auto border border-slate-100 rounded-xl scrollbar-thin">
                     <table className="w-full text-left text-xs border-collapse">
                       <thead className="bg-slate-50 text-[9.5px] font-black uppercase text-slate-400 sticky top-0 border-b border-slate-100">
                         <tr>

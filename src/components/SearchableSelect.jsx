@@ -37,7 +37,8 @@ export default function SearchableSelect({ children, className, searchLabel = 'S
     if (!expanded) return;
     const rect = triggerRef.current.getBoundingClientRect();
     const below = window.innerHeight - rect.bottom;
-    setPosition({ position: 'fixed', left: Math.max(8, Math.min(rect.left, window.innerWidth - rect.width - 8)), width: rect.width,
+    const popupWidth = Math.min(rect.width, Math.max(0, window.innerWidth - 16));
+    setPosition({ position: 'fixed', left: Math.max(8, Math.min(rect.left, window.innerWidth - popupWidth - 8)), width: popupWidth,
       ...(below < 240 && rect.top > below ? { bottom: window.innerHeight - rect.top + 4 } : { top: rect.bottom + 4 }),
       maxHeight: Math.max(120, Math.min(320, Math.max(below, rect.top) - 16)), zIndex: 10000 });
     const closeOutside = event => {
@@ -81,7 +82,7 @@ export default function SearchableSelect({ children, className, searchLabel = 'S
         show();
       }}>{children}</select>
     <input ref={triggerRef} type="text" role="combobox" disabled={props.disabled}
-      className={className} style={props.style} autoComplete="off"
+      className={(className || '') + ' min-w-0 max-w-full'} style={props.style} autoComplete="off"
       size={Math.min(28, Math.max(3, (selected?.label.length || 0) + 2))}
       aria-label={props['aria-label'] || searchLabel} aria-autocomplete="list"
       aria-required={props.required || undefined} aria-describedby={props['aria-describedby']}
@@ -108,7 +109,7 @@ export default function SearchableSelect({ children, className, searchLabel = 'S
       <div id={listId} role="listbox" aria-label={searchLabel} className="mt-1 min-h-0 overflow-y-auto">
         {matches.map((option, index) => <button type="button" role="option" tabIndex={-1} key={option.value} id={listId + '-' + index}
           aria-selected={option.value === selected?.value} onMouseDown={event => event.preventDefault()}
-          onClick={() => choose(option)} className={'block w-full rounded-lg px-3 py-2 text-left text-xs hover:bg-amber-50 ' + (index === active ? 'bg-slate-100 ' : '') + (option.value === selected?.value ? 'font-bold text-amber-700' : '')}>
+          onClick={() => choose(option)} className={'block w-full break-words rounded-lg px-3 py-2 text-left text-xs hover:bg-amber-50 ' + (index === active ? 'bg-slate-100 ' : '') + (option.value === selected?.value ? 'font-bold text-amber-700' : '')}>
           {option.label}
         </button>)}
         {!matches.length && <p role="status" className="px-3 py-3 text-xs text-slate-500">No matching options</p>}

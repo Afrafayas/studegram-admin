@@ -572,12 +572,12 @@ support@unigather.app`;
   };
 
   return (
-    <div className="flex-1 p-6 space-y-6 bg-[#F0F2F5]">
+    <div className="flex-1 min-w-0 p-4 sm:p-6 space-y-6 bg-[#F0F2F5]">
       {/* 1. DIRECTORY TABLE VIEW (when no student single view is active) */}
       {!singleViewStudent ? (
         <>
           {/* Header */}
-          <div className="flex justify-between items-center bg-white border border-[#E2E8F0] border-t-4 border-t-[#D99A1C] p-6 rounded-2xl shadow-xs">
+          <div className="flex flex-wrap gap-3 justify-between items-center bg-white border border-[#E2E8F0] border-t-4 border-t-[#D99A1C] p-6 rounded-2xl shadow-xs">
             <div className="space-y-1">
               <h1 className="text-xl font-black text-slate-900 tracking-tight">Students Directory</h1>
               <p className="text-xs text-slate-500 font-medium">Manage Direct and B2B-referred students, view files status and passport records.</p>
@@ -596,7 +596,7 @@ support@unigather.app`;
           </div>
 
           {/* Search & Filters */}
-          <div className="bg-white border border-[#E2E8F0] border-t-4 border-t-[#2563EB] rounded-2xl p-5 shadow-xs flex flex-col sm:flex-row gap-4 items-center justify-between">
+          <div className="bg-white border border-[#E2E8F0] border-t-4 border-t-[#2563EB] rounded-2xl p-5 shadow-xs flex flex-col sm:flex-row sm:flex-wrap gap-4 items-center justify-between">
             <div className="bg-slate-100 p-1 rounded-xl flex w-full sm:w-auto">
               {['All', /* 'Active', 'Inactive', */ 'Paid Students'].map((status) => (
                 <ActionButton
@@ -613,7 +613,7 @@ support@unigather.app`;
               ))}
             </div>
 
-            <div className="flex w-full sm:w-auto items-center gap-3 flex-wrap sm:flex-nowrap">
+            <div className="flex min-w-0 w-full sm:w-auto items-center gap-3 flex-wrap">
               <SearchableSelect
                 value={intakeFilter}
                 onChange={(e) => setIntakeFilter(e.target.value)}
@@ -1054,7 +1054,7 @@ support@unigather.app`;
                       </div>
 
                       {studentApps.length > 0 ? (
-                        <div className="border border-slate-200 rounded-2xl overflow-hidden shadow-2xs">
+                        <div className="border border-slate-200 rounded-2xl overflow-x-auto shadow-2xs">
                           <table className="w-full text-left border-collapse text-xs">
                             <thead>
                               <tr className="bg-slate-50 border-b border-slate-200">
@@ -1254,7 +1254,7 @@ support@unigather.app`;
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-1.5">
                   <label className="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">Passport Number</label>
                   <ValidatedInput validationKind="passport"
@@ -1534,8 +1534,8 @@ support@unigather.app`;
               </div>
 
               {/* Action Buttons */}
-              <div className="flex flex-col sm:flex-row gap-2 pt-2 justify-between items-center">
-                <div className="flex gap-2 w-full sm:w-auto">
+              <div className="flex flex-col sm:flex-row sm:flex-wrap gap-2 pt-2 justify-between items-center">
+                <div className="flex flex-wrap gap-2 w-full sm:w-auto">
                   <ActionButton
                     type="button"
                     onClick={() => {
@@ -1549,7 +1549,7 @@ support@unigather.app`;
                   </ActionButton>
                 </div>
 
-                <div className="flex gap-2 w-full sm:w-auto justify-end">
+                <div className="flex flex-wrap gap-2 w-full sm:w-auto justify-end">
                   <ActionButton
                     type="button"
                     disabled={isSendingEmail}

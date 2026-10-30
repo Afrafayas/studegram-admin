@@ -296,9 +296,9 @@ export default function AdminHeader({
   return (
     <header className="flex flex-col select-none z-30 shrink-0 sticky top-0 bg-[#0A0A0F] text-white border-b border-slate-900 shadow-xs">
       {/* Top Navigation Bar */}
-      <div className="h-[64px] min-h-[64px] px-6 flex items-center justify-between">
+      <div className="h-[64px] min-h-[64px] px-3 sm:px-6 flex items-center justify-between gap-2">
         {/* Left Side: Hamburger & Breadcrumbs */}
-        <div className="flex items-center gap-4">
+        <div className="flex min-w-0 items-center gap-2 sm:gap-4">
           <ActionButton
             onClick={onToggleSidebar}
             className="lg:hidden p-1.5 text-slate-400 hover:text-white hover:bg-slate-900 rounded-lg focus:outline-none"
@@ -322,7 +322,7 @@ export default function AdminHeader({
           )}
 
           {/* Breadcrumbs */}
-          <div className="hidden sm:flex items-center gap-1.5 text-xs font-semibold text-slate-400">
+          <div className="hidden sm:flex min-w-0 flex-wrap items-center gap-1.5 text-xs font-semibold text-slate-400">
             {breadcrumbs.map((crumb, index) => (
               <React.Fragment key={crumb}>
                 {index > 0 && (
@@ -336,14 +336,14 @@ export default function AdminHeader({
               </React.Fragment>
             ))}
           </div>
-          <div className="sm:hidden text-xs font-bold text-white">
+          <div className="sm:hidden min-w-0 truncate text-xs font-bold text-white">
             {breadcrumbs[breadcrumbs.length - 1]}
           </div>
         </div>
 
         {/* Right Side: Profile Dropdown, Notifications & Refresh Button */}
-        <div className="flex items-center gap-3 relative">
-          {onRefreshData && (
+        <div className="flex shrink-0 items-center gap-1 sm:gap-3 relative">
+          {/* onRefreshData && (
             <ActionButton
               onClick={onRefreshData}
               disabled={isSyncing}
@@ -353,7 +353,7 @@ export default function AdminHeader({
               <span className={isSyncing ? "animate-spin text-[#D99A1C]" : "text-[#D99A1C]"}>🔄</span>
               <span className="hidden md:inline">{isSyncing ? "Refreshing..." : "Refresh"}</span>
             </ActionButton>
-          )}
+          ) */}
 
           {/* Real-time Application Comments Icon & Drawer */}
           <div className="relative">
@@ -382,7 +382,7 @@ export default function AdminHeader({
                   onClick={() => setShowComments(false)}
                   className="fixed inset-0 z-10"
                 />
-                <div className="absolute right-0 top-11 w-80 sm:w-96 bg-[#0A0A0F] border border-slate-800 rounded-2xl shadow-2xl py-3 z-50 animate-in fade-in slide-in-from-top-2 duration-150">
+                <div className="fixed left-3 right-3 top-[68px] sm:absolute sm:left-auto sm:right-0 sm:top-11 sm:w-96 bg-[#0A0A0F] border border-slate-800 rounded-2xl shadow-2xl py-3 z-50 animate-in fade-in slide-in-from-top-2 duration-150">
                   <div className="px-4 pb-2.5 border-b border-slate-900 flex justify-between items-center">
                     <div>
                       <h4 className="text-xs font-black text-white uppercase tracking-wider flex items-center gap-2">
@@ -466,7 +466,7 @@ export default function AdminHeader({
                   onClick={() => setShowNotifications(false)}
                   className="fixed inset-0 z-10"
                 />
-                <div className="absolute right-0 top-11 w-80 sm:w-96 bg-[#0A0A0F] border border-slate-800 rounded-2xl shadow-2xl py-3 z-50 animate-in fade-in slide-in-from-top-2 duration-150">
+                <div className="fixed left-3 right-3 top-[68px] sm:absolute sm:left-auto sm:right-0 sm:top-11 sm:w-96 bg-[#0A0A0F] border border-slate-800 rounded-2xl shadow-2xl py-3 z-50 animate-in fade-in slide-in-from-top-2 duration-150">
                   <div className="px-4 pb-2.5 border-b border-slate-900 flex justify-between items-center">
                     <div>
                       <h4 className="text-xs font-black text-white uppercase tracking-wider">System Notifications</h4>

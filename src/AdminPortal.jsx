@@ -642,7 +642,7 @@ export default function AdminPortal({ onLogout }) {
           }}
         />
 
-        <main id="admin-main-content" key={`${activeTab}-${activeSubTab}`} className="flex-1 overflow-y-auto overflow-x-hidden pb-16 animate-fade-in scroll-smooth">
+        <main id="admin-main-content" key={`${activeTab}-${activeSubTab}`} className="flex-1 min-w-0 overflow-y-auto overflow-x-hidden pb-16 animate-fade-in scroll-smooth">
           {dataLoadError && <p role="alert" className="mx-6 mt-4 p-3 rounded-xl bg-amber-50 border border-amber-200 text-xs text-amber-800">{dataLoadError}</p>}
           {renderActiveTabContent()}
         </main>

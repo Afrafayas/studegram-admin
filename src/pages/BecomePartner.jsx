@@ -740,7 +740,7 @@ export default function BecomePartner({ clients = [], setClients, applications =
           </div>
 
           {/* Premium Sub-Tab Switcher */}
-          <div className="flex items-center bg-slate-800/90 border border-slate-700/80 p-1.5 rounded-2xl gap-1.5 shrink-0 shadow-inner backdrop-blur-md">
+          <div className="flex flex-wrap max-w-full items-center bg-slate-800/90 border border-slate-700/80 p-1.5 rounded-2xl gap-1.5 shrink-0 shadow-inner backdrop-blur-md">
             <ActionButton
               onClick={handleBackToDirectory}
               className={`px-5 py-2.5 text-xs font-black rounded-xl transition-all cursor-pointer flex items-center gap-2 ${
@@ -776,9 +776,9 @@ export default function BecomePartner({ clients = [], setClients, applications =
       {subView === 'directory' && !singleViewPartner && (
         <div className="space-y-6 animate-fade-in">
           {/* Directory Toolbar: Filters, Search & Action Button */}
-          <div className="bg-white border border-slate-200/90 rounded-2xl p-4 md:p-5 shadow-xs flex flex-col lg:flex-row gap-4 items-center justify-between">
+          <div className="bg-white border border-slate-200/90 rounded-2xl p-4 md:p-5 shadow-xs flex flex-col lg:flex-row lg:flex-wrap gap-4 items-center justify-between">
             {/* Status Filter Tabs */}
-            <div className="bg-slate-100/90 p-1 rounded-xl flex w-full lg:w-auto border border-slate-200/60">
+            <div className="bg-slate-100/90 p-1 rounded-xl flex flex-wrap gap-1 min-w-0 w-full lg:w-auto border border-slate-200/60">
               {['All', 'Pending', 'Waiting for Missing Document', 'Approved'].map((status) => (
                 <ActionButton
                   key={status}
@@ -1377,7 +1377,7 @@ export default function BecomePartner({ clients = [], setClients, applications =
                       </h4>
                     </div>
                     {refStudents.length > 0 ? (
-                      <div className="border border-slate-200 rounded-xl overflow-hidden shadow-2xs">
+                      <div className="border border-slate-200 rounded-xl overflow-x-auto shadow-2xs">
                         <table className="w-full text-left border-collapse text-xs">
                           <thead>
                             <tr className="bg-slate-50 border-b border-slate-200">
