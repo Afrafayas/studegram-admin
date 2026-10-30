@@ -1,3 +1,4 @@
+import SearchableSelect from '../components/SearchableSelect';
 import { getDisplayId } from '../utils/displayId';
 import { normalizeKey, normalizeIntake, readRow, headerErrors, mapCurrency, mapFeePeriod, mapDegreeLevel, mapCategory, validFee, splitIntakes, buildLookup } from '../utils/courseImport';
 import { currencies, feeCurrency, formatFee, feePeriods, inferFeePeriod } from '../utils/courseFee';
@@ -968,7 +969,7 @@ if (!token) throw new Error('Please sign in to save changes.');
                   <tr className="bg-slate-50 border-b border-[#E2E8F0]">
                     <th className="px-5 py-3 text-slate-400 text-[10px] font-extrabold uppercase tracking-wider">University</th>
                     <th className="px-5 py-3 text-slate-400 text-[10px] font-extrabold uppercase tracking-wider">Location</th>
-                    <th className="px-5 py-3 text-slate-400 text-[10px] font-extrabold uppercase tracking-wider">Ranking</th>
+                    {/* <th className="px-5 py-3 text-slate-400 text-[10px] font-extrabold uppercase tracking-wider">Ranking</th> */}
                     <th className="px-5 py-3 text-slate-400 text-[10px] font-extrabold uppercase tracking-wider">Requirements</th>
                     <th className="px-5 py-3 text-slate-400 text-[10px] font-extrabold uppercase tracking-wider">Status</th>
                     <th className="px-5 py-3 text-slate-400 text-[10px] font-extrabold uppercase tracking-wider text-right">Actions</th>
@@ -977,13 +978,14 @@ if (!token) throw new Error('Please sign in to save changes.');
                 <tbody className="divide-y divide-slate-100 text-xs font-semibold text-slate-700">
                   {universities.length === 0 ? (
                     <tr>
-                      <td colSpan={6} className="px-6 py-8 text-center text-slate-400 text-xs italic">
+                      <td colSpan={5} className="px-6 py-8 text-center text-slate-400 text-xs italic">
                         No universities found. Click "+ Add University" above to create one.
                       </td>
                     </tr>
                   ) : (
                     paginatedUnivs.map((univ) => {
                       const uId = univ._id || univ.id;
+                      const courseCount = getResolvedAssignedCourses(univ).length;
                       const reqs = Array.isArray(univ.requirements) ? univ.requirements : (univ.requirements ? [univ.requirements] : []);
                       return (
                         <tr key={uId} className="hover:bg-slate-50/60 transition-colors">
@@ -998,14 +1000,14 @@ if (!token) throw new Error('Please sign in to save changes.');
                               )}
                               <div>
                                 <p className="text-xs font-black text-slate-900">{univ.name}</p>
-                                <p className="text-[10px] text-slate-400 font-semibold">{Array.isArray(univ.courses) ? `${univ.courses.length} courses` : '0 courses'}</p>
+                                <p className="text-[10px] text-slate-400 font-semibold">{courseCount} {courseCount === 1 ? 'course' : 'courses'}</p>
                               </div>
                             </div>
                           </td>
                           <td className="px-5 py-3.5 text-slate-600">
                             {univ.city ? `${univ.city}, ` : ''}{univ.country}
                           </td>
-                          <td className="px-5 py-3.5">
+                          {/* <td className="px-5 py-3.5">
                             {univ.ranking ? (
                               <span className="bg-amber-50 text-amber-800 border border-amber-200 text-[10px] font-bold px-2 py-0.5 rounded-md">
                                 🏆 {univ.ranking}
@@ -1013,7 +1015,7 @@ if (!token) throw new Error('Please sign in to save changes.');
                             ) : (
                               <span className="text-slate-400 text-[10px]">N/A</span>
                             )}
-                          </td>
+                          </td> */}
                           <td className="px-5 py-3.5">
                             <div className="flex flex-wrap gap-1 max-w-[200px]">
                               {reqs.length > 0 ? (
@@ -1721,7 +1723,7 @@ if (!token) throw new Error('Please sign in to save changes.');
                 </div>
                 <div className="space-y-1.5">
                   <label className="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">Format</label>
-                  <select
+                  <SearchableSelect
                     value={docFormat}
                     onChange={(e) => setDocFormat(e.target.value)}
                     className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs font-semibold focus:outline-none focus:bg-white focus:ring-1 focus:ring-[#D99A1C]"
@@ -1730,7 +1732,7 @@ if (!token) throw new Error('Please sign in to save changes.');
                     <option value=".docx">.docx (MS Word)</option>
                     <option value=".jpg">.jpg (JPEG Image)</option>
                     <option value=".png">.png (PNG Image)</option>
-                  </select>
+                  </SearchableSelect>
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-1.5">
@@ -1874,7 +1876,7 @@ if (!token) throw new Error('Please sign in to save changes.');
 
                   <div className="space-y-1.5">
                     <label className="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">Country *</label>
-                    <select
+                    <SearchableSelect
                       value={univCountry}
                       onChange={(e) => setUnivCountry(e.target.value)}
                       className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-semibold focus:outline-none focus:bg-white focus:border-[#D99A1C]"
@@ -1886,7 +1888,7 @@ if (!token) throw new Error('Please sign in to save changes.');
                       <option value="Germany">Germany</option>
                       <option value="Singapore">Singapore</option>
                       <option value="India">India</option>
-                    </select>
+                    </SearchableSelect>
                   </div>
                 </div>
 
@@ -1915,14 +1917,14 @@ if (!token) throw new Error('Please sign in to save changes.');
 
                   <div className="space-y-1.5">
                     <label className="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">Status</label>
-                    <select
+                    <SearchableSelect
                       value={univStatus}
                       onChange={(e) => setUnivStatus(e.target.value)}
                       className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-semibold focus:outline-none focus:bg-white focus:border-[#D99A1C]"
                     >
                       <option value="Active">Active</option>
                       <option value="Inactive">Inactive</option>
-                    </select>
+                    </SearchableSelect>
                   </div>
                 </div>
 
@@ -2048,7 +2050,7 @@ if (!token) throw new Error('Please sign in to save changes.');
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   <div className="space-y-1.5">
                     <label className="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">Assign University *</label>
-                    <select
+                    <SearchableSelect searchLabel="Search universities..."
                       required
                       value={courseUniv}
                       onChange={(e) => setCourseUniv(e.target.value)}
@@ -2060,12 +2062,12 @@ if (!token) throw new Error('Please sign in to save changes.');
                         const uName = typeof u === 'object' ? u.name : u;
                         return <option key={uId} value={uId}>{uName}</option>;
                       })}
-                    </select>
+                    </SearchableSelect>
                   </div>
 
                   <div className="space-y-1.5">
                     <label className="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">Degree Level</label>
-                    <select
+                    <SearchableSelect
                       value={courseDegreeLevel}
                       onChange={(e) => setCourseDegreeLevel(e.target.value)}
                       className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-semibold focus:outline-none focus:bg-white focus:border-[#D99A1C]"
@@ -2075,7 +2077,7 @@ if (!token) throw new Error('Please sign in to save changes.');
                       <option value="PhD">Doctorate / PhD</option>
                       <option value="Diploma">Diploma / Foundation</option>
                       <option value="Certificate">Certificate</option>
-                    </select>
+                    </SearchableSelect>
                   </div>
                 </div>
 
@@ -2086,22 +2088,22 @@ if (!token) throw new Error('Please sign in to save changes.');
                   </div>
                   <div className="space-y-1.5 min-w-0">
                     <label htmlFor="course-category" className="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">Category</label>
-                    <select id="course-category" value={courseCategory} onChange={e => setCourseCategory(e.target.value)} className="w-full min-w-0 h-10 bg-slate-50 border border-slate-200 rounded-xl px-3 text-xs font-semibold focus:outline-none focus:bg-white focus:border-[#D99A1C]">
+                    <SearchableSelect id="course-category" value={courseCategory} onChange={e => setCourseCategory(e.target.value)} className="w-full min-w-0 h-10 bg-slate-50 border border-slate-200 rounded-xl px-3 text-xs font-semibold focus:outline-none focus:bg-white focus:border-[#D99A1C]">
                       <option value="Technology">Technology & Engineering</option>
                       <option value="Business">Business & Management</option>
                       <option value="Arts">Arts & Humanities</option>
                       <option value="Science">Natural Sciences</option>
                       <option value="Health">Medicine & Health</option>
-                    </select>
+                    </SearchableSelect>
                   </div>
                 </div>
 
                 <div className="grid grid-cols-[0.8fr_1fr_1.3fr] gap-2 sm:gap-3 rounded-xl border border-slate-200 bg-slate-50/50 p-3 sm:p-4">
                   <div className="space-y-1.5 min-w-0">
                     <label htmlFor="course-currency" className="flex items-end min-h-7 sm:min-h-0 text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">Currency</label>
-                    <select id="course-currency" value={courseCurrency} onChange={e => setCourseCurrency(e.target.value)} className="w-full min-w-0 h-10 bg-slate-50 border border-slate-200 rounded-xl px-3 text-xs font-semibold focus:outline-none focus:bg-white focus:border-[#D99A1C] !px-2">
+                    <SearchableSelect id="course-currency" value={courseCurrency} onChange={e => setCourseCurrency(e.target.value)} className="w-full min-w-0 h-10 bg-slate-50 border border-slate-200 rounded-xl px-3 text-xs font-semibold focus:outline-none focus:bg-white focus:border-[#D99A1C] !px-2">
                       {currencies.map(code => <option key={code} value={code}>{code}</option>)}
-                    </select>
+                    </SearchableSelect>
                   </div>
                   <div className="space-y-1.5 min-w-0">
                     <label htmlFor="course-fee" className="flex items-end min-h-7 sm:min-h-0 text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">Tuition Fee</label>
@@ -2109,10 +2111,10 @@ if (!token) throw new Error('Please sign in to save changes.');
                   </div>
                   <div className="space-y-1.5 min-w-0">
                     <label htmlFor="course-fee-period" className="flex items-end min-h-7 sm:min-h-0 text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">Fee Period</label>
-                    <select id="course-fee-period" value={courseFeePeriod} onChange={e => setCourseFeePeriod(e.target.value)} className="w-full min-w-0 h-10 bg-slate-50 border border-slate-200 rounded-xl px-3 text-xs font-semibold focus:outline-none focus:bg-white focus:border-[#D99A1C] !px-2">
+                    <SearchableSelect id="course-fee-period" value={courseFeePeriod} onChange={e => setCourseFeePeriod(e.target.value)} className="w-full min-w-0 h-10 bg-slate-50 border border-slate-200 rounded-xl px-3 text-xs font-semibold focus:outline-none focus:bg-white focus:border-[#D99A1C] !px-2">
                       <option value="">Not specified</option>
                       {feePeriods.map(period => <option key={period.value} value={period.value}>{period.label}</option>)}
-                    </select>
+                    </SearchableSelect>
                   </div>
                 </div>
 
@@ -2958,7 +2960,7 @@ function PaginationFooter({ totalItems, currentPage, setCurrentPage, itemsPerPag
     <div className="px-6 py-4 bg-slate-50 border-t border-[#E2E8F0] flex flex-col sm:flex-row items-center justify-between gap-4">
       <div className="flex items-center gap-3">
         <span className="text-xs font-semibold text-slate-500">Rows per page:</span>
-        <select
+        <SearchableSelect
           value={itemsPerPage}
           onChange={(e) => {
             setItemsPerPage(Number(e.target.value));
@@ -2971,7 +2973,7 @@ function PaginationFooter({ totalItems, currentPage, setCurrentPage, itemsPerPag
           <option value={20}>20</option>
           <option value={50}>50</option>
           <option value={100}>100</option>
-        </select>
+        </SearchableSelect>
       </div>
 
       <div className="flex items-center gap-1.5">

@@ -1,3 +1,4 @@
+import SearchableSelect from '../components/SearchableSelect';
 import { getDisplayId } from '../utils/displayId';
 import { parseFee, formatFee } from '../utils/courseFee';
 import { ActionButton } from '../components/ActionControls';
@@ -642,7 +643,7 @@ export default function CommissionManagement({ clients = [], referralAgents = []
           <div className="px-6 py-4 bg-slate-50 border-t border-[#E2E8F0] flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-[#64748B] font-semibold select-none">
             <div className="flex items-center gap-3">
               <span className="text-xs font-semibold text-slate-500">Rows per page:</span>
-              <select
+              <SearchableSelect
                 value={itemsPerPage}
                 onChange={(e) => {
                   setItemsPerPage(Number(e.target.value));
@@ -655,7 +656,7 @@ export default function CommissionManagement({ clients = [], referralAgents = []
                 <option value={20}>20</option>
                 <option value={50}>50</option>
                 <option value={100}>100</option>
-              </select>
+              </SearchableSelect>
             </div>
 
             <div className="flex items-center gap-1.5">

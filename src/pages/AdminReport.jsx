@@ -1,3 +1,4 @@
+import SearchableSelect from '../components/SearchableSelect';
 import { getDisplayId } from '../utils/displayId';
 import { ActionButton } from '../components/ActionControls';
 import React, { useState, useMemo } from 'react';
@@ -217,7 +218,7 @@ export default function AdminReport({
               <span className="text-[9px] font-extrabold text-[#D99A1C] bg-[#D99A1C]/10 px-1.5 py-0.5 rounded">Active Subtab</span>
             )}
           </div>
-          <select 
+          <SearchableSelect
             value={selectedAgent} 
             onChange={(e) => setSelectedAgent(e.target.value)}
             className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-semibold focus:outline-none focus:bg-white focus:ring-1 focus:ring-[#D99A1C] focus:border-[#D99A1C]"
@@ -227,7 +228,7 @@ export default function AdminReport({
             {availableAgents.map(ag => (
               <option key={ag} value={ag}>{ag}</option>
             ))}
-          </select>
+          </SearchableSelect>
         </div>
 
         <div className={`space-y-1.5 p-2 rounded-xl transition-all ${activeSubTab === 'report-university' ? 'bg-[#2563EB]/5 ring-1 ring-[#2563EB]/30' : ''}`}>
@@ -237,7 +238,7 @@ export default function AdminReport({
               <span className="text-[9px] font-extrabold text-[#2563EB] bg-[#2563EB]/10 px-1.5 py-0.5 rounded">Active Subtab</span>
             )}
           </div>
-          <select 
+          <SearchableSelect searchLabel="Search universities..."
             value={selectedUniversity} 
             onChange={(e) => setSelectedUniversity(e.target.value)}
             className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-semibold focus:outline-none focus:bg-white focus:ring-1 focus:ring-[#D99A1C] focus:border-[#D99A1C]"
@@ -246,7 +247,7 @@ export default function AdminReport({
             {availableUniversities.map(univ => (
               <option key={univ} value={univ}>{univ}</option>
             ))}
-          </select>
+          </SearchableSelect>
         </div>
 
         <div className={`space-y-1.5 p-2 rounded-xl transition-all ${activeSubTab === 'report-country' ? 'bg-emerald-50/50 ring-1 ring-emerald-200' : ''}`}>
@@ -256,7 +257,7 @@ export default function AdminReport({
               <span className="text-[9px] font-extrabold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded">Active Subtab</span>
             )}
           </div>
-          <select 
+          <SearchableSelect
             value={selectedCountry} 
             onChange={(e) => setSelectedCountry(e.target.value)}
             className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-semibold focus:outline-none focus:bg-white focus:ring-1 focus:ring-[#D99A1C] focus:border-[#D99A1C]"
@@ -265,7 +266,7 @@ export default function AdminReport({
             {availableCountries.map(country => (
               <option key={country} value={country}>{country}</option>
             ))}
-          </select>
+          </SearchableSelect>
         </div>
       </div>
 

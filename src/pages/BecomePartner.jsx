@@ -1,3 +1,5 @@
+import SearchableSelect from '../components/SearchableSelect';
+import ValidatedInput from '../components/ValidatedInput';
 import { getDisplayId } from '../utils/displayId';
 import PartnerDocumentRequests from '../components/PartnerDocumentRequests';
 import { ActionButton, ActionForm } from '../components/ActionControls';
@@ -794,14 +796,14 @@ export default function BecomePartner({ clients = [], setClients, applications =
 
             {/* Location & Search */}
             <div className="flex flex-col sm:flex-row w-full lg:w-auto items-center gap-3">
-              <select
+              <SearchableSelect
                 value={locationFilter}
                 onChange={(e) => setLocationFilter(e.target.value)}
                 className="w-full sm:w-auto bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-800 font-bold focus:outline-none focus:border-[#D99A1C] focus:bg-white transition-all cursor-pointer"
               >
                 <option value="All">🌐 All Operating Countries</option>
                 {countriesList.map(c => <option key={c} value={c}>📍 {c}</option>)}
-              </select>
+              </SearchableSelect>
 
               <div className="relative w-full sm:w-72">
                 <span className="absolute inset-y-0 left-0 flex items-center pl-3.5 pointer-events-none text-slate-400">
@@ -1018,7 +1020,7 @@ export default function BecomePartner({ clients = [], setClients, applications =
               <div className="px-6 py-4 bg-slate-50 border-t border-[#E2E8F0] flex flex-col sm:flex-row items-center justify-between gap-4">
                 <div className="flex items-center gap-3">
                   <span className="text-xs font-semibold text-slate-500">Rows per page:</span>
-                  <select
+                  <SearchableSelect
                     value={itemsPerPage}
                     onChange={(e) => {
                       setItemsPerPage(Number(e.target.value));
@@ -1031,7 +1033,7 @@ export default function BecomePartner({ clients = [], setClients, applications =
                     <option value={20}>20</option>
                     <option value={50}>50</option>
                     <option value={100}>100</option>
-                  </select>
+                  </SearchableSelect>
                 </div>
 
                 <div className="flex items-center gap-1.5">
@@ -1525,14 +1527,14 @@ export default function BecomePartner({ clients = [], setClients, applications =
 
                   <div className="space-y-1.5">
                     <label className="block text-[10px] font-extrabold text-slate-600 uppercase tracking-wider">Phone Number <span className="text-rose-500">*</span></label>
-                    <input type="tel" required name="phone" value={formData.phone} onChange={handleInputChange} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs font-semibold focus:outline-none focus:bg-white focus:border-[#D99A1C]" placeholder="e.g. +91 9876543210" />
+                    <ValidatedInput validationKind="phone" type="tel" required name="phone" value={formData.phone} onChange={handleInputChange} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs font-semibold focus:outline-none focus:bg-white focus:border-[#D99A1C]" placeholder="e.g. +91 9876543210" />
                   </div>
 
                   <div className="space-y-1.5">
                     <label className="block text-[10px] font-extrabold text-slate-600 uppercase tracking-wider">Operating Country</label>
-                    <select name="country" value={formData.country} onChange={handleInputChange} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs font-semibold focus:outline-none focus:bg-white focus:border-[#D99A1C]">
+                    <SearchableSelect name="country" value={formData.country} onChange={handleInputChange} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs font-semibold focus:outline-none focus:bg-white focus:border-[#D99A1C]">
                       {countriesList.map(c => <option key={c} value={c}>{c}</option>)}
-                    </select>
+                    </SearchableSelect>
                   </div>
 
                   {partnerType === 'Company' && (
@@ -1543,7 +1545,7 @@ export default function BecomePartner({ clients = [], setClients, applications =
                       </div>
                       <div className="space-y-1.5">
                         <label className="block text-[10px] font-extrabold text-slate-600 uppercase tracking-wider">Tax Registration / GST ID</label>
-                        <input type="text" name="taxId" value={formData.taxId} onChange={handleInputChange} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs font-semibold focus:outline-none focus:bg-white focus:border-[#D99A1C]" placeholder="e.g. GSTIN29ABCDE1234F" />
+                        <ValidatedInput validationKind={formData.country?.trim().toLowerCase() === 'india' ? 'gst' : 'tax'} type="text" name="taxId" value={formData.taxId} onChange={handleInputChange} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs font-semibold focus:outline-none focus:bg-white focus:border-[#D99A1C]" placeholder="e.g. GSTIN29ABCDE1234F" />
                       </div>
                     </>
                   )}
@@ -1637,7 +1639,7 @@ export default function BecomePartner({ clients = [], setClients, applications =
 
                 <div className="space-y-1.5">
                   <label className="block text-[10px] font-extrabold text-slate-600 uppercase tracking-wider">Phone Number <span className="text-rose-500">*</span></label>
-                  <input
+                  <ValidatedInput validationKind="phone"
                     type="tel"
                     required
                     value={editingPartner.phone}
@@ -1648,14 +1650,14 @@ export default function BecomePartner({ clients = [], setClients, applications =
 
                 <div className="space-y-1.5">
                   <label className="block text-[10px] font-extrabold text-slate-600 uppercase tracking-wider">Partner Entity Structure</label>
-                  <select
+                  <SearchableSelect
                     value={editingPartner.partnerType}
                     onChange={(e) => setEditingPartner(prev => ({ ...prev, partnerType: e.target.value }))}
                     className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-semibold focus:outline-none focus:border-[#D99A1C]"
                   >
                     <option value="Company">Company Agent</option>
                     <option value="Individual">Individual Agent</option>
-                  </select>
+                  </SearchableSelect>
                 </div>
 
                 {editingPartner.partnerType === 'Company' && (
@@ -1672,7 +1674,7 @@ export default function BecomePartner({ clients = [], setClients, applications =
 
                     <div className="space-y-1.5">
                       <label className="block text-[10px] font-extrabold text-slate-600 uppercase tracking-wider">Tax Registration / GST ID</label>
-                      <input
+                      <ValidatedInput validationKind={editingPartner.country?.trim().toLowerCase() === 'india' ? 'gst' : 'tax'}
                         type="text"
                         value={editingPartner.taxId}
                         onChange={(e) => setEditingPartner(prev => ({ ...prev, taxId: e.target.value }))}
@@ -1684,18 +1686,18 @@ export default function BecomePartner({ clients = [], setClients, applications =
 
                 <div className="space-y-1.5">
                   <label className="block text-[10px] font-extrabold text-slate-600 uppercase tracking-wider">Operating Country</label>
-                  <select
+                  <SearchableSelect
                     value={editingPartner.country}
                     onChange={(e) => setEditingPartner(prev => ({ ...prev, country: e.target.value }))}
                     className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-semibold focus:outline-none focus:border-[#D99A1C]"
                   >
                     {countriesList.map(c => <option key={c} value={c}>{c}</option>)}
-                  </select>
+                  </SearchableSelect>
                 </div>
 
                 <div className="space-y-1.5">
                   <label className="block text-[10px] font-extrabold text-slate-600 uppercase tracking-wider">Account Status</label>
-                  <select
+                  <SearchableSelect
                     value={editingPartner.status}
                     onChange={(e) => setEditingPartner(prev => ({ ...prev, status: e.target.value }))}
                     className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-semibold focus:outline-none focus:border-[#D99A1C]"
@@ -1703,7 +1705,7 @@ export default function BecomePartner({ clients = [], setClients, applications =
                     <option value="Active">Active</option>
                     <option value="Pending">Pending</option>
                     <option value="Inactive">Inactive</option>
-                  </select>
+                  </SearchableSelect>
                 </div>
               </div>
 
@@ -1718,7 +1720,7 @@ export default function BecomePartner({ clients = [], setClients, applications =
                   </div>
 
                   <div className="flex flex-wrap items-center gap-2">
-                    <select
+                    <SearchableSelect
                       id="editDocTypeSelect"
                       className="px-2.5 py-1 bg-white border border-slate-300 rounded-xl text-[11px] font-bold text-slate-800 focus:outline-none focus:border-[#D99A1C]"
                       defaultValue="Company Incorporation Certificate"
@@ -1729,7 +1731,7 @@ export default function BecomePartner({ clients = [], setClients, applications =
                       <option value="Individual ID Proof (Passport / National ID)">Individual ID Proof</option>
                       <option value="Address Proof / Resume">Address Proof / Resume</option>
                       <option value="Other Compliance Proof">Other Compliance Proof</option>
-                    </select>
+                    </SearchableSelect>
 
                     <label className="px-3 py-1.5 bg-[#D99A1C] hover:bg-[#F5B025] text-white rounded-xl text-[10px] font-black cursor-pointer shadow-xs flex items-center gap-1.5 transition-all">
                       {isUploadingEditDoc ? (

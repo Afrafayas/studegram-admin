@@ -1,3 +1,4 @@
+import SearchableSelect from '../components/SearchableSelect';
 import { ActionButton, ActionForm } from '../components/ActionControls';
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
@@ -418,14 +419,14 @@ export default function RoleHierarchy() {
 
                 <div className="space-y-1">
                   <label className="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">Target Portal *</label>
-                  <select
+                  <SearchableSelect
                     value={roleForm.portalType}
                     onChange={(e) => setRoleForm({ ...roleForm, portalType: e.target.value })}
                     className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold text-slate-900 focus:outline-none focus:border-[#D99A1C]"
                   >
                     <option value="Admin">🏛️ Admin Portal</option>
                     <option value="Agent">🏢 Agent Portal</option>
-                  </select>
+                  </SearchableSelect>
                 </div>
 
                 <div className="space-y-1 md:col-span-2">

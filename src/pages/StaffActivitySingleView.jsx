@@ -1,3 +1,4 @@
+import SearchableSelect from '../components/SearchableSelect';
 import { ActionButton } from '../components/ActionControls';
 import React, { useState, useEffect } from 'react';
 import API from '../api/axios';
@@ -451,7 +452,7 @@ export default function StaffActivitySingleView({ staffId, onBack }) {
         {/* Date Selector */}
         <div className="flex items-center gap-2 self-end sm:self-auto">
           <span className="text-xs font-bold text-slate-400">Timeframe:</span>
-          <select
+          <SearchableSelect
             value={dateFilter}
             onChange={(e) => setDateFilter(e.target.value)}
             className="text-xs font-semibold bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 text-slate-700 focus:outline-none focus:ring-1 focus:ring-amber-500"
@@ -462,7 +463,7 @@ export default function StaffActivitySingleView({ staffId, onBack }) {
             <option value="week">Past 7 Days</option>
             <option value="15days">Past 15 Days</option>
             <option value="month">Past 30 Days</option>
-          </select>
+          </SearchableSelect>
         </div>
       </div>
 

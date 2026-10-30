@@ -133,7 +133,7 @@ export default function DailyReport({ applications, onNavigateToBecomePartner, o
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 4v16m8-8H4" />
             </svg>
-            <span>+ New Application</span>
+            <span>New Application</span>
           </ActionButton>
           <div className="hidden sm:flex items-center gap-2 bg-emerald-50 border border-emerald-100 px-3 py-2 rounded-xl">
             <span className="h-2 w-2 bg-[#10B981] rounded-full animate-ping"></span>

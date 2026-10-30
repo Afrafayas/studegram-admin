@@ -1,3 +1,5 @@
+import SearchableSelect from '../components/SearchableSelect';
+import ValidatedInput from '../components/ValidatedInput';
 import { getDisplayId } from '../utils/displayId';
 import { ActionButton, ActionForm } from '../components/ActionControls';
 import React, { useState } from 'react';
@@ -200,7 +202,7 @@ if (!token) throw new Error('Please sign in to save changes.');
 
         <div className="flex w-full sm:w-auto items-center gap-3">
           {/* Location Filter Dropdown */}
-          <select
+          <SearchableSelect
             value={locationFilter}
             onChange={(e) => setLocationFilter(e.target.value)}
             className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs text-slate-900 focus:outline-none focus:border-[#D99A1C] focus:ring-1 focus:ring-[#D99A1C] font-semibold cursor-pointer"
@@ -211,7 +213,7 @@ if (!token) throw new Error('Please sign in to save changes.');
             <option value="United States">United States</option>
             <option value="Australia">Australia</option>
             <option value="India">India</option>
-          </select>
+          </SearchableSelect>
 
           <div className="relative w-full sm:max-w-xs">
             <span className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-slate-400">
@@ -578,7 +580,7 @@ if (!token) throw new Error('Please sign in to save changes.');
 
               <div className="space-y-1.5">
                 <label className="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">Phone Number</label>
-                <input
+                <ValidatedInput validationKind="phone"
                   type="tel"
                   required
                   value={newPartnerPhone}

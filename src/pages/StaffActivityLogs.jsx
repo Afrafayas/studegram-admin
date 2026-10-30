@@ -1,3 +1,4 @@
+import SearchableSelect from '../components/SearchableSelect';
 import { ActionButton } from '../components/ActionControls';
 import React, { useState, useEffect } from 'react';
 import API from '../api/axios';
@@ -434,7 +435,7 @@ export default function StaffActivityLogs() {
 
           {/* Role Filter */}
           <div>
-            <select
+            <SearchableSelect
               value={roleFilter}
               onChange={(e) => setRoleFilter(e.target.value)}
               className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 focus:outline-none focus:ring-1 focus:ring-amber-500"
@@ -443,12 +444,12 @@ export default function StaffActivityLogs() {
               {availableRoles.map(r => (
                 <option key={r} value={r}>{r}</option>
               ))}
-            </select>
+            </SearchableSelect>
           </div>
 
           {/* Status Filter */}
           <div>
-            <select
+            <SearchableSelect
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
               className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 focus:outline-none focus:ring-1 focus:ring-amber-500"
@@ -456,12 +457,12 @@ export default function StaffActivityLogs() {
               <option value="All">All Online Statuses</option>
               <option value="Online">🟢 Online Now Only</option>
               <option value="Offline">Offline Staff</option>
-            </select>
+            </SearchableSelect>
           </div>
 
           {/* Timeframe Filter */}
           <div>
-            <select
+            <SearchableSelect
               value={timeframe}
               onChange={(e) => setTimeframe(e.target.value)}
               className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 focus:outline-none focus:ring-1 focus:ring-amber-500"
@@ -472,7 +473,7 @@ export default function StaffActivityLogs() {
               <option value="week">Past 7 Days</option>
               <option value="15days">Past 15 Days</option>
               <option value="month">Past 30 Days</option>
-            </select>
+            </SearchableSelect>
           </div>
         </div>
       </div>

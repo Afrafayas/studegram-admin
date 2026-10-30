@@ -1,3 +1,5 @@
+import SearchableSelect from '../components/SearchableSelect';
+import ValidatedInput from '../components/ValidatedInput';
 import { getDisplayId } from '../utils/displayId';
 import { applicationFee } from '../utils/courseFee';
 import { getAssignedExecutiveName } from '../utils/applicationAssignment';
@@ -1068,7 +1070,7 @@ export default function Applications({ applications, referralAgents = [], intake
 
         <div className="flex w-full sm:w-auto items-center gap-3">
           {/* Filter by Intake */}
-          <select
+          <SearchableSelect
             value={intakeFilter}
             onChange={(e) => setIntakeFilter(e.target.value)}
             className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs text-slate-900 focus:outline-none focus:border-[#D99A1C] focus:ring-1 focus:ring-[#D99A1C] font-semibold cursor-pointer"
@@ -1077,10 +1079,10 @@ export default function Applications({ applications, referralAgents = [], intake
             {availableIntakes.map((intake) => (
               <option key={intake} value={intake}>{intake}</option>
             ))}
-          </select>
+          </SearchableSelect>
 
           {/* Filter by Partner */}
-          <select
+          <SearchableSelect
             value={partnerFilter}
             onChange={(e) => setPartnerFilter(e.target.value)}
             className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs text-slate-900 focus:outline-none focus:border-[#D99A1C] focus:ring-1 focus:ring-[#D99A1C] font-semibold cursor-pointer"
@@ -1094,7 +1096,7 @@ export default function Applications({ applications, referralAgents = [], intake
                 <option key={pKey} value={pName}>{pName}</option>
               );
             })}
-          </select>
+          </SearchableSelect>
 
           {/* Search bar */}
           <div className="relative w-full sm:max-w-xs">
@@ -1290,7 +1292,7 @@ export default function Applications({ applications, referralAgents = [], intake
           <div className="px-6 py-4 bg-slate-50 border-t border-[#E2E8F0] flex flex-col sm:flex-row items-center justify-between gap-4">
             <div className="flex items-center gap-3">
               <span className="text-xs font-semibold text-slate-500">Rows per page:</span>
-              <select
+              <SearchableSelect
                 value={itemsPerPage}
                 onChange={(e) => {
                   setItemsPerPage(Number(e.target.value));
@@ -1303,7 +1305,7 @@ export default function Applications({ applications, referralAgents = [], intake
                 <option value={20}>20</option>
                 <option value={50}>50</option>
                 <option value={100}>100</option>
-              </select>
+              </SearchableSelect>
             </div>
 
             <div className="flex items-center gap-1.5">
@@ -1813,7 +1815,7 @@ export default function Applications({ applications, referralAgents = [], intake
                 <label className="block text-[10px] font-extrabold text-slate-600 uppercase tracking-wider">
                   Destination Country <span className="text-rose-500">*</span>
                 </label>
-                <select
+                <SearchableSelect
                   value={editCountry}
                   onChange={(e) => {
                     setEditCountry(e.target.value);
@@ -1827,7 +1829,7 @@ export default function Applications({ applications, referralAgents = [], intake
                   {availableCountries.map(c => (
                     <option key={c} value={c}>{c}</option>
                   ))}
-                </select>
+                </SearchableSelect>
               </div>
 
               {/* Destination University (filtered by Country) */}
@@ -1842,7 +1844,7 @@ export default function Applications({ applications, referralAgents = [], intake
                     </span>
                   )}
                 </div>
-                <select
+                <SearchableSelect searchLabel="Search universities..."
                   value={editUniversity}
                   disabled={!editCountry}
                   onChange={(e) => {
@@ -1864,7 +1866,7 @@ export default function Applications({ applications, referralAgents = [], intake
                     const label = typeof u === 'object' ? u.name : u;
                     return <option key={value} value={value}>{label}</option>;
                   })}
-                </select>
+                </SearchableSelect>
                 {editCountry && editFilteredUniversities.length === 0 && (
                   <p className="text-[10px] text-amber-600 font-semibold mt-1">
                     ⚠️ No partner institutions found in {editCountry}. Please select another country.
@@ -1877,7 +1879,7 @@ export default function Applications({ applications, referralAgents = [], intake
                 <label className="block text-[10px] font-extrabold text-slate-600 uppercase tracking-wider">
                   Academic Program <span className="text-rose-500">*</span>
                 </label>
-                <select
+                <SearchableSelect searchLabel="Search courses..."
                   value={editCourse}
                   disabled={!editUniversity}
                   onChange={(e) => setEditCourse(e.target.value)}
@@ -1892,7 +1894,7 @@ export default function Applications({ applications, referralAgents = [], intake
                     const label = typeof c === 'object' ? c.title : c;
                     return <option key={value} value={value}>{label}</option>;
                   })}
-                </select>
+                </SearchableSelect>
               </div>
 
               {/* Intake Season */}
@@ -1900,7 +1902,7 @@ export default function Applications({ applications, referralAgents = [], intake
                 <label className="block text-[10px] font-extrabold text-slate-600 uppercase tracking-wider">
                   Intake Season *
                 </label>
-                <select
+                <SearchableSelect
                   value={editIntake}
                   onChange={(e) => setEditIntake(e.target.value)}
                   required
@@ -1912,7 +1914,7 @@ export default function Applications({ applications, referralAgents = [], intake
                     const value = typeof i === 'object' ? i.title : i;
                     return <option key={value} value={value}>{value}</option>;
                   })}
-                </select>
+                </SearchableSelect>
               </div>
 
               {/* Level of Study */}
@@ -1920,7 +1922,7 @@ export default function Applications({ applications, referralAgents = [], intake
                 <label className="block text-[10px] font-extrabold text-slate-600 uppercase tracking-wider">
                   Level of Study *
                 </label>
-                <select
+                <SearchableSelect
                   value={editLevel}
                   onChange={(e) => setEditLevel(e.target.value)}
                   required
@@ -1929,7 +1931,7 @@ export default function Applications({ applications, referralAgents = [], intake
                   <option value="Undergraduate (UG)">Undergraduate (UG)</option>
                   <option value="Postgraduate (PG)">Postgraduate (PG)</option>
                   <option value="PhD">PhD</option>
-                </select>
+                </SearchableSelect>
               </div>
 
               {/* Student Details */}
@@ -1945,7 +1947,7 @@ export default function Applications({ applications, referralAgents = [], intake
                 </div>
                 <div className="space-y-1">
                   <label className="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">Phone</label>
-                  <input
+                  <ValidatedInput validationKind="phone"
                     type="text"
                     value={editStudentPhone}
                     onChange={(e) => setEditStudentPhone(e.target.value)}
@@ -2017,7 +2019,7 @@ export default function Applications({ applications, referralAgents = [], intake
             <ActionForm onSubmit={handleStatusUpdateSubmit} className="space-y-4">
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1">Select Stage / Status</label>
-                <select
+                <SearchableSelect
                   value={selectedStatus}
                   onChange={(e) => setSelectedStatus(e.target.value)}
                   className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs text-slate-900 font-extrabold focus:outline-none focus:border-[#D99A1C] focus:ring-1 focus:ring-[#D99A1C] cursor-pointer"
@@ -2025,7 +2027,7 @@ export default function Applications({ applications, referralAgents = [], intake
                   {STATUS_STEPS.map((s) => (
                     <option key={s} value={s}>{s}</option>
                   ))}
-                </select>
+                </SearchableSelect>
               </div>
 
               <div>
@@ -2087,7 +2089,7 @@ export default function Applications({ applications, referralAgents = [], intake
             <ActionForm onSubmit={handleAssignSubmit} className="space-y-4">
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1">Select Handling Staff Member</label>
-                <select
+                <SearchableSelect
                   required
                   value={selectedStaffId}
                   onChange={(e) => setSelectedStaffId(e.target.value)}
@@ -2099,7 +2101,7 @@ export default function Applications({ applications, referralAgents = [], intake
                       {staff.name} ({staff.role}) - {staff.email}
                     </option>
                   ))}
-                </select>
+                </SearchableSelect>
               </div>
 
               <div className="flex items-center justify-end gap-3 pt-2">
