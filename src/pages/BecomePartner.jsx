@@ -1,3 +1,8 @@
+import ListFilterTabs from '../components/ListFilterTabs';
+import useServerList, { restoreListRows } from '../hooks/useServerList';
+import ListToolbar from '../components/ListToolbar';
+import ActionMenu from '../components/ActionMenu';
+import BatchDocumentUpload from '../components/BatchDocumentUpload';
 import SearchableSelect from '../components/SearchableSelect';
 import ValidatedInput from '../components/ValidatedInput';
 import { getDisplayId } from '../utils/displayId';
@@ -54,6 +59,9 @@ const handleDownloadDocument = (docUrl, fileName) => {
 };
 
 export default function BecomePartner({ clients = [], setClients, applications = [], onPartnerOnboarded, onBack, initialSelectedPartnerId }) {
+  const [onboardingDocuments, setOnboardingDocuments] = useState([]);
+  const [hasQueuedOnboardingDocuments, setHasQueuedOnboardingDocuments] = useState(false);
+  const [hasQueuedEditDocuments, setHasQueuedEditDocuments] = useState(false);
   const toast = useToast();
   const { addAuditLog } = useAuth();
   const dismissedTargetRef = useRef(false);
@@ -315,34 +323,14 @@ export default function BecomePartner({ clients = [], setClients, applications =
   const activeCount = partners.filter(p => p.status === 'Active').length;
   const pendingCount = partners.filter(p => p.status === 'Pending').length;
 
-  const filteredPartners = partners.filter(p => {
-    const codeStr = p.partnerCode || '';
-    const nameStr = p.name || '';
-    const emailStr = p.email || '';
-    const phoneStr = p.phone || '';
-    const companyStr = p.companyName || '';
-
-    const searchMatch = nameStr.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                        codeStr.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                        emailStr.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                        phoneStr.includes(searchTerm) ||
-                        companyStr.toLowerCase().includes(searchTerm.toLowerCase());
-
-    const statusMatch = statusFilter === 'All' || 
-                        (statusFilter === 'Pending' && p.status === 'Pending') ||
-                        (statusFilter === 'Waiting for Missing Document' && p.status === 'Waiting for Missing Document') ||
-                        (statusFilter === 'Approved' && p.status === 'Active');
-
-    const locationMatch = locationFilter === 'All' || p.country === locationFilter;
-
-    return searchMatch && statusMatch && locationMatch;
-  });
+  const serverList = useServerList('/partners', { search: searchTerm, filters: { status: statusFilter === 'Approved' ? 'Active' : statusFilter, country: locationFilter }, page: currentPage, limit: itemsPerPage, onPageChange: setCurrentPage, reloadKey: JSON.stringify(partners) });
+  const filteredPartners = restoreListRows(serverList.data, partners);
 
   // Pagination Math
-  const totalItems = filteredPartners.length;
-  const totalPages = Math.ceil(totalItems / itemsPerPage) || 1;
+  const totalItems = serverList.totalCount;
+  const totalPages = serverList.totalPages;
   const startIndex = (currentPage - 1) * itemsPerPage;
-  const paginatedPartners = filteredPartners.slice(startIndex, startIndex + itemsPerPage);
+  const paginatedPartners = filteredPartners;
 
 
   const handleUpdateStatus = async (partnerId, newStatus) => {
@@ -436,6 +424,7 @@ export default function BecomePartner({ clients = [], setClients, applications =
 
   const handleSavePartnerEdit = async (e) => {
     e.preventDefault();
+    if (hasQueuedEditDocuments || isUploadingEditDoc) { toast.error('Upload or remove queued documents before saving.'); return; }
     if (!editingPartner) return;
     setIsSavingPartner(true);
 
@@ -503,13 +492,6 @@ export default function BecomePartner({ clients = [], setClients, applications =
     country: 'India'
   });
 
-  const [documents, setDocuments] = useState({
-    incorporationCert: null,
-    taxCert: null,
-    signatoryIdProof: null,
-    idProof: null,
-    addressProof: null
-  });
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isUploadingEditDoc, setIsUploadingEditDoc] = useState(false);
@@ -527,54 +509,9 @@ export default function BecomePartner({ clients = [], setClients, applications =
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleFileChange = async (docKey, e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-
-    if (file.size > 15 * 1024 * 1024) {
-      toast.error('File size exceeds 15MB limit. Please select a smaller file.');
-      return;
-    }
-
-    let uploadedUrl = '';
-    try {
-      const uploadFormData = new FormData();
-      uploadFormData.append('file', file);
-      const uploadRes = await API.post('/upload', uploadFormData, {
-        headers: { 'Content-Type': 'multipart/form-data' }
-      });
-      if (uploadRes.data?.success && (uploadRes.data.url || uploadRes.data.fileUrl)) {
-        uploadedUrl = uploadRes.data.url || uploadRes.data.fileUrl;
-      }
-    } catch (uploadErr) {
-      toast.error(uploadErr.response?.data?.message || 'S3 upload failed. Please retry.');
-      return;
-    }
-
-    if (uploadedUrl) {
-      setDocuments(prev => ({
-        ...prev,
-        [docKey]: {
-          fileObj: file,
-          name: file.name,
-          previewUrl: uploadedUrl,
-          size: (file.size / (1024 * 1024)).toFixed(2) + ' MB',
-          type: file.type.includes('pdf') ? 'pdf' : 'image',
-          uploadedAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-        }
-      }));
-      toast.success(`Uploaded '${file.name}' successfully!`);
-    } else {
-      toast.error('File was not stored in S3. Please retry.');
-    }
-  };
-
-  const handleRemoveFile = (docKey) => {
-    setDocuments(prev => ({ ...prev, [docKey]: null }));
-  };
-
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (hasQueuedOnboardingDocuments) { toast.error('Upload or remove queued documents before onboarding.'); return; }
 
     if (!formData.name || !formData.email || !formData.phone) {
       toast.error('Please complete all required contact details.');
@@ -587,12 +524,12 @@ export default function BecomePartner({ clients = [], setClients, applications =
     }
 
     if (partnerType === 'Company') {
-      if (!documents.incorporationCert) {
+      if (!onboardingDocuments.some(doc => doc.name === 'Company Incorporation Certificate')) {
         toast.error('Please upload Company Incorporation Certificate.');
         return;
       }
     } else {
-      if (!documents.idProof) {
+      if (!onboardingDocuments.some(doc => doc.name === 'Individual ID Proof (Passport / National ID)')) {
         toast.error('Please upload Individual ID Proof (Passport / National ID).');
         return;
       }
@@ -600,17 +537,7 @@ export default function BecomePartner({ clients = [], setClients, applications =
 
     setIsSubmitting(true);
 
-    const docsPayload = [];
-    if (partnerType === 'Company') {
-      if (documents.incorporationCert) docsPayload.push({ title: 'Company Incorporation Certificate', fileName: documents.incorporationCert.name, previewUrl: documents.incorporationCert.previewUrl, type: documents.incorporationCert.type });
-      if (documents.taxCert) docsPayload.push({ title: 'Tax / GST Registration Certificate', fileName: documents.taxCert.name, previewUrl: documents.taxCert.previewUrl, type: documents.taxCert.type });
-      if (documents.signatoryIdProof) docsPayload.push({ title: 'Authorised Signatory ID Proof', fileName: documents.signatoryIdProof.name, previewUrl: documents.signatoryIdProof.previewUrl, type: documents.signatoryIdProof.type });
-    } else {
-      if (documents.idProof) docsPayload.push({ title: 'Individual ID Proof (Passport/National ID)', fileName: documents.idProof.name, previewUrl: documents.idProof.previewUrl, type: documents.idProof.type });
-      if (documents.addressProof) docsPayload.push({ title: 'Address Proof / Resume', fileName: documents.addressProof.name, previewUrl: documents.addressProof.previewUrl, type: documents.addressProof.type });
-    }
-
-
+    const docsPayload = onboardingDocuments;
 
     try {
       {
@@ -668,6 +595,7 @@ export default function BecomePartner({ clients = [], setClients, applications =
 
   const resetOnboardingForm = () => {
     setIsSubmittedSuccess(false);
+    setOnboardingDocuments([]);
     setPartnerType('Company');
     setFormData({
       name: '',
@@ -676,13 +604,6 @@ export default function BecomePartner({ clients = [], setClients, applications =
       companyName: '',
       taxId: '',
       country: 'India'
-    });
-    setDocuments({
-      incorporationCert: null,
-      taxCert: null,
-      signatoryIdProof: null,
-      idProof: null,
-      addressProof: null
     });
   };
 
@@ -697,160 +618,27 @@ export default function BecomePartner({ clients = [], setClients, applications =
   };
 
   return (
-    <div className="flex-1 p-5 md:p-8 space-y-6 bg-[#F8FAFC] animate-fade-in-up">
+    <div className="workspace-page flex-1 p-5 md:p-8 space-y-6 bg-[#F8FAFC] animate-fade-in-up">
       {/* Premium Header Banner with Metrics & View Switcher */}
-      <div className="bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 border border-slate-700/60 p-6 rounded-3xl shadow-xl text-white relative overflow-hidden">
-        {/* Subtle background glow */}
-        <div className="absolute top-0 right-0 w-96 h-96 bg-[#D99A1C]/10 rounded-full blur-3xl pointer-events-none"></div>
-        <div className="absolute bottom-0 left-1/3 w-80 h-80 bg-blue-500/10 rounded-full blur-3xl pointer-events-none"></div>
-
-        <div className="relative z-10 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
-          <div className="space-y-2">
-            <div className="inline-flex items-center gap-2 px-3 py-1 bg-amber-500/10 border border-[#D99A1C]/40 rounded-full backdrop-blur-md">
-              <span className="w-2 h-2 rounded-full bg-[#D99A1C] animate-pulse"></span>
-              <span className="text-[10px] font-black text-[#F5B025] uppercase tracking-widest">
-                Partner Network Console
-              </span>
-            </div>
-            <h1 className="text-2xl font-black tracking-tight text-white flex items-center gap-2">
-              <span>Become Our Partner</span>
-              <span className="text-xs font-bold text-slate-400 bg-slate-800/80 px-2.5 py-0.5 rounded-lg border border-slate-700">
-                v2.4
-              </span>
-            </h1>
-            <p className="text-xs text-slate-300 font-medium max-w-xl leading-relaxed">
-              Unified directory management, referral partner onboarding, tax compliance verification, and instant document inspection.
-            </p>
-
-            {/* Quick Metrics Cards */}
-            <div className="flex flex-wrap items-center gap-3 pt-2">
-              <div className="bg-slate-800/80 border border-slate-700/80 px-3 py-1.5 rounded-xl flex items-center gap-2">
-                <span className="text-[10px] font-extrabold uppercase text-slate-400">Total Partners:</span>
-                <span className="text-xs font-black text-amber-400">{partners.length}</span>
-              </div>
-              <div className="bg-slate-800/80 border border-slate-700/80 px-3 py-1.5 rounded-xl flex items-center gap-2">
-                <span className="text-[10px] font-extrabold uppercase text-slate-400">Active Agencies:</span>
-                <span className="text-xs font-black text-emerald-400">{activeCount}</span>
-              </div>
-              <div className="bg-slate-800/80 border border-slate-700/80 px-3 py-1.5 rounded-xl flex items-center gap-2">
-                <span className="text-[10px] font-extrabold uppercase text-slate-400">Pending Review:</span>
-                <span className="text-xs font-black text-blue-400">{pendingCount}</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Premium Sub-Tab Switcher */}
-          <div className="flex flex-wrap max-w-full items-center bg-slate-800/90 border border-slate-700/80 p-1.5 rounded-2xl gap-1.5 shrink-0 shadow-inner backdrop-blur-md">
-            <ActionButton
-              onClick={handleBackToDirectory}
-              className={`px-5 py-2.5 text-xs font-black rounded-xl transition-all cursor-pointer flex items-center gap-2 ${
-                subView === 'directory'
-                  ? 'bg-gradient-to-r from-[#D99A1C] to-[#F5B025] text-slate-950 shadow-lg shadow-[#D99A1C]/25'
-                  : 'text-slate-300 hover:text-white hover:bg-slate-700/50'
-              }`}
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-              </svg>
-              <span>Referral Partners Directory ({partners.length})</span>
-            </ActionButton>
-
-            <ActionButton
-              onClick={handleOpenOnboarding}
-              className={`px-5 py-2.5 text-xs font-black rounded-xl transition-all cursor-pointer flex items-center gap-2 ${
-                subView === 'onboard'
-                  ? 'bg-gradient-to-r from-[#D99A1C] to-[#F5B025] text-slate-950 shadow-lg shadow-[#D99A1C]/25'
-                  : 'text-slate-300 hover:text-white hover:bg-slate-700/50'
-              }`}
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 4v16m8-8H4" />
-              </svg>
-              <span>Onboard New Partner</span>
-            </ActionButton>
-          </div>
-        </div>
-      </div>
+      <div className="workspace-panel flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-slate-200 border-t-4 border-t-[#D99A1C] bg-white p-6 shadow-sm">
+ <div className="space-y-1"><h1 className="text-xl font-bold tracking-tight text-slate-900">Become Our Partner</h1><p className="text-xs font-medium text-slate-500">Manage agency profiles, onboard partners, and review verification documents.</p></div>
+ <div className="flex flex-wrap gap-2"><ActionButton type="button" onClick={handleBackToDirectory} className={subView === 'directory' ? 'rounded-xl border border-slate-200 bg-slate-100 px-4 py-2.5 text-xs font-semibold text-slate-700' : 'rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-xs font-semibold text-slate-600 hover:bg-slate-50'}>Partner directory</ActionButton><ActionButton type="button" onClick={handleOpenOnboarding} className="rounded-xl bg-[#D99A1C] px-4 py-2.5 text-xs font-bold text-slate-950 hover:bg-[#C28410]">Onboard New Partner</ActionButton></div>
+</div>
 
       {/* VIEW 1: REFERRAL PARTNERS DIRECTORY */}
       {subView === 'directory' && !singleViewPartner && (
         <div className="space-y-6 animate-fade-in">
-          {/* Directory Toolbar: Filters, Search & Action Button */}
-          <div className="bg-white border border-slate-200/90 rounded-2xl p-4 md:p-5 shadow-xs flex flex-col lg:flex-row lg:flex-wrap gap-4 items-center justify-between">
-            {/* Status Filter Tabs */}
-            <div className="bg-slate-100/90 p-1 rounded-xl flex flex-wrap gap-1 min-w-0 w-full lg:w-auto border border-slate-200/60">
-              {['All', 'Pending', 'Waiting for Missing Document', 'Approved'].map((status) => (
-                <ActionButton
-                  key={status}
-                  onClick={() => setStatusFilter(status)}
-                  className={`flex-1 lg:flex-none px-4 py-2 text-xs font-black rounded-lg transition-all cursor-pointer ${
-                    statusFilter === status 
-                      ? 'bg-white text-slate-900 shadow-sm border border-slate-200/80 font-black' 
-                      : 'text-slate-500 hover:text-slate-900'
-                  }`}
-                >
-                  {status === 'All' ? 'All Channels' : status === 'Pending' ? 'Pending Review' : status === 'Waiting for Missing Document' ? 'Waiting for Documents' : 'Approved Active'}
-                </ActionButton>
-              ))}
-            </div>
-
-            {/* Location & Search */}
-            <div className="flex flex-col sm:flex-row w-full lg:w-auto items-center gap-3">
-              <SearchableSelect
-                value={locationFilter}
-                onChange={(e) => setLocationFilter(e.target.value)}
-                className="w-full sm:w-auto bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-800 font-bold focus:outline-none focus:border-[#D99A1C] focus:bg-white transition-all cursor-pointer"
-              >
-                <option value="All">🌐 All Operating Countries</option>
-                {countriesList.map(c => <option key={c} value={c}>📍 {c}</option>)}
-              </SearchableSelect>
-
-              <div className="relative w-full sm:w-72">
-                <span className="absolute inset-y-0 left-0 flex items-center pl-3.5 pointer-events-none text-slate-400">
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                  </svg>
-                </span>
-                <input
-                  type="text"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-8 py-2.5 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:bg-white focus:border-[#D99A1C] transition-all font-semibold"
-                  placeholder="Search agency, code, email..."
-                />
-                {searchTerm && (
-                  <ActionButton
-                    onClick={() => setSearchTerm('')}
-                    className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600 font-bold text-xs"
-                  >
-                    ✕
-                  </ActionButton>
-                )}
-              </div>
-
-              <ActionButton
-                onClick={handleOpenOnboarding}
-                className="w-full sm:w-auto bg-gradient-to-r from-[#D99A1C] to-[#F5B025] hover:from-[#c28815] hover:to-[#e09e1d] text-white font-black text-xs px-4 py-2.5 rounded-xl shadow-md transition-all cursor-pointer flex items-center justify-center gap-1.5 shrink-0"
-              >
-                <span>+ Onboard Agency</span>
-              </ActionButton>
-            </div>
-          </div>
-
           {/* Directory Master Card & Table */}
-          <div className="bg-white border border-slate-200/90 rounded-3xl shadow-sm overflow-hidden">
-            <div className="px-6 py-4 bg-slate-50/70 border-b border-slate-200/80 flex justify-between items-center">
-              <div className="flex items-center gap-2">
-                <span className="w-2.5 h-2.5 rounded-full bg-[#D99A1C]"></span>
-                <h2 className="text-xs font-black text-slate-900 uppercase tracking-wider">
-                  Referral Agency Directory ({filteredPartners.length})
-                </h2>
-              </div>
-            </div>
+          <div className="workspace-list-frame bg-white border border-slate-200/90 rounded-3xl shadow-sm overflow-hidden">
+            {/* Scoping Tabs on top of table */}
+            <ListFilterTabs value={statusFilter} onChange={value => { setStatusFilter(value); setCurrentPage(1); }} options={[{value:'All',label:'All partners',filters:{status:'All'}},{value:'Active',label:'Active',filters:{status:'Active'}},{value:'Pending',label:'Pending review',filters:{status:'Pending'}},{value:'Waiting for Missing Document',label:'Missing documents',filters:{status:'Waiting for Missing Document'}},{value:'Inactive',label:'Inactive',filters:{status:'Inactive'}}]} query={{endpoint:'/partners',search:searchTerm,filters:{country:locationFilter},reloadKey:JSON.stringify(partners)}} />
+
+            <ListToolbar search={searchTerm} onSearchChange={setSearchTerm} filters={[{ key: 'status', label: 'statuses', value: statusFilter, onChange: setStatusFilter, options: ['Pending', 'Waiting for Missing Document', 'Active', 'Inactive'] },{ key: 'country', label: 'countries', value: locationFilter, onChange: setLocationFilter, options: serverList.facets.country || countriesList }]} onReset={() => { setSearchTerm(''); setStatusFilter('All'); setLocationFilter('All'); setCurrentPage(1); }} loading={serverList.loading} error={serverList.error} onRetry={serverList.reload} />
+            
 
             <div className="overflow-x-auto">
               {filteredPartners.length > 0 ? (
-                <table className="w-full text-left border-collapse">
+                <table className="workspace-table w-full text-left border-collapse">
                   <thead>
                     <tr className="bg-slate-100/60 border-b border-slate-200/80">
                       <th className="px-6 py-3.5 text-slate-400 text-[10px] font-black uppercase tracking-wider w-[60px]">#</th>
@@ -866,7 +654,7 @@ export default function BecomePartner({ clients = [], setClients, applications =
                       const referredStudents = getReferredStudents(partner);
 
                       return (
-                        <tr 
+                        <tr tabIndex={0} onKeyDown={event => { if (event.target === event.currentTarget && event.key === "Enter") { event.preventDefault(); event.currentTarget.click(); } }} 
                           key={partner.id || idx}
                           className="hover:bg-slate-50/80 transition-colors cursor-pointer group" 
                           onClick={() => {
@@ -922,29 +710,6 @@ export default function BecomePartner({ clients = [], setClients, applications =
                           </td>
                           <td className="px-6 py-4 text-right" onClick={(e) => e.stopPropagation()}>
                             <div className="flex items-center justify-end gap-2">
-                              <ActionButton
-                                type="button"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  dismissedTargetRef.current = false;
-                                  setSingleViewPartner(partner);
-                                  window.scrollTo({ top: 0, behavior: 'smooth' });
-                                  document.getElementById('admin-main-content')?.scrollTo({ top: 0, behavior: 'smooth' });
-                                }}
-                                className="px-3 py-1.5 bg-[#D99A1C]/10 hover:bg-[#D99A1C]/20 text-[#D99A1C] border border-[#D99A1C]/30 rounded-xl text-[10px] font-black transition-all cursor-pointer flex items-center gap-1 shadow-2xs"
-                                title="View Full Single Page Details"
-                              >
-                                <span>👁️ View Details</span>
-                              </ActionButton>
-                              <ActionButton
-                                type="button"
-                                onClick={(e) => handleOpenEditModal(partner, e)}
-                                className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200/80 rounded-xl text-[10px] font-black transition-all cursor-pointer flex items-center gap-1 shadow-2xs"
-                                title="Edit Partner Profile Details"
-                              >
-                                <span>✏️ Edit</span>
-                              </ActionButton>
-
                               <span className={`px-2.5 py-1 border rounded-full text-[9px] font-black uppercase tracking-wider ${
                                 partner.status === 'Active' 
                                   ? 'bg-emerald-50 text-emerald-700 border-emerald-200' 
@@ -955,48 +720,46 @@ export default function BecomePartner({ clients = [], setClients, applications =
                                 {partner.status}
                               </span>
 
-                              {partner.status === 'Pending' && (
-                                <ActionButton
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    dismissedTargetRef.current = false;
-                                    setSingleViewPartner(partner);
-                                    window.scrollTo({ top: 0, behavior: 'smooth' });
-                                    document.getElementById('admin-main-content')?.scrollTo({ top: 0, behavior: 'smooth' });
-                                  }}
-                                  className="bg-emerald-600 hover:bg-emerald-700 text-white font-black text-[9px] px-2.5 py-1.5 rounded-lg transition-all shadow-2xs cursor-pointer uppercase"
-                                >
-                                  Approve
-                                </ActionButton>
-                              )}
-                              {partner.status === 'Active' && (
-                                <ActionButton
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    dismissedTargetRef.current = false;
-                                    setSingleViewPartner(partner);
-                                    window.scrollTo({ top: 0, behavior: 'smooth' });
-                                    document.getElementById('admin-main-content')?.scrollTo({ top: 0, behavior: 'smooth' });
-                                  }}
-                                  className="bg-rose-500 hover:bg-rose-600 text-white font-black text-[9px] px-2.5 py-1.5 rounded-lg transition-all shadow-2xs cursor-pointer uppercase"
-                                >
-                                  Deactivate
-                                </ActionButton>
-                              )}
-                              {partner.status === 'Inactive' && (
-                                <ActionButton
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    dismissedTargetRef.current = false;
-                                    setSingleViewPartner(partner);
-                                    window.scrollTo({ top: 0, behavior: 'smooth' });
-                                    document.getElementById('admin-main-content')?.scrollTo({ top: 0, behavior: 'smooth' });
-                                  }}
-                                  className="bg-emerald-600 hover:bg-emerald-700 text-white font-black text-[9px] px-2.5 py-1.5 rounded-lg transition-all shadow-2xs cursor-pointer uppercase"
-                                >
-                                  Activate
-                                </ActionButton>
-                              )}
+                              <ActionMenu
+                                items={[
+                                  {
+                                    label: 'View Single Page Details',
+                                    onClick: () => {
+                                      dismissedTargetRef.current = false;
+                                      setSingleViewPartner(partner);
+                                      window.scrollTo({ top: 0, behavior: 'smooth' });
+                                      document.getElementById('admin-main-content')?.scrollTo({ top: 0, behavior: 'smooth' });
+                                    }
+                                  },
+                                  {
+                                    label: 'Edit Partner Profile',
+                                    onClick: (e) => handleOpenEditModal(partner, e)
+                                  },
+                                  partner.status === 'Pending' && {
+                                    label: 'Review / Approve Partner',
+                                    onClick: () => {
+                                      dismissedTargetRef.current = false;
+                                      setSingleViewPartner(partner);
+                                      window.scrollTo({ top: 0, behavior: 'smooth' });
+                                    }
+                                  },
+                                  partner.status === 'Active' && {
+                                    label: 'Deactivate Partner',
+                                    danger: true,
+                                    onClick: () => {
+                                      dismissedTargetRef.current = false;
+                                      setSingleViewPartner(partner);
+                                    }
+                                  },
+                                  partner.status === 'Inactive' && {
+                                    label: 'Activate Partner',
+                                    onClick: () => {
+                                      dismissedTargetRef.current = false;
+                                      setSingleViewPartner(partner);
+                                    }
+                                  }
+                                ]}
+                              />
                             </div>
                           </td>
                         </tr>
@@ -1085,15 +848,7 @@ export default function BecomePartner({ clients = [], setClients, applications =
               >
                 <span>← Back to Directory</span>
               </ActionButton>
-              <div>
-                <span className="text-[10px] font-extrabold text-[#D99A1C] uppercase tracking-wider block">Single View Dossier</span>
-                <h2 className="text-xl font-black text-slate-900 flex items-center gap-2">
-                  <span>{singleViewPartner.name}</span>
-                  <span className="text-xs font-mono font-bold bg-blue-50 text-blue-700 px-2.5 py-0.5 rounded-md border border-blue-200">
-                    {singleViewPartner.partnerCode}
-                  </span>
-                </h2>
-              </div>
+              
             </div>
 
             {/* Check & Approve Button Bar */}
@@ -1205,18 +960,7 @@ export default function BecomePartner({ clients = [], setClients, applications =
             {/* Left Column: Full Credentials */}
             <div className="space-y-6 lg:col-span-1">
               <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm space-y-5">
-                <div className="flex items-center gap-4 pb-4 border-b border-slate-100">
-                  <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-slate-900 via-slate-800 to-[#D99A1C] text-white flex items-center justify-center font-black text-lg shadow-lg">
-                    {singleViewPartner.name ? singleViewPartner.name.split(' ').map(n => n[0]).join('').slice(0, 2) : 'PR'}
-                  </div>
-                  <div>
-                    <h3 className="font-black text-slate-900 text-base">{singleViewPartner.name}</h3>
-                    <p className="text-xs text-slate-500 font-semibold">{singleViewPartner.companyName || singleViewPartner.name}</p>
-                    <span className="inline-block mt-1 px-2.5 py-0.5 bg-amber-50 text-[#D99A1C] border border-amber-200 rounded text-[10px] font-black">
-                      {(singleViewPartner.partnerType && singleViewPartner.partnerType.toString().toLowerCase() === 'individual') ? '👤 Individual Agent' : '🏢 Company Agency'}
-                    </span>
-                  </div>
-                </div>
+                
 
                 <div className="space-y-3.5 text-xs">
                   <div className="flex justify-between py-1 border-b border-slate-100">
@@ -1250,11 +994,11 @@ export default function BecomePartner({ clients = [], setClients, applications =
               {(() => {
                 const refStudents = getReferredStudents(singleViewPartner);
                 return (
-                  <div className="bg-gradient-to-br from-slate-900 to-slate-800 text-white rounded-3xl p-6 shadow-md space-y-3 border border-slate-700/60">
+                  <div className="bg-white text-slate-900 rounded-2xl p-6 shadow-sm space-y-3 border border-slate-200">
                     <span className="text-[10px] font-black uppercase tracking-widest text-[#D99A1C]">Referred Metrics</span>
                     <div className="flex justify-between items-center">
                       <div>
-                        <h4 className="text-2xl font-black text-white">{refStudents.length}</h4>
+                        <h4 className="text-2xl font-black text-slate-900">{refStudents.length}</h4>
                         <p className="text-xs text-slate-400 font-semibold">Total Referred Students</p>
                       </div>
                       <div className="w-12 h-12 rounded-2xl bg-amber-500/10 border border-[#D99A1C]/30 flex items-center justify-center text-xl text-[#F5B025]">
@@ -1270,23 +1014,7 @@ export default function BecomePartner({ clients = [], setClients, applications =
             <div className="space-y-6 lg:col-span-2">
               {/* Uploaded Documents Gallery with Inline Page Viewer */}
               <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm space-y-5">
-                <div className="flex justify-between items-center pb-3 border-b border-slate-100">
-                  <div>
-                    <span className="text-[10px] font-extrabold text-[#D99A1C] uppercase tracking-wider block">Document Compliance Verification</span>
-                    <h3 className="text-sm font-black text-slate-900 uppercase tracking-wider">
-                      Uploaded Verification Proofs ({singleViewPartner.documents ? singleViewPartner.documents.length : 0})
-                    </h3>
-                  </div>
-                  {singleViewPartner.status === 'Active' ? (
-                    <span className="text-[10px] font-black text-emerald-700 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200">
-                      Uploaded Documents
-                    </span>
-                  ) : (
-                    <span className="text-[10px] font-black text-amber-700 bg-amber-50 px-3 py-1 rounded-full border border-amber-200">
-                      Pending Approval
-                    </span>
-                  )}
-                </div>
+                
 
                 {/* Inline Document Preview Grid */}
                 {singleViewPartner.documents && singleViewPartner.documents.length > 0 ? (
@@ -1312,7 +1040,7 @@ export default function BecomePartner({ clients = [], setClients, applications =
                           </div>
 
                           {/* Inline Document Box Canvas/Iframe Viewer */}
-                          <div className="h-48 bg-white border border-slate-200 rounded-xl overflow-hidden flex items-center justify-center p-2 shadow-inner">
+                          <div className="workspace-list-frame h-48 bg-white border border-slate-200 rounded-xl overflow-hidden flex items-center justify-center p-2 shadow-inner">
                             {isImg ? (
                               <img src={docBlobUrl} alt={docTitle} className="max-h-full max-w-full object-contain rounded" />
                             ) : (
@@ -1560,27 +1288,18 @@ export default function BecomePartner({ clients = [], setClients, applications =
                   <p className="text-xs text-slate-500 font-medium">Upload mandatory verification proofs ({partnerType === 'Company' ? 'Company Incorporation Certificate, Tax ID, Signatory ID' : 'Individual ID Proof, Address Proof'}). Formats: PDF, PNG, JPG (Max 15MB).</p>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {partnerType === 'Company' ? (
-                    <>
-                      <DocumentUploadSlot label="Company Incorporation Certificate" description="Official Business Registration License" docKey="incorporationCert" fileObj={documents.incorporationCert} required={true} onFileChange={handleFileChange} onRemoveFile={handleRemoveFile} onViewFile={(doc) => setPreviewModalDoc(doc)} />
-                      <DocumentUploadSlot label="Tax / GST Registration Certificate" description="Tax Identification Copy" docKey="taxCert" fileObj={documents.taxCert} required={false} onFileChange={handleFileChange} onRemoveFile={handleRemoveFile} onViewFile={(doc) => setPreviewModalDoc(doc)} />
-                      <DocumentUploadSlot label="Authorised Signatory ID Proof" description="Director Passport or Photo ID" docKey="signatoryIdProof" fileObj={documents.signatoryIdProof} required={false} onFileChange={handleFileChange} onRemoveFile={handleRemoveFile} onViewFile={(doc) => setPreviewModalDoc(doc)} />
-                    </>
-                  ) : (
-                    <>
-                      <DocumentUploadSlot label="Individual ID Proof (Passport / National ID)" description="Government Photo ID" docKey="idProof" fileObj={documents.idProof} required={true} onFileChange={handleFileChange} onRemoveFile={handleRemoveFile} onViewFile={(doc) => setPreviewModalDoc(doc)} />
-                      <DocumentUploadSlot label="Address Proof / Resume" description="Utility Bill or Professional Bio" docKey="addressProof" fileObj={documents.addressProof} required={false} onFileChange={handleFileChange} onRemoveFile={handleRemoveFile} onViewFile={(doc) => setPreviewModalDoc(doc)} />
-                    </>
-                  )}
-                </div>
+                <BatchDocumentUpload key={partnerType} role="Agent" disabled={isSubmitting} onBusyChange={setIsSubmitting} onPendingChange={setHasQueuedOnboardingDocuments} onComplete={async uploaded => { setOnboardingDocuments(prev => [...prev, ...uploaded]); }} />
+                {onboardingDocuments.length > 0 && <div className="space-y-2">
+                  <p className="text-xs font-semibold">Attached: {onboardingDocuments.map(doc => doc.name).join(', ')}</p>
+                  {onboardingDocuments.map((doc, index) => <div key={doc.url} className="flex items-center justify-between gap-2 text-xs"><span>{doc.name} � {doc.fileName}</span><ActionButton type="button" onClick={() => setOnboardingDocuments(prev => prev.filter((_, i) => i !== index))} className="text-red-700">Remove</ActionButton></div>)}
+                </div>}
               </div>
 
               <div className="flex justify-end gap-3 bg-white border border-slate-200 p-4 rounded-2xl shadow-xs">
                 <ActionButton type="button" onClick={() => setSubView('directory')} className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-extrabold text-xs rounded-xl cursor-pointer">
                   Cancel
                 </ActionButton>
-                <ActionButton type="submit" disabled={isSubmitting} className="px-6 py-2.5 bg-[#D99A1C] hover:bg-[#F5B025] text-white font-black text-xs rounded-xl shadow-md cursor-pointer inline-flex items-center justify-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed">
+                <ActionButton type="submit" disabled={isSubmitting || hasQueuedOnboardingDocuments} className="px-6 py-2.5 bg-[#D99A1C] hover:bg-[#F5B025] text-white font-black text-xs rounded-xl shadow-md cursor-pointer inline-flex items-center justify-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed">
                   {isSubmitting && (
                     <svg className="animate-spin h-3.5 w-3.5 text-white" fill="none" viewBox="0 0 24 24">
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
@@ -1720,86 +1439,7 @@ export default function BecomePartner({ clients = [], setClients, applications =
                   </div>
 
                   <div className="flex flex-wrap items-center gap-2">
-                    <SearchableSelect
-                      id="editDocTypeSelect"
-                      className="px-2.5 py-1 bg-white border border-slate-300 rounded-xl text-[11px] font-bold text-slate-800 focus:outline-none focus:border-[#D99A1C]"
-                      defaultValue="Company Incorporation Certificate"
-                    >
-                      <option value="Company Incorporation Certificate">Company Incorporation Certificate</option>
-                      <option value="Tax / GST Registration Certificate">Tax / GST Certificate</option>
-                      <option value="Authorised Signatory ID Proof">Authorised Signatory ID</option>
-                      <option value="Individual ID Proof (Passport / National ID)">Individual ID Proof</option>
-                      <option value="Address Proof / Resume">Address Proof / Resume</option>
-                      <option value="Other Compliance Proof">Other Compliance Proof</option>
-                    </SearchableSelect>
-
-                    <label className="px-3 py-1.5 bg-[#D99A1C] hover:bg-[#F5B025] text-white rounded-xl text-[10px] font-black cursor-pointer shadow-xs flex items-center gap-1.5 transition-all">
-                      {isUploadingEditDoc ? (
-                        <>
-                          <svg className="animate-spin h-3 w-3 text-white" fill="none" viewBox="0 0 24 24">
-                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                          </svg>
-                          <span>Uploading...</span>
-                        </>
-                      ) : (
-                        <span>+ Attach File Proof</span>
-                      )}
-                      <input
-                        type="file"
-                        accept=".pdf,.png,.jpg,.jpeg"
-                        disabled={isUploadingEditDoc}
-                        className="hidden"
-                        onChange={async (e) => {
-                          const file = e.target.files[0];
-                          if (!file) return;
-                          if (file.size > 15 * 1024 * 1024) {
-                            toast.error('File size exceeds 15MB limit.');
-                            return;
-                          }
-                          const typeSelect = document.getElementById('editDocTypeSelect');
-                          const docTitle = typeSelect ? typeSelect.value : 'Compliance Proof';
-
-                          setIsUploadingEditDoc(true);
-                          let fileUrl = '';
-                          try {
-                            const uploadFormData = new FormData();
-                            uploadFormData.append('file', file);
-                            const uploadRes = await API.post('/upload', uploadFormData, {
-                              headers: { 'Content-Type': 'multipart/form-data' }
-                            });
-                            if (uploadRes.data?.success && (uploadRes.data.url || uploadRes.data.fileUrl)) {
-                              fileUrl = uploadRes.data.url || uploadRes.data.fileUrl;
-                            }
-                          } catch (err) {
-                            toast.error(err.response?.data?.message || 'S3 upload failed. Please retry.');
-                            return;
-                          } finally {
-                            setIsUploadingEditDoc(false);
-                          }
-
-                          const attachDocObj = (preview) => {
-                            const newDocObj = {
-                              title: docTitle,
-                              fileName: file.name,
-                              previewUrl: preview,
-                              type: file.type.includes('pdf') ? 'pdf' : 'image'
-                            };
-                            setEditingPartner(prev => ({
-                              ...prev,
-                              documents: [...(prev.documents || []), newDocObj]
-                            }));
-                            toast.success(`Attached '${file.name}' to profile!`);
-                          };
-
-                          if (fileUrl) {
-                            attachDocObj(fileUrl);
-                          } else {
-                            toast.error('File was not stored in S3. Please retry.');
-                          }
-                        }}
-                      />
-                    </label>
+<BatchDocumentUpload key={editingPartner._id || editingPartner.id} role="Agent" disabled={isSavingPartner} onBusyChange={setIsUploadingEditDoc} onPendingChange={setHasQueuedEditDocuments} onComplete={async uploaded => { setEditingPartner(prev => ({ ...prev, documents: [...(prev.documents || []), ...uploaded] })); }} />
                   </div>
                 </div>
 
@@ -1962,7 +1602,7 @@ export default function BecomePartner({ clients = [], setClients, applications =
               <ActionButton
                 type="button"
                 onClick={() => setPreviewModalDoc(null)}
-                className="px-4 py-1.5 sm:px-5 sm:py-2 bg-slate-800 hover:bg-slate-900 text-white font-extrabold text-[11px] sm:text-xs rounded-xl shadow-md transition-all cursor-pointer"
+                className="px-4 py-1.5 sm:px-5 sm:py-2 bg-slate-800 hover:bg-white text-slate-900 font-extrabold text-[11px] sm:text-xs rounded-xl shadow-md transition-all cursor-pointer border-b border-slate-200"
               >
                 Close Preview
               </ActionButton>
@@ -2119,56 +1759,6 @@ export default function BecomePartner({ clients = [], setClients, applications =
           </div>
         </div>,
         document.body
-      )}
-    </div>
-  );
-}
-
-function DocumentUploadSlot({ label, description, docKey, fileObj, required, onFileChange, onRemoveFile, onViewFile }) {
-  return (
-    <div className={`border-2 border-dashed rounded-2xl p-4 transition-all flex flex-col justify-between min-h-[140px] ${fileObj ? 'border-emerald-300 bg-emerald-50/30' : 'border-slate-200 bg-slate-50/50 hover:border-[#D99A1C]'}`}>
-      <div>
-        <div className="flex justify-between items-start">
-          <label className="text-xs font-black text-slate-900">{label} {required && <span className="text-rose-500">*</span>}</label>
-          {required && <span className="text-[9px] font-extrabold text-rose-600 bg-rose-50 px-1.5 py-0.5 rounded uppercase">Required</span>}
-        </div>
-        <p className="text-[10px] text-slate-400 font-semibold mt-0.5">{description}</p>
-      </div>
-
-      {fileObj ? (
-        <div className="bg-white border border-emerald-200 p-2.5 rounded-xl flex items-center justify-between mt-3 gap-2">
-          <div className="flex items-center gap-2 overflow-hidden flex-1">
-            <span className="text-xs font-bold text-emerald-600">📄</span>
-            <div className="truncate">
-              <p className="text-xs font-bold text-slate-900 truncate">{fileObj.name}</p>
-              {fileObj.size && <p className="text-[9px] text-slate-400 font-semibold">{fileObj.size}</p>}
-            </div>
-          </div>
-          <div className="flex items-center gap-1.5 shrink-0">
-            <ActionButton
-              type="button" 
-              onClick={() => {
-                if (onViewFile && fileObj) {
-                  const isImg = fileObj.type === 'image' || (fileObj.name && fileObj.name.match(/\.(png|jpg|jpeg|gif|svg|webp)$/i));
-                  const urlToUse = fileObj.previewUrl || (fileObj.fileObj ? URL.createObjectURL(fileObj.fileObj) : '');
-                  const safeUrl = getDocumentBlobUrl(urlToUse, isImg ? 'image/png' : 'application/pdf');
-                  onViewFile({ title: label, fileName: fileObj.name, previewUrl: safeUrl, type: isImg ? 'image' : 'pdf' });
-                }
-              }} 
-              className="px-2.5 py-1 bg-amber-50 hover:bg-amber-100 text-[#D99A1C] border border-amber-200 rounded-md text-[10px] font-black flex items-center gap-1 cursor-pointer transition-all shadow-2xs"
-              title="Preview / View Uploaded Document"
-            >
-              <span>👁️ View Document</span>
-            </ActionButton>
-            <ActionButton type="button" onClick={() => onRemoveFile(docKey)} className="text-rose-500 font-bold text-xs p-1 hover:bg-rose-50 rounded" title="Remove Document">✕</ActionButton>
-          </div>
-        </div>
-      ) : (
-        <label className="cursor-pointer bg-white border border-slate-200 p-2.5 rounded-xl text-center block mt-3 hover:border-[#D99A1C] transition-all">
-          <input type="file" accept=".pdf,.png,.jpg,.jpeg" onChange={(e) => onFileChange(docKey, e)} className="hidden" />
-          <p className="text-xs font-bold text-slate-700">Select File to Upload</p>
-          <span className="text-[9px] text-slate-400">PDF, PNG, JPG (Max 15MB)</span>
-        </label>
       )}
     </div>
   );

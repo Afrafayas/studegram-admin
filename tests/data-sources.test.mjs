@@ -25,7 +25,7 @@ test('missing course data does not produce a fee, intake, or university record',
   const course = mapCourse({ _id: 'sparse', title: 'Sparse record' });
   assert.equal(course.university, '');
   assert.equal(course.intake, '');
-  assert.equal(course.fee, 'Not provided');
+  assert.equal(course.fee, 'Not specified'); // Preserve the current shared fee formatter's empty-state label.
 });
 
 test('notices use stored content, priority, poster, and identifier', () => {
@@ -87,7 +87,8 @@ test('zero commission values remain zero when synchronized to an application', a
   const controller = loadController('controllers/commissionController.js', {
     '../models/Commission': { findById: async () => commission },
     '../models/Application': { findByIdAndUpdate: async (_, value) => { update = value; } },
-    '../models/Partner': {}, '../models/Notification': {}, '../utils/sendEmail': () => {}
+    '../models/Partner': {}, '../models/Notification': {}, '../utils/sendEmail': () => {},
+    '../utils/applicationEmail': { sendApplicationEmail: async () => {} }
   });
   let status;
   await controller.updateCommission({ params: { id: 'commission' }, body: { amount: 0, rate: 0 } }, {
@@ -99,7 +100,7 @@ test('zero commission values remain zero when synchronized to an application', a
 });
 
 test('unconfigured commissions have no invented fees, rates, or payout amounts', () => {
-  const requireBackend = createRequire(path.resolve('../studgram backend/package.json'));
+  const requireBackend = createRequire(path.resolve(backend, 'models/Commission.js'));
   const module = { exports: {} };
   vm.runInNewContext(fs.readFileSync(path.join(backend, 'models/Commission.js'), 'utf8'), {
     module, require: requireBackend, Number, String, Date, Math, isNaN, parseFloat

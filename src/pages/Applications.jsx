@@ -1,3 +1,7 @@
+import ListFilterTabs from '../components/ListFilterTabs';
+import useServerList, { restoreListRows } from '../hooks/useServerList';
+import ListToolbar from '../components/ListToolbar';
+import ActionMenu from '../components/ActionMenu';
 import SearchableSelect from '../components/SearchableSelect';
 import ValidatedInput from '../components/ValidatedInput';
 import { getDisplayId } from '../utils/displayId';
@@ -8,6 +12,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useAuth } from '../context/AuthContext';
 import ApplicationChatDrawer from '../components/ApplicationChatDrawer';
+import ApplicationMessagesActivity from '../components/ApplicationMessagesActivity';
 import API from '../api/axios';
 import { useToast } from '../context/ToastContext';
 import { resolveDocumentUrl, documentFileName, downloadApplicationDocument } from '../utils/applicationDocuments';
@@ -77,6 +82,7 @@ export default function Applications({ applications, referralAgents = [], intake
   const [intakeFilter, setIntakeFilter] = useState('All');
   const [ownershipTab, setOwnershipTab] = useState('All'); // 'All' | 'My Picked' | 'Unpicked'
   const [selectedChatApp, setSelectedChatApp] = useState(null);
+  const [singleViewMainTab, setSingleViewMainTab] = useState('details'); // 'details' | 'activity'
 
   // Single View Application State (persists across page refresh)
   const [singleViewApp, setSingleViewApp] = useState(() => {
@@ -612,11 +618,15 @@ export default function Applications({ applications, referralAgents = [], intake
     };
   }, [currentAppId, initialSelectedAppId]);
 
-  const handleAddComment = async (e) => {
-    e.preventDefault();
-    if (!newCommentInput.trim() || !singleViewApp) return;
-
-    const textToSave = newCommentInput.trim();
+  const handleAddComment = async (eOrText) => {
+    let textToSave = '';
+    if (typeof eOrText === 'string') {
+      textToSave = eOrText.trim();
+    } else if (eOrText && eOrText.preventDefault) {
+      eOrText.preventDefault();
+      textToSave = newCommentInput.trim();
+    }
+    if (!textToSave || !singleViewApp) return;
     const newCommentObj = {
       id: `local-${Date.now()}`,
       author: currentUser?.name || 'Super Admin',
@@ -914,86 +924,28 @@ export default function Applications({ applications, referralAgents = [], intake
     }
   };
 
+  const serverList = useServerList('/applications', { search: searchTerm, filters: { status: statusFilter, partner: partnerFilter, intake: intakeFilter, ...(ownershipTab === 'Unreplied' ? {hasUnrepliedMessage:'true'} : {}) }, params: { scope: ownershipTab === 'My Picked' ? 'my_picked' : ownershipTab === 'Unpicked' ? 'unpicked' : 'all' }, page: currentPage, limit: itemsPerPage, onPageChange: setCurrentPage, reloadKey: JSON.stringify(applications) });
+
   // Search and filter applications
-  const filteredApps = applications.filter(app => {
-    const term = searchTerm.toLowerCase().trim();
-    let searchMatch = true;
-    if (term) {
-      const camsId = (app.camsId || '').toLowerCase();
-      const student = (app.studentName || '').toLowerCase();
-      const passport = (app.passportNo || '').toLowerCase();
-      const email = (app.studentEmail || '').toLowerCase();
-      const univ = (app.universityName || '').toLowerCase();
-      const course = (app.courseName || '').toLowerCase();
-      searchMatch = camsId.includes(term) ||
-                    student.includes(term) ||
-                    passport.includes(term) ||
-                    email.includes(term) ||
-                    univ.includes(term) ||
-                    course.includes(term);
-    }
-
-    let statusMatch = true;
-    if (statusFilter !== 'All') {
-      const currentAppStatus = (app.secondaryStatus === 'Paid Students' || app.status === 'Paid Students' || app.paymentStatus === 'Paid')
-        ? 'Paid Students'
-        : (app.status || app.secondaryStatus || 'Submitted');
-      statusMatch = currentAppStatus.toLowerCase().trim() === statusFilter.toLowerCase().trim();
-    }
-
-    let partnerMatch = true;
-    if (partnerFilter !== 'All') {
-      if (partnerFilter === 'Direct') {
-        partnerMatch = !app.partner || app.assignedBdm === 'Direct' || app.partnerName === 'Direct';
-      } else {
-        const pf = partnerFilter.toLowerCase().trim();
-        const pName = (app.partnerName || app.partner?.name || app.assignedBdm || '').toLowerCase().trim();
-        const pCompany = (app.partnerCompanyName || app.partner?.companyName || '').toLowerCase().trim();
-        const pId = String(app.partner?._id || app.partner?.id || app.partner || '');
-        partnerMatch = pName === pf || pCompany === pf || pName.includes(pf) || pCompany.includes(pf) || pId === partnerFilter;
-      }
-    }
-
-    let intakeMatch = true;
-    if (intakeFilter !== 'All') {
-      const inf = intakeFilter.toLowerCase().trim();
-      const appIntake = (app.intake || '').toLowerCase().trim();
-      intakeMatch = appIntake === inf || appIntake.includes(inf);
-    }
-
-    // Ownership Tab Filter ('All' | 'My Picked' | 'Unpicked')
-    let ownershipMatch = true;
-    const myId = String(currentUser?._id || currentUser?.id || '').trim();
-    const myEmail = String(currentUser?.email || '').toLowerCase().trim();
-    if (ownershipTab === 'My Picked') {
-      const pickerId = String(app.pickedBy?._id || app.pickedBy?.id || '').trim();
-      const pickerEmail = String(app.pickedBy?.email || '').toLowerCase().trim();
-      ownershipMatch = isPicked(app) && (
-        (myId && pickerId === myId) ||
-        (myEmail && pickerEmail === myEmail)
-      );
-    } else if (ownershipTab === 'Unpicked') {
-      ownershipMatch = !isPicked(app);
-    }
-
-    return searchMatch && statusMatch && partnerMatch && intakeMatch && ownershipMatch;
-  });
+  let filteredApps = restoreListRows(serverList.data, applications);
 
   const unpickedCount = applications.filter(a => !isPicked(a)).length;
   const unrepliedCount = applications.filter(a => a.hasUnrepliedMessage).length;
+  const myPickedCount = applications.filter(a => isPicked(a) && (a.pickedBy?.id === currentUser?._id || a.pickedBy?.email === currentUser?.email || a.pickedBy?._id === currentUser?._id)).length;
 
   // Pagination Math
-  const totalItems = filteredApps.length;
-  const totalPages = Math.ceil(totalItems / itemsPerPage) || 1;
+  const totalItems = serverList.totalCount;
+  const totalPages = serverList.totalPages;
   const startIndex = (currentPage - 1) * itemsPerPage;
-  const paginatedApps = filteredApps.slice(startIndex, startIndex + itemsPerPage);
+  const paginatedApps = filteredApps;
 
   return (
-    <div className="flex-1 min-w-0 p-4 sm:p-6 space-y-6 bg-[#F0F2F5]">
+    <div className="workspace-page flex-1 min-w-0 p-4 sm:p-6 space-y-6 bg-[#F0F2F5]">
+      <div className={editModalApp ? 'hidden' : 'contents'}>
       {!singleViewApp ? (
         <>
           {/* Header */}
-      <div className="flex flex-wrap gap-3 justify-between items-center bg-white border border-[#E2E8F0] border-t-4 border-t-[#D99A1C] p-6 rounded-2xl shadow-xs">
+      <div className="workspace-panel flex flex-wrap gap-3 justify-between items-center bg-white border border-[#E2E8F0] border-t-4 border-t-[#D99A1C] p-6 rounded-2xl shadow-xs">
         <div className="space-y-1">
           <h1 className="text-xl font-black text-slate-900 tracking-tight">Student Applications Registry</h1>
           <p className="text-xs text-slate-500 font-medium">View, search, filter B2B partner applications, and update application lifecycle status up to Closing.</p>
@@ -1009,137 +961,16 @@ export default function Applications({ applications, referralAgents = [], intake
         </ActionButton>
       </div>
 
-      {/* SuperAdmin / Admin Overview Cards */}
-      {(['SuperAdmin', 'Super Admin', 'Admin', 'Director'].includes(currentUser?.role)) && (
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <div className="bg-white border border-slate-200 border-t-4 border-t-amber-500 p-4 rounded-2xl shadow-xs">
-            <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest block">Waiting / Unpicked Applications</span>
-            <div className="flex items-baseline gap-2 mt-2">
-              <span className="text-2xl font-black text-slate-900">{unpickedCount}</span>
-              <span className="text-[10px] text-amber-600 font-bold uppercase">Pending Pick / Assign</span>
-            </div>
-          </div>
-          <div className="bg-white border border-slate-200 border-t-4 border-t-[#1e3a8a] p-4 rounded-2xl shadow-xs">
-            <span className="text-[10px] font-extrabold text-[#1e3a8a] uppercase tracking-widest block">Unreplied Agent Messages</span>
-            <div className="flex items-baseline gap-2 mt-2">
-              <span className="text-2xl font-black text-[#1e3a8a]">{unrepliedCount}</span>
-              <span className="text-[10px] text-blue-600 font-bold uppercase">Pending Reply</span>
-            </div>
-          </div>
-          <div className="bg-white border border-slate-200 border-t-4 border-t-emerald-500 p-4 rounded-2xl shadow-xs">
-            <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest block">Total Registered Applications</span>
-            <div className="flex items-baseline gap-2 mt-2">
-              <span className="text-2xl font-black text-slate-900">{applications.length}</span>
-              <span className="text-[10px] text-emerald-600 font-bold uppercase">Active Registry</span>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Ownership & Scoping Tabs */}
-      <div className="bg-white border border-slate-200 p-3 rounded-2xl shadow-xs flex flex-col sm:flex-row sm:flex-wrap gap-3 items-center justify-between">
-        <div className="flex flex-wrap gap-2 w-full sm:w-auto">
-          <ActionButton
-            onClick={() => setOwnershipTab('All')}
-            className={`px-4 py-2 text-xs font-black rounded-xl transition-all ${
-              ownershipTab === 'All' ? 'bg-[#0A0A0F] text-white shadow-sm' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-            }`}
-          >
-            All Applications ({applications.length})
-          </ActionButton>
-          <ActionButton
-            onClick={() => setOwnershipTab('My Picked')}
-            className={`px-4 py-2 text-xs font-black rounded-xl transition-all ${
-              ownershipTab === 'My Picked' ? 'bg-[#D99A1C] text-white shadow-sm' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-            }`}
-          >
-            My Picked Applications
-          </ActionButton>
-          <ActionButton
-            onClick={() => setOwnershipTab('Unpicked')}
-            className={`px-4 py-2 text-xs font-black rounded-xl transition-all ${
-              ownershipTab === 'Unpicked' ? 'bg-amber-600 text-white shadow-sm' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-            }`}
-          >
-            Waiting / Unpicked List ({unpickedCount})
-          </ActionButton>
-        </div>
-      </div>
-
-      {/* Advanced Filters */}
-      <div className="bg-white border border-[#E2E8F0] border-t-4 border-t-[#2563EB] rounded-2xl p-5 shadow-xs flex flex-col sm:flex-row sm:flex-wrap gap-4 items-center justify-between">
-        <div className="flex flex-wrap gap-2">
-          {['All', 'Submitted', 'Under Review', 'Paid Students', 'Conditional Offer Issued', 'CAS / I-20 Issued', 'Visa Approved', 'Enrolled / Closed'].map((status) => (
-            <ActionButton
-              key={status}
-              onClick={() => setStatusFilter(status)}
-              className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer ${
-                statusFilter === status 
-                  ? 'bg-indigo-50 text-indigo-700 border border-indigo-150 font-black shadow-3xs' 
-                  : 'bg-slate-50 text-slate-500 border border-slate-150 hover:text-slate-900 hover:bg-slate-100'
-              }`}
-            >
-              {status}
-            </ActionButton>
-          ))}
-        </div>
-
-        <div className="flex min-w-0 w-full sm:w-auto items-center gap-3 flex-wrap">
-          {/* Filter by Intake */}
-          <SearchableSelect
-            value={intakeFilter}
-            onChange={(e) => setIntakeFilter(e.target.value)}
-            className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs text-slate-900 focus:outline-none focus:border-[#D99A1C] focus:ring-1 focus:ring-[#D99A1C] font-semibold cursor-pointer"
-          >
-            <option value="All">All Intakes</option>
-            {availableIntakes.map((intake) => (
-              <option key={intake} value={intake}>{intake}</option>
-            ))}
-          </SearchableSelect>
-
-          {/* Filter by Partner */}
-          <SearchableSelect
-            value={partnerFilter}
-            onChange={(e) => setPartnerFilter(e.target.value)}
-            className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs text-slate-900 focus:outline-none focus:border-[#D99A1C] focus:ring-1 focus:ring-[#D99A1C] font-semibold cursor-pointer"
-          >
-            <option value="All">All Partners / Channels</option>
-            <option value="Direct">Direct Applications</option>
-            {(referralAgents || []).map((p, idx) => {
-              const pKey = p._id || p.id || p.siNo || p.partnerCode || (p.agentName || p.name ? (p.agentName || p.name) + '-' + idx : 'partner-' + idx);
-              const pName = p.agentName || p.name || ('Partner ' + (idx + 1));
-              return (
-                <option key={pKey} value={pName}>{pName}</option>
-              );
-            })}
-          </SearchableSelect>
-
-          {/* Search bar */}
-          <div className="relative w-full sm:max-w-xs">
-            <span className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-slate-400">
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-              </svg>
-            </span>
-            <input
-              type="text"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-4 py-2.5 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:bg-white focus:border-[#D99A1C] focus:ring-1 focus:ring-[#D99A1C] transition-all font-medium"
-              placeholder="Search by student, ID, course..."
-            />
-          </div>
-        </div>
-      </div>
-
       {/* Applications Table */}
-      <div className="bg-white border border-[#E2E8F0] border-t-4 border-t-[#D99A1C] rounded-2xl shadow-xs overflow-hidden">
-        <div className="px-6 py-4 border-b border-[#E2E8F0] flex justify-between items-center">
-          <h2 className="text-xs font-black text-slate-900 uppercase tracking-wider">Application Files Directory</h2>
-        </div>
+      <div className="workspace-panel workspace-list-frame bg-white border border-[#E2E8F0] border-t-4 border-t-[#D99A1C] rounded-2xl shadow-xs overflow-hidden">
+        {/* Ownership & Scoping Tabs on top of table */}
+        <ListFilterTabs value={ownershipTab} onChange={value => { setOwnershipTab(value); setCurrentPage(1); }} options={[{value:'All',label:'All applications',params:{scope:'all'}},{value:'My Picked',label:'My picked',params:{scope:'my_picked'}},{value:'Unpicked',label:'Waiting / unpicked',params:{scope:'unpicked'}},{value:'Unreplied',label:'Unreplied messages',params:{scope:'all'},filters:{hasUnrepliedMessage:'true'}}]} query={{endpoint:'/applications',search:searchTerm,filters:{status:statusFilter,partner:partnerFilter,intake:intakeFilter},reloadKey:JSON.stringify(applications)}} />
+
+        <ListToolbar search={searchTerm} onSearchChange={setSearchTerm} filters={[{ key: 'status', label: 'statuses', value: statusFilter, onChange: setStatusFilter, options: serverList.facets.status || [] },{ key: 'intake', label: 'intakes', value: intakeFilter, onChange: setIntakeFilter, options: serverList.facets.intake || [] },{ key: 'partner', label: 'channels', value: partnerFilter, onChange: setPartnerFilter, options: serverList.facets.partner || [] }]} onReset={() => { setSearchTerm(''); setStatusFilter('All'); setIntakeFilter('All'); setPartnerFilter('All'); setCurrentPage(1); }} loading={serverList.loading} error={serverList.error} onRetry={serverList.reload} />
+        
         <div className="overflow-x-auto">
           {filteredApps.length > 0 ? (
-            <table className="w-full text-left border-collapse">
+            <table className="workspace-table w-full text-left border-collapse">
               <thead>
                 <tr className="bg-slate-50 border-b border-[#E2E8F0]">
                   <th className="px-6 py-3.5 text-slate-400 text-[10px] font-extrabold uppercase tracking-wider pl-6">ID / Application ID</th>
@@ -1158,7 +989,7 @@ export default function Applications({ applications, referralAgents = [], intake
                   const pickedStaffName = typeof app.pickedBy === 'string' ? app.pickedBy : ((app.pickedBy?.name && app.pickedBy.name.trim()) || app.pickedBy?.email || null);
 
                   return (
-                    <tr 
+                    <tr tabIndex={0} onKeyDown={event => { if (event.target === event.currentTarget && event.key === "Enter") { event.preventDefault(); event.currentTarget.click(); } }} 
                       key={app.camsId || app.id || app._id} 
                       onClick={() => handleOpenSingleView(app)}
                       className={`hover:bg-amber-50/40 transition-colors cursor-pointer group ${
@@ -1224,59 +1055,40 @@ export default function Applications({ applications, referralAgents = [], intake
                         {app.dateAdded}
                       </td>
                       <td className="px-6 py-4 text-right pr-6" onClick={(e) => e.stopPropagation()}>
-                        <div className="flex flex-col items-end gap-2">
-                          {(!isPicked(app) || ['SuperAdmin', 'Super Admin', 'Admin', 'Director'].includes(currentUser?.role)) && (
-                            <div className="flex items-center justify-end gap-1.5 flex-nowrap">
-                              {!isPicked(app) && (
-                                <ActionButton
-                                  onClick={() => handlePickApplication(app)}
-                                  className={LIST_ACTION_CLASS + ' border-emerald-200 bg-emerald-50 text-emerald-700 hover:border-emerald-300 hover:bg-emerald-100'}
-                                  title="Pick Application to handle follow-up"
-                                >
-                                  <ListActionIcon action="pick" /><span>Pick App</span>
-                                </ActionButton>
-                              )}
-                              {(['SuperAdmin', 'Super Admin', 'Admin', 'Director'].includes(currentUser?.role)) && (
-                                <ActionButton
-                                  onClick={() => {
-                                    setAssignModalApp(app);
-                                    setSelectedStaffId('');
-                                  }}
-                                  className={LIST_ACTION_CLASS + ' border-indigo-200 bg-indigo-50 text-indigo-700 hover:border-indigo-300 hover:bg-indigo-100'}
-                                  title="Assign Staff Member"
-                                >
-                                  <ListActionIcon action="assign" /><span>Assign Staff</span>
-                                </ActionButton>
-                              )}
-                            </div>
-                          )}
-                          <div className="flex items-center justify-end gap-1.5 flex-nowrap">
-                            <ActionButton
-                              onClick={() => handleOpenSingleView(app)}
-                              className={LIST_ICON_ACTION_CLASS + ' border-blue-200 bg-blue-50 text-blue-700 hover:border-blue-300 hover:bg-blue-100'}
-                              aria-label="View application"
-                              title="View application"
-                            >
-                              <ListActionIcon action="view" />
-                            </ActionButton>
-                            <ActionButton
-                              onClick={() => openEditModal(app)}
-                              className={LIST_ICON_ACTION_CLASS + ' border-amber-200 bg-amber-50 text-amber-700 hover:border-amber-300 hover:bg-amber-100'}
-                              aria-label="Edit application"
-                              title="Edit application"
-                            >
-                              <ListActionIcon action="edit" />
-                            </ActionButton>
-                            <ActionButton
-                              onClick={() => setSelectedChatApp(app)}
-                              className={LIST_ICON_ACTION_CLASS + ' border-indigo-200 bg-indigo-50 text-indigo-700 hover:border-indigo-300 hover:bg-indigo-100'}
-                              aria-label="Chat about application"
-                              title="Chat about application"
-                            >
-                              <ListActionIcon action="chat" />
-                            </ActionButton>
-                          </div>
-                        </div>
+                        <ActionMenu
+                          items={[
+                            {
+                              label: 'View Application Details',
+                              onClick: () => handleOpenSingleView(app)
+                            },
+                            {
+                              label: 'Edit Application',
+                              onClick: () => openEditModal(app)
+                            },
+                            {
+                              label: 'Chat / Messages',
+                              onClick: () => setSelectedChatApp(app)
+                            },
+                            !isPicked(app) && {
+                              label: 'Pick Application',
+                              onClick: () => handlePickApplication(app)
+                            },
+                            (['SuperAdmin', 'Super Admin', 'Admin', 'Director'].includes(currentUser?.role)) && {
+                              label: 'Assign Staff',
+                              onClick: () => {
+                                setAssignModalApp(app);
+                                setSelectedStaffId('');
+                              }
+                            },
+                            {
+                              label: 'Update Status',
+                              onClick: () => {
+                                setStatusModalApp(app);
+                                setSelectedStatus(app.secondaryStatus || app.status || 'Submitted');
+                              }
+                            }
+                          ]}
+                        />
                       </td>
                     </tr>
                   );
@@ -1364,7 +1176,7 @@ export default function Applications({ applications, referralAgents = [], intake
               </ActionButton>
               <div>
                 <div className="flex flex-wrap items-center gap-2">
-                  <span className="text-[10px] font-extrabold text-[#D99A1C] uppercase tracking-wider">Application Detailed Dossier</span>
+                  <span className="text-[10px] font-extrabold text-[#D99A1C] uppercase tracking-wider">Application Details</span>
                   <span className="text-[10px] text-slate-400 font-bold">•</span>
                   <span className="text-[10px] text-slate-500 font-bold">
                     Date Created: {singleViewApp.dateAdded || (singleViewApp.createdAt ? new Date(singleViewApp.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : 'Recent')}
@@ -1429,10 +1241,14 @@ export default function Applications({ applications, referralAgents = [], intake
               </ActionButton>
 
               <ActionButton
-                onClick={() => setSelectedChatApp(singleViewApp)}
-                className="inline-flex min-h-8 items-center justify-center gap-1.5 rounded-lg border px-3 py-1.5 text-[11px] font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 focus-visible:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap cursor-pointer border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100"
+                onClick={() => setSingleViewMainTab(singleViewMainTab === 'activity' ? 'details' : 'activity')}
+                className={`inline-flex min-h-8 items-center justify-center gap-1.5 rounded-lg border px-3 py-1.5 text-[11px] font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 focus-visible:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap cursor-pointer ${
+                  singleViewMainTab === 'activity'
+                    ? 'border-indigo-400 bg-indigo-600 text-white shadow-xs'
+                    : 'border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100'
+                }`}
               >
-                <ListActionIcon action="chat" /><span>Open Chat</span>
+                <ListActionIcon action="chat" /><span>{singleViewMainTab === 'activity' ? 'View App Details' : 'Open Messages & Activity'}</span>
               </ActionButton>
 
               <ActionButton
@@ -1451,8 +1267,48 @@ export default function Applications({ applications, referralAgents = [], intake
             </div>
           </div>
 
+          {/* Single View Main Tab Bar: App Details vs Messages & Activity */}
+          <div className="flex flex-wrap bg-white border border-slate-200 rounded-2xl p-2 gap-2 shadow-xs">
+            <button
+              type="button"
+              onClick={() => setSingleViewMainTab('details')}
+              className={`flex items-center gap-2 py-2 px-4 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                singleViewMainTab === 'details'
+                  ? 'bg-slate-900 text-white shadow-sm'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+              }`}
+            >
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 002 2z" />
+              </svg>
+              <span>App Details</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setSingleViewMainTab('activity')}
+              className={`flex items-center gap-2 py-2 px-4 rounded-xl text-xs font-bold transition-all relative cursor-pointer ${
+                singleViewMainTab === 'activity'
+                  ? 'bg-[#D99A1C] text-white shadow-sm'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+              }`}
+            >
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 10h.01M12 10h.01M16 10h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+              </svg>
+              <span>Messages & Activity</span>
+              {singleViewApp.hasUnrepliedMessage ? (
+                <span className="w-2 h-2 bg-rose-500 rounded-full animate-pulse"></span>
+              ) : (
+                <span className="w-2 h-2 bg-emerald-500 rounded-full"></span>
+              )}
+            </button>
+          </div>
+
+          {singleViewMainTab === 'details' ? (
+            <section aria-label="Application details" className="min-w-0 rounded-2xl border border-slate-200 bg-white shadow-sm [overflow-wrap:anywhere]">
           {/* Stage Timeline Card */}
-          <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm space-y-3">
+          <div className="min-w-0 border-b border-slate-200 p-4 sm:p-6 space-y-3">
             <div className="flex flex-wrap gap-2 justify-between items-center pb-2 border-b border-slate-100">
               <span className="text-[10px] font-black uppercase tracking-widest text-[#D99A1C]">Application Progress Lifecycle</span>
               <span className="text-xs font-black text-emerald-600 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200 uppercase">
@@ -1487,85 +1343,75 @@ export default function Applications({ applications, referralAgents = [], intake
           </div>
 
           {/* Dossier Grid Layout - Perfectly Balanced Bottom Level */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-stretch">
+          <div className="grid min-w-0 grid-cols-1 lg:grid-cols-2">
             {/* Left Column: Student, Academic Specs & Counselor Remarks */}
-            <div className="space-y-5 lg:col-span-1 flex flex-col">
+            <div className="contents">
               {/* Student Profile Info */}
-              <div className="bg-white border border-slate-200 rounded-3xl p-5 sm:p-6 shadow-sm space-y-4">
-                <div className="flex items-center gap-4 pb-3 border-b border-slate-100">
-                  <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-slate-900 via-slate-800 to-[#D99A1C] text-white flex items-center justify-center font-black text-base shadow-md">
-                    {singleViewApp.studentName ? singleViewApp.studentName.split(' ').map(n => n[0]).join('').slice(0, 2) : 'ST'}
-                  </div>
-                  <div>
-                    <h3 className="font-black text-slate-900 text-base">{singleViewApp.studentName}</h3>
-                    <p className="text-xs text-slate-500 font-semibold">{singleViewApp.studentEmail || 'Email pending'}</p>
-                    <span className="inline-block mt-1 px-2.5 py-0.5 bg-blue-50 text-blue-700 border border-blue-200 rounded text-[10px] font-mono font-bold">
-                      Passport: {singleViewApp.passportNo || 'Pending'}
-                    </span>
-                  </div>
-                </div>
+              <div className="min-w-0 border-b border-slate-200 p-4 sm:p-6 space-y-4 lg:col-span-2">
+                <h2 className="text-xs font-bold uppercase tracking-wide text-slate-700">Student details</h2>
+                
 
-                <div className="space-y-3 text-xs">
-                  <div className="flex flex-wrap gap-x-3 gap-y-1 justify-between py-1 border-b border-slate-100">
+                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-x-6 gap-y-3 text-xs">
+                  <div className="min-w-0 flex flex-wrap items-start gap-x-2 gap-y-1 py-1 border-b border-slate-100">
                     <span className="text-slate-400 font-bold">Phone Line:</span>
-                    <span className="font-bold text-slate-800">{singleViewApp.phone || 'N/A'}</span>
+                    <span className="min-w-0 max-w-full break-words font-bold text-slate-800">{singleViewApp.phone || 'N/A'}</span>
                   </div>
-                  <div className="flex flex-wrap gap-x-3 gap-y-1 justify-between py-1 border-b border-slate-100">
+                  <div className="min-w-0 flex flex-wrap items-start gap-x-2 gap-y-1 py-1 border-b border-slate-100">
                     <span className="text-slate-400 font-bold">Date of Birth:</span>
-                    <span className="font-bold text-slate-800">{singleViewApp.dob || 'N/A'}</span>
+                    <span className="min-w-0 max-w-full break-words font-bold text-slate-800">{singleViewApp.dob || 'N/A'}</span>
                   </div>
-                  <div className="flex flex-wrap gap-x-3 gap-y-1 justify-between py-1 border-b border-slate-100">
+                  <div className="min-w-0 flex flex-wrap items-start gap-x-2 gap-y-1 py-1 border-b border-slate-100">
                     <span className="text-slate-400 font-bold">Country:</span>
-                    <span className="font-bold text-slate-800">📍 {singleViewApp.country || ''}</span>
+                    <span className="min-w-0 max-w-full break-words font-bold text-slate-800">📍 {singleViewApp.country || ''}</span>
                   </div>
-                  <div className="flex flex-wrap gap-x-3 gap-y-1 justify-between py-1">
+                  <div className="min-w-0 flex flex-wrap items-start gap-x-2 gap-y-1 py-1">
                     <span className="text-slate-400 font-bold">Referred By:</span>
-                    <span className="font-bold text-indigo-600">{singleViewApp.assignedBdm || 'Direct Application'}</span>
+                    <span className="min-w-0 max-w-full break-words font-bold text-indigo-600">{singleViewApp.assignedBdm || 'Direct Application'}</span>
                   </div>
                 </div>
               </div>
 
               {/* Academic Program Info */}
-              <div className="bg-white border border-slate-200 rounded-3xl p-5 sm:p-6 shadow-sm space-y-4">
+              <div className="min-w-0 border-b border-slate-200 p-4 sm:p-6 space-y-4 lg:border-b-0 lg:border-r">
                 <div className="pb-3 border-b border-slate-100">
                   <span className="text-[10px] font-black uppercase tracking-widest text-[#D99A1C]">Target Academic Program</span>
                   <h4 className="font-black text-slate-900 text-base mt-0.5">{singleViewApp.universityName}</h4>
                   <p className="text-xs text-indigo-600 font-bold mt-0.5">{singleViewApp.courseName}</p>
                 </div>
 
-                <div className="space-y-3 text-xs">
-                  <div className="flex flex-wrap gap-x-3 gap-y-1 justify-between py-1 border-b border-slate-100">
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-x-6 gap-y-3 text-xs">
+                  <div className="min-w-0 flex flex-wrap items-start gap-x-2 gap-y-1 py-1 border-b border-slate-100">
                     <span className="text-slate-400 font-bold">Destination Country:</span>
-                    <span className="font-bold text-slate-800">📍 {singleViewApp.country || singleViewApp.destinationCountry || singleViewApp.university?.country || 'Not provided'}</span>
+                    <span className="min-w-0 max-w-full break-words font-bold text-slate-800">📍 {singleViewApp.country || singleViewApp.destinationCountry || singleViewApp.university?.country || 'Not provided'}</span>
                   </div>
-                  <div className="flex flex-wrap gap-x-3 gap-y-1 justify-between py-1 border-b border-slate-100">
+                  <div className="min-w-0 flex flex-wrap items-start gap-x-2 gap-y-1 py-1 border-b border-slate-100">
                     <span className="text-slate-400 font-bold">Level of Study:</span>
-                    <span className="font-bold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded border border-indigo-200">{singleViewApp.level || 'Undergraduate (UG)'}</span>
+                    <span className="min-w-0 max-w-full break-words font-bold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded border border-indigo-200">{singleViewApp.level || 'Undergraduate (UG)'}</span>
                   </div>
-                  <div className="flex flex-wrap gap-x-3 gap-y-1 justify-between py-1 border-b border-slate-100">
+                  <div className="min-w-0 flex flex-wrap items-start gap-x-2 gap-y-1 py-1 border-b border-slate-100">
                     <span className="text-slate-400 font-bold">Intake Season:</span>
-                    <span className="font-bold text-slate-900 bg-amber-50 px-2 py-0.5 rounded border border-amber-200">{singleViewApp.intake}</span>
+                    <span className="min-w-0 max-w-full break-words font-bold text-slate-900 bg-amber-50 px-2 py-0.5 rounded border border-amber-200">{singleViewApp.intake}</span>
                   </div>
-                  <div className="flex flex-wrap gap-x-3 gap-y-1 justify-between py-1 border-b border-slate-100">
+                  <div className="min-w-0 flex flex-wrap items-start gap-x-2 gap-y-1 py-1 border-b border-slate-100">
                     <span className="text-slate-400 font-bold">Tuition Fees:</span>
-                    <span className="font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                    <span className="min-w-0 max-w-full break-words font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
                       {applicationFee(singleViewApp)}
                     </span>
                   </div>
-                  <div className="flex flex-wrap gap-x-3 gap-y-1 justify-between py-1 border-b border-slate-100">
+                  <div className="min-w-0 flex flex-wrap items-start gap-x-2 gap-y-1 py-1 border-b border-slate-100">
                     <span className="text-slate-400 font-bold">Referral Partner / Source:</span>
-                    <span className="font-bold text-indigo-600">
+                    <span className="min-w-0 max-w-full break-words font-bold text-indigo-600">
                       {singleViewApp.referredBy || singleViewApp.partnerName || singleViewApp.partner?.name || singleViewApp.assignedBdm || 'Direct Applicant'}
                     </span>
                   </div>
-                  <div className="flex flex-wrap gap-x-3 gap-y-1 justify-between py-1 border-b border-slate-100">
+                  <div className="min-w-0 flex flex-wrap items-start gap-x-2 gap-y-1 py-1 border-b border-slate-100">
                     <span className="text-slate-400 font-bold">Assigned Executive:</span>
-                    <span className="font-bold text-slate-800">{getAssignedExecutiveName(singleViewApp) || 'Unassigned'}</span>
+                    <span className="min-w-0 max-w-full break-words font-bold text-slate-800">{getAssignedExecutiveName(singleViewApp) || 'Unassigned'}</span>
                   </div>
-                  <div className="flex justify-between items-center py-1">
+                  <div className="flex flex-wrap items-center gap-2 py-1">
                     <span className="text-slate-400 font-bold">Handling Staff (Picked):</span>
                     {isPicked(singleViewApp) ? (
-                      <span className="font-bold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-200 text-xs">
+                      <span className="min-w-0 max-w-full break-words font-bold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-200 text-xs">
                         {singleViewApp.pickedBy?.name || singleViewApp.pickedBy?.email || singleViewApp.pickedBy}
                       </span>
                     ) : (
@@ -1623,20 +1469,11 @@ export default function Applications({ applications, referralAgents = [], intake
             </div>
 
             {/* Right Column: Uploaded Documents & Application Comments */}
-            <div className="space-y-5 lg:col-span-2 flex flex-col">
+            <div className="contents">
               {/* Compact Uploaded Documents Gallery */}
-              <div className="bg-white border border-slate-200 rounded-3xl p-5 sm:p-6 shadow-sm space-y-4">
-                <div className="flex justify-between items-center pb-3 border-b border-slate-100">
-                  <div>
-                    <span className="text-[10px] font-extrabold text-[#D99A1C] uppercase tracking-wider block">Submitted File Proofs</span>
-                    <h3 className="text-sm font-black text-slate-900 uppercase tracking-wider">
-                      Application Documents ({singleViewApp.documents?.length || 0})
-                    </h3>
-                  </div>
-                  <span className="text-[10px] font-black text-emerald-700 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200">
-                    Uploaded Documents
-                  </span>
-                </div>
+              <div className="min-w-0 border-b border-slate-200 p-4 sm:p-6 space-y-4 lg:border-b-0">
+                <h2 className="text-xs font-bold uppercase tracking-wide text-slate-700">Uploaded documents ({singleViewApp.documents?.length || 0})</h2>
+                
 
                 {/* Compact Document Cards Grid */}
                 {(() => {
@@ -1683,7 +1520,7 @@ export default function Applications({ applications, referralAgents = [], intake
                                     type: isImg ? 'image' : 'pdf'
                                   });
                                 }}
-                                className="flex-1 py-1.5 bg-white hover:bg-slate-100 text-slate-800 border border-slate-200 rounded-lg font-bold text-[11px] transition-all cursor-pointer flex items-center justify-center gap-1 shadow-2xs"
+                                className="min-w-0 flex-1 py-1.5 bg-white hover:bg-slate-100 text-slate-800 border border-slate-200 rounded-lg font-bold text-[11px] transition-all cursor-pointer flex items-center justify-center gap-1 shadow-2xs"
                               >
                                 <span>🔍 Expand</span>
                               </ActionButton>
@@ -1691,7 +1528,7 @@ export default function Applications({ applications, referralAgents = [], intake
                                 type="button"
                                 onClick={() => handleDownloadAppDocument(rawUrl, docFileName)}
                                 disabled={!docBlobUrl}
-                                className="flex-1 py-1.5 bg-gradient-to-r from-[#D99A1C] to-[#F5B025] hover:from-[#c28815] hover:to-[#e09e1d] text-white rounded-lg font-bold text-[11px] transition-all cursor-pointer flex items-center justify-center gap-1 shadow-2xs"
+                                className="min-w-0 flex-1 py-1.5 bg-gradient-to-r from-[#D99A1C] to-[#F5B025] hover:from-[#c28815] hover:to-[#e09e1d] text-white rounded-lg font-bold text-[11px] transition-all cursor-pointer flex items-center justify-center gap-1 shadow-2xs"
                               >
                                 <span>📥 Download</span>
                               </ActionButton>
@@ -1705,18 +1542,8 @@ export default function Applications({ applications, referralAgents = [], intake
               </div>
 
               {/* Comments panel expands to show the full history on demand. */}
-              <div className="bg-white border border-slate-200 rounded-3xl p-5 sm:p-6 shadow-sm flex flex-col">
-                <div className="flex justify-between items-center pb-3 border-b border-slate-100 shrink-0">
-                  <div>
-                    <span className="text-[10px] font-extrabold text-[#D99A1C] uppercase tracking-wider block">Internal Discussion &amp; Audit</span>
-                    <h3 className="text-sm font-black text-slate-900 uppercase tracking-wider flex items-center gap-2">
-                      <span>Application Comments &amp; History</span>
-                      <span className="text-xs bg-slate-100 text-slate-700 px-2 py-0.5 rounded-full border border-slate-200 font-bold">
-                        {commentsList.length}
-                      </span>
-                    </h3>
-                  </div>
-                </div>
+              <div className="min-w-0 p-4 sm:p-6 flex flex-col lg:col-span-2">
+                
 
                 {/* Add Comment Input Form */}
                 <ActionForm onSubmit={handleAddComment} className="space-y-2.5 bg-slate-50 p-3.5 rounded-2xl border border-slate-200 my-3 shrink-0">
@@ -1728,7 +1555,7 @@ export default function Applications({ applications, referralAgents = [], intake
                     placeholder="Write a comment or internal note regarding offer status, document verification, or university follow-up..."
                     className="w-full bg-white border border-slate-200 rounded-xl p-3 text-xs text-slate-900 focus:outline-none focus:border-[#D99A1C] focus:ring-1 focus:ring-[#D99A1C] transition-all font-medium resize-none"
                   ></textarea>
-                  <div className="flex justify-between items-center pt-0.5">
+                  <div className="flex flex-wrap gap-3 justify-between items-center pt-0.5">
                     <span className="text-[10px] text-slate-400 font-semibold">Visible to internal admin &amp; staff members</span>
                     <ActionButton
                       type="submit"
@@ -1751,10 +1578,10 @@ export default function Applications({ applications, referralAgents = [], intake
                   {commentsList.length > 0 ? (
                     (commentsExpanded ? commentsList : commentsList.slice(0, 3)).map((c, cIdx) => (
                       <div key={c.id || cIdx} className="bg-slate-50/80 border border-slate-200/80 p-3.5 rounded-2xl space-y-2">
-                        <div className="flex justify-between items-center">
+                        <div className="flex flex-wrap gap-3 justify-between items-center">
                           <div className="flex items-center gap-2">
-                            <div className="w-7 h-7 rounded-full bg-[#0A0A0F] text-[#D99A1C] flex items-center justify-center font-bold text-[10px]">
-                              {c.author ? c.author.slice(0, 2).toUpperCase() : 'ST'}
+                            <div className="w-7 h-7 shrink-0 rounded-full bg-[#0A0A0F] text-[#D99A1C] flex items-center justify-center font-bold text-[10px]">
+                              <svg aria-hidden="true" className="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="8" r="4" /><path d="M5 21v-2a7 7 0 0 1 14 0v2" /></svg>
                             </div>
                             <div>
                               <span className="text-xs font-black text-slate-900 block leading-tight">{c.author}</span>
@@ -1762,7 +1589,7 @@ export default function Applications({ applications, referralAgents = [], intake
                             </div>
                           </div>
                           <span className="text-[9px] text-slate-400 font-semibold">
-                            {c.createdAt ? new Date(c.createdAt).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' }) : 'Recently'}
+                            {c.createdAt ? new Date(c.createdAt).toLocaleString('en-US', { dateStyle: 'short', timeStyle: 'short', hour12: true }) : 'Recently'}
                           </span>
                         </div>
                         <p className="text-xs text-slate-700 font-medium leading-relaxed bg-white p-3 rounded-xl border border-slate-150">
@@ -1792,34 +1619,51 @@ export default function Applications({ applications, referralAgents = [], intake
               </div>
             </div>
           </div>
+          </section>
+        ) : (
+          <ApplicationMessagesActivity
+            app={singleViewApp}
+            commentsList={commentsList}
+            onAddComment={handleAddComment}
+            isPostingComment={isPostingComment}
+            currentUser={currentUser}
+            onRefresh={onRefresh}
+          />
+        )}
         </div>
       )}
 
-      {/* Edit Application Modal */}
-      {editModalApp && createPortal(
-        <div className="fixed inset-0 z-[9999] bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-white rounded-3xl max-w-xl w-full p-6 shadow-2xl border border-slate-100 space-y-5 animate-in fade-in zoom-in-95 my-auto max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+      </div>
+
+      {/* Edit Application Page */}
+      {editModalApp && (
+        <div className="w-full min-w-0">
+          <div className="bg-white rounded-2xl w-full p-4 sm:p-6 shadow-sm border border-slate-200 border-t-4 border-t-[#D99A1C] space-y-6 [overflow-wrap:anywhere]">
+            <div className="flex flex-col-reverse sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200 pb-5">
               <div>
-                <h3 className="text-sm font-black text-slate-900">Edit Application Details</h3>
-                <p className="text-[11px] text-slate-500 font-semibold">
+                <h1 className="text-xl font-bold text-slate-900">Edit Application</h1>
+                <p className="mt-1 text-sm text-slate-600">
                   Applicant: <strong className="text-slate-900">{editModalApp.studentName}</strong> ({editModalApp.camsId || 'Application file'})
                 </p>
               </div>
               <ActionButton
                 onClick={() => setEditModalApp(null)}
-                className="text-slate-400 hover:text-slate-700 p-1 rounded-lg cursor-pointer"
+                className="self-start inline-flex items-center gap-2 text-slate-700 hover:bg-slate-100 px-3 py-2 border border-slate-200 rounded-lg text-xs font-semibold cursor-pointer"
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" />
                 </svg>
+                Back
               </ActionButton>
             </div>
 
-            <ActionForm onSubmit={handleSaveEditApplication} className="space-y-4 text-left">
+            <ActionForm onSubmit={handleSaveEditApplication} className="grid grid-cols-1 items-stretch gap-6 text-left lg:grid-cols-2">
+              <section className="min-w-0 h-full space-y-5 rounded-xl border border-slate-200 p-4 sm:p-5">
+                
               {/* Destination Country (FIRST) */}
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
               <div className="space-y-1.5">
-                <label className="block text-[10px] font-extrabold text-slate-600 uppercase tracking-wider">
+                <label className="block text-xs font-extrabold text-slate-600 uppercase tracking-wider">
                   Destination Country <span className="text-rose-500">*</span>
                 </label>
                 <SearchableSelect
@@ -1830,7 +1674,7 @@ export default function Applications({ applications, referralAgents = [], intake
                     setEditCourse('');
                   }}
                   required
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs text-slate-900 font-semibold focus:outline-none focus:border-[#D99A1C] focus:ring-1 focus:ring-[#D99A1C] cursor-pointer"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-sm text-slate-900 font-medium focus:outline-none focus:border-[#D99A1C] focus:ring-1 focus:ring-[#D99A1C] cursor-pointer"
                 >
                   <option value="">-- Choose Country First --</option>
                   {availableCountries.map(c => (
@@ -1841,15 +1685,10 @@ export default function Applications({ applications, referralAgents = [], intake
 
               {/* Destination University (filtered by Country) */}
               <div className="space-y-1.5">
-                <div className="flex items-center justify-between">
-                  <label className="block text-[10px] font-extrabold text-slate-600 uppercase tracking-wider">
+                <div className="flex flex-wrap items-start justify-between gap-2">
+                  <label className="block text-xs font-extrabold text-slate-600 uppercase tracking-wider">
                     Destination University <span className="text-rose-500">*</span>
                   </label>
-                  {editCountry && (
-                    <span className="text-[10px] font-bold text-[#D99A1C]">
-                      {editFilteredUniversities.length} institution{editFilteredUniversities.length !== 1 ? 's' : ''} in {editCountry}
-                    </span>
-                  )}
                 </div>
                 <SearchableSelect searchLabel="Search universities..."
                   value={editUniversity}
@@ -1859,7 +1698,7 @@ export default function Applications({ applications, referralAgents = [], intake
                     setEditCourse('');
                   }}
                   required
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs text-slate-900 font-semibold focus:outline-none focus:border-[#D99A1C] focus:ring-1 focus:ring-[#D99A1C] disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-sm text-slate-900 font-medium focus:outline-none focus:border-[#D99A1C] focus:ring-1 focus:ring-[#D99A1C] disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                 >
                   <option value="">
                     {!editCountry 
@@ -1874,16 +1713,22 @@ export default function Applications({ applications, referralAgents = [], intake
                     return <option key={value} value={value}>{label}</option>;
                   })}
                 </SearchableSelect>
+                {editCountry && (
+                  <p className="text-[11px] font-bold text-[#D99A1C]">
+                    {editFilteredUniversities.length} institution{editFilteredUniversities.length !== 1 ? 's' : ''} in {editCountry}
+                  </p>
+                )}
                 {editCountry && editFilteredUniversities.length === 0 && (
-                  <p className="text-[10px] text-amber-600 font-semibold mt-1">
+                  <p className="text-xs text-amber-600 font-semibold mt-1">
                     ⚠️ No partner institutions found in {editCountry}. Please select another country.
                   </p>
                 )}
               </div>
+              </div>
 
               {/* Academic Program (filtered by University) */}
               <div className="space-y-1.5">
-                <label className="block text-[10px] font-extrabold text-slate-600 uppercase tracking-wider">
+                <label className="block text-xs font-extrabold text-slate-600 uppercase tracking-wider">
                   Academic Program <span className="text-rose-500">*</span>
                 </label>
                 <SearchableSelect searchLabel="Search courses..."
@@ -1891,7 +1736,7 @@ export default function Applications({ applications, referralAgents = [], intake
                   disabled={!editUniversity}
                   onChange={(e) => setEditCourse(e.target.value)}
                   required
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs text-slate-900 font-semibold focus:outline-none focus:border-[#D99A1C] focus:ring-1 focus:ring-[#D99A1C] disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-sm text-slate-900 font-medium focus:outline-none focus:border-[#D99A1C] focus:ring-1 focus:ring-[#D99A1C] disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                 >
                   <option value="">
                     {!editUniversity ? '-- Please Select a University First --' : '-- Choose Course --'}
@@ -1904,16 +1749,17 @@ export default function Applications({ applications, referralAgents = [], intake
                 </SearchableSelect>
               </div>
 
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
               {/* Intake Season */}
               <div className="space-y-1.5">
-                <label className="block text-[10px] font-extrabold text-slate-600 uppercase tracking-wider">
+                <label className="block text-xs font-extrabold text-slate-600 uppercase tracking-wider">
                   Intake Season *
                 </label>
                 <SearchableSelect
                   value={editIntake}
                   onChange={(e) => setEditIntake(e.target.value)}
                   required
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs text-slate-900 font-semibold focus:outline-none focus:border-[#D99A1C] focus:ring-1 focus:ring-[#D99A1C] cursor-pointer"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-sm text-slate-900 font-medium focus:outline-none focus:border-[#D99A1C] focus:ring-1 focus:ring-[#D99A1C] cursor-pointer"
                 >
                   <option value="">Select intake</option>
                   {editIntake && !intakes.some(i => (typeof i === 'object' ? i.title : i) === editIntake) && <option value={editIntake}>{editIntake}</option>}
@@ -1926,56 +1772,68 @@ export default function Applications({ applications, referralAgents = [], intake
 
               {/* Level of Study */}
               <div className="space-y-1.5">
-                <label className="block text-[10px] font-extrabold text-slate-600 uppercase tracking-wider">
+                <label className="block text-xs font-extrabold text-slate-600 uppercase tracking-wider">
                   Level of Study *
                 </label>
                 <SearchableSelect
                   value={editLevel}
                   onChange={(e) => setEditLevel(e.target.value)}
                   required
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs text-slate-900 font-semibold focus:outline-none focus:border-[#D99A1C] focus:ring-1 focus:ring-[#D99A1C] cursor-pointer"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-sm text-slate-900 font-medium focus:outline-none focus:border-[#D99A1C] focus:ring-1 focus:ring-[#D99A1C] cursor-pointer"
                 >
                   <option value="Undergraduate (UG)">Undergraduate (UG)</option>
                   <option value="Postgraduate (PG)">Postgraduate (PG)</option>
                   <option value="PhD">PhD</option>
                 </SearchableSelect>
               </div>
+              </div>
 
+              </section>
+              <section className="min-w-0 h-full space-y-5 rounded-xl border border-slate-200 p-4 sm:p-5">
+                
               {/* Student Details */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1 border-t border-slate-100">
+              <div className="space-y-5">
+                <div className="rounded-xl border border-slate-200 bg-slate-50 p-3.5">
+                  <p className="text-[10px] font-black uppercase tracking-widest text-slate-500">Selected student</p>
+                  <div className="mt-2 grid grid-cols-1 gap-x-4 gap-y-2 text-xs sm:grid-cols-2">
+                    <div className="min-w-0"><span className="text-slate-400 font-bold">Email:</span> <span className="break-words font-semibold text-slate-800">{editStudentEmail || editModalApp?.studentEmail || 'Not provided'}</span></div>
+                    <div className="min-w-0"><span className="text-slate-400 font-bold">Passport:</span> <span className="break-words font-semibold text-slate-800">{editModalApp?.passportNo || editModalApp?.student?.passportNo || 'Not provided'}</span></div>
+                  </div>
+                </div>
                 <div className="space-y-1">
-                  <label className="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">Student Name</label>
+                  <label className="block text-xs font-extrabold text-slate-500 uppercase tracking-wider">Student Name</label>
                   <input
                     type="text"
                     value={editStudentName}
                     onChange={(e) => setEditStudentName(e.target.value)}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-semibold focus:outline-none focus:bg-white focus:border-[#D99A1C]"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-sm font-medium focus:outline-none focus:bg-white focus:border-[#D99A1C]"
                   />
                 </div>
                 <div className="space-y-1">
-                  <label className="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">Phone</label>
+                  <label className="block text-xs font-extrabold text-slate-500 uppercase tracking-wider">Phone</label>
                   <ValidatedInput validationKind="phone"
                     type="text"
                     value={editStudentPhone}
                     onChange={(e) => setEditStudentPhone(e.target.value)}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-semibold focus:outline-none focus:bg-white focus:border-[#D99A1C]"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-sm font-medium focus:outline-none focus:bg-white focus:border-[#D99A1C]"
                   />
                 </div>
               </div>
 
               {/* Notes */}
               <div className="space-y-1">
-                <label className="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">Internal Application Notes</label>
+                <label className="block text-xs font-extrabold text-slate-500 uppercase tracking-wider">Internal Application Notes</label>
                 <textarea
-                  rows="2"
+                  rows="6"
                   value={editNotes}
                   onChange={(e) => setEditNotes(e.target.value)}
                   placeholder="Notes regarding academic profile, conditions, or admissions..."
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs font-medium focus:outline-none focus:bg-white focus:border-[#D99A1C]"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm font-medium focus:outline-none focus:bg-white focus:border-[#D99A1C]"
                 />
               </div>
 
-              <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-100">
+              </section>
+              <div className="lg:col-span-2 flex flex-wrap items-center justify-end gap-3 pt-5 border-t border-slate-200">
                 <ActionButton
                   type="button"
                   onClick={() => setEditModalApp(null)}
@@ -2000,8 +1858,7 @@ export default function Applications({ applications, referralAgents = [], intake
               </div>
             </ActionForm>
           </div>
-        </div>,
-        document.body
+        </div>
       )}
 
       {/* Status Update Modal */}

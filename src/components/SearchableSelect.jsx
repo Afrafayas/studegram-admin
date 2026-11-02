@@ -17,7 +17,7 @@ function collectOptions(children, disabled = false) {
 }
 
 // The native select retains form validation, option values and the original change event.
-export default function SearchableSelect({ children, className, searchLabel = 'Search options', ...props }) {
+export default function SearchableSelect({ children, className, searchLabel = 'Search options', placeholder, displayValue, hideEmptyOption = false, ...props }) {
   const nativeRef = useRef(null);
   const triggerRef = useRef(null);
   const popupRef = useRef(null);
@@ -30,7 +30,7 @@ export default function SearchableSelect({ children, className, searchLabel = 'S
   const options = collectOptions(children);
   const currentValue = props.value !== undefined ? props.value : localValue;
   const selected = options.find(option => option.value === String(currentValue ?? '')) || options.find(option => !option.disabled) || options[0];
-  const matches = options.filter(option => !option.disabled && option.label.toLocaleLowerCase().includes(query.trim().toLocaleLowerCase()));
+  const matches = options.filter(option => !option.disabled && (!hideEmptyOption || option.value !== '') && option.label.toLocaleLowerCase().includes(query.trim().toLocaleLowerCase()));
   const expanded = open && !props.disabled;
 
   useEffect(() => {
@@ -88,8 +88,8 @@ export default function SearchableSelect({ children, className, searchLabel = 'S
       aria-required={props.required || undefined} aria-describedby={props['aria-describedby']}
       aria-expanded={expanded} aria-controls={expanded ? listId : undefined}
       aria-activedescendant={expanded && matches[active] ? listId + '-' + active : undefined}
-      value={expanded ? query : (selected?.label || '')}
-      placeholder={expanded ? (selected?.label || searchLabel) : searchLabel}
+      value={expanded ? query : (displayValue ?? (placeholder !== undefined && selected?.value === '' ? '' : selected?.label || ''))}
+      placeholder={placeholder ?? (expanded ? (selected?.label || searchLabel) : searchLabel)}
       onFocus={show} onClick={() => { if (!expanded) show(); }}
       onBlur={() => setOpen(false)}
       onChange={event => { setQuery(event.target.value); setActive(0); setOpen(true); }}

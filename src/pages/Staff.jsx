@@ -1,3 +1,7 @@
+import ListFilterTabs from '../components/ListFilterTabs';
+import useServerList, { restoreListRows } from '../hooks/useServerList';
+import ListToolbar from '../components/ListToolbar';
+import ActionMenu from '../components/ActionMenu';
 import SearchableSelect from '../components/SearchableSelect';
 import ValidatedInput from '../components/ValidatedInput';
 import AdminStaffDetails from '../components/AdminStaffDetails';
@@ -13,6 +17,7 @@ export default function Staff({ staffList, setStaffList, applications }) {
   const { currentUser, hasPermission, addAuditLog } = useAuth();
   
   const [searchTerm, setSearchTerm] = useState('');
+  const [roleFilter, setRoleFilter] = useState('All');
   const [statusFilter, setStatusFilter] = useState('All');
   const [countryFilter, setCountryFilter] = useState('All');
   const [selectedStaffId, setSelectedStaffId] = useState(() => new URLSearchParams(window.location.search).get('adminStaffId'));
@@ -41,7 +46,7 @@ export default function Staff({ staffList, setStaffList, applications }) {
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm, statusFilter, countryFilter]);
+  }, [searchTerm, statusFilter, countryFilter, roleFilter]);
 
   const [dbAdminRoles, setDbAdminRoles] = useState([]);
 
@@ -116,6 +121,8 @@ export default function Staff({ staffList, setStaffList, applications }) {
     ])
   );
 
+  const serverList = useServerList('/users', { search: searchTerm, filters: { status: statusFilter, country: countryFilter, role: roleFilter }, page: currentPage, limit: itemsPerPage, onPageChange: setCurrentPage, enabled: hasPermission('staff:view'), reloadKey: JSON.stringify(safeStaffList) });
+
   // Permission Guard
   if (!hasPermission('staff:view')) {
     return (
@@ -132,25 +139,6 @@ export default function Staff({ staffList, setStaffList, applications }) {
   }
 
   // Filter staff based on searching, status, and country
-  const baseFiltered = safeStaffList.filter(s => {
-    const name = s.name || '';
-    const email = s.email || '';
-    const role = s.role || '';
-    const phone = s.phone || '';
-
-    const searchMatch = name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      role.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      phone.includes(searchTerm);
-
-    const statusMatch = statusFilter === 'All' || 
-      (s.status || '').toLowerCase() === statusFilter.toLowerCase();
-    const staffCountries = getStaffCountries(s);
-    const countryMatch = countryFilter === 'All' || staffCountries.some(c => c.toLowerCase() === countryFilter.toLowerCase());
-
-    return searchMatch && statusMatch && countryMatch;
-  });
-
   // Apply scope filtering (Country Head / Regional staff scoping)
   const scopedStaff = safeStaffList.filter(s => {
     if (!currentUser?.role || ['Director', 'COO', 'Super Admin', 'SuperAdmin', 'Admin'].includes(currentUser.role)) return true;
@@ -160,14 +148,14 @@ export default function Staff({ staffList, setStaffList, applications }) {
     return (s.country || 'India').toLowerCase() === (currentUser.country || 'India').toLowerCase();
   });
 
-  const filteredStaff = baseFiltered.filter(staff => scopedStaff.includes(staff));
+  const filteredStaff = restoreListRows(serverList.data, safeStaffList, 'users');
   const selectedStaff = scopedStaff.find(staff => String(staff._id || staff.id) === selectedStaffId);
 
   // Pagination Math & Array Slicing
-  const totalItems = filteredStaff.length;
-  const totalPages = Math.ceil(totalItems / itemsPerPage) || 1;
+  const totalItems = serverList.totalCount;
+  const totalPages = serverList.totalPages;
   const startIndex = (currentPage - 1) * itemsPerPage;
-  const paginatedStaff = filteredStaff.slice(startIndex, startIndex + itemsPerPage);
+  const paginatedStaff = filteredStaff;
 
   // Open Edit Modal with selected staff data
   const handleOpenEditModal = (staff) => {
@@ -384,10 +372,10 @@ export default function Staff({ staffList, setStaffList, applications }) {
   const getSubmittedApplications = staff => (applications || []).filter(app => matchesStaff(app.submittedByStaff, staff));
 
   return (
-    <div className="flex-1 min-w-0 p-4 sm:p-6 space-y-6 bg-[#F0F2F5]">
+    <div className="workspace-page flex-1 min-w-0 p-4 sm:p-6 space-y-6 bg-[#F0F2F5]">
       {selectedStaffId ? <AdminStaffDetails staff={selectedStaff} countries={selectedStaff ? (selectedStaff.countries?.length ? selectedStaff.countries : selectedStaff.country ? [selectedStaff.country] : []) : []} assignedApplications={getAssignedApplications(selectedStaff)} submittedApplications={getSubmittedApplications(selectedStaff)} onBack={() => navigateToStaff(null)} onEdit={handleOpenEditModal} /> : <>
       {/* Header */}
-      <div className="flex flex-wrap gap-3 justify-between items-center bg-white border border-[#E2E8F0] border-t-4 border-t-[#D99A1C] p-6 rounded-2xl shadow-xs">
+      <div className="workspace-panel flex flex-wrap gap-3 justify-between items-center bg-white border border-[#E2E8F0] border-t-4 border-t-[#D99A1C] p-6 rounded-2xl shadow-xs">
         <div className="space-y-1">
           <h1 className="text-xl font-black text-slate-900 tracking-tight">Staff Management Directory</h1>
           <p className="text-xs text-slate-500 font-medium">Manage backend admin operations staff, edit profiles, assign active client files and configure permissions by region.</p>
@@ -403,61 +391,16 @@ export default function Staff({ staffList, setStaffList, applications }) {
         </ActionButton>
       </div>
 
-      {/* Search & Filters */}
-      <div className="bg-[#FFFFFF] border border-[#E2E8F0] border-t-4 border-t-[#2563EB] rounded-2xl p-5 shadow-xs flex flex-col sm:flex-row sm:flex-wrap gap-4 items-center justify-between">
-        <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto">
-          <div className="bg-slate-100 p-1 rounded-xl flex flex-wrap gap-1">
-            {['All', 'Active', 'Inactive', 'Suspended'].map((status) => (
-              <ActionButton
-                key={status}
-                onClick={() => setStatusFilter(status)}
-                className={`px-3.5 py-1.5 text-xs font-bold rounded-lg transition-all ${statusFilter === status
-                    ? 'bg-white text-[#D99A1C] shadow-sm font-black'
-                    : 'text-slate-500 hover:text-slate-900'
-                  }`}
-              >
-                {status}
-              </ActionButton>
-            ))}
-          </div>
-
-          {/* Country Filter Dropdown (Dynamic) */}
-          <SearchableSelect
-            value={countryFilter}
-            onChange={(e) => setCountryFilter(e.target.value)}
-            className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-[#D99A1C] focus:ring-1 focus:ring-[#D99A1C] font-extrabold cursor-pointer"
-          >
-            <option value="All">All Assigned Countries</option>
-            {availableCountries.map(country => (
-              <option key={country} value={country}>{country}</option>
-            ))}
-          </SearchableSelect>
-        </div>
-
-        <div className="relative w-full sm:max-w-xs">
-          <span className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-slate-400">
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-            </svg>
-          </span>
-          <input
-            type="text"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-4 py-2.5 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:bg-white focus:border-[#D99A1C] focus:ring-1 focus:ring-[#D99A1C] transition-all font-medium"
-            placeholder="Search by name, role, email, phone..."
-          />
-        </div>
-      </div>
-
       {/* Directory Table */}
-      <div className="bg-white border border-[#E2E8F0] border-t-4 border-t-[#D99A1C] rounded-2xl shadow-xs overflow-hidden">
-        <div className="px-6 py-4 border-b border-[#E2E8F0] flex justify-between items-center">
-          <h2 className="text-xs font-black text-slate-900 uppercase tracking-wider">Registered Operations Team</h2>
-        </div>
+      <div className="workspace-panel workspace-list-frame bg-white border border-[#E2E8F0] border-t-4 border-t-[#D99A1C] rounded-2xl shadow-xs overflow-hidden">
+        {/* Scoping Tabs on top of table */}
+        <ListFilterTabs value={statusFilter} onChange={value => { setStatusFilter(value); setCurrentPage(1); }} options={[{value:'All',label:'All staff',filters:{status:'All'}},{value:'Active',label:'Active',filters:{status:'Active'}},{value:'Inactive',label:'Inactive',filters:{status:'Inactive'}},{value:'Suspended',label:'Suspended',filters:{status:'Suspended'}}]} query={{endpoint:'/users',search:searchTerm,filters:{country:countryFilter,role:roleFilter},reloadKey:JSON.stringify(safeStaffList)}} />
+
+        <ListToolbar search={searchTerm} onSearchChange={setSearchTerm} filters={[{ key: 'status', label: 'statuses', value: statusFilter, onChange: setStatusFilter, options: ['Active', 'Inactive', 'Suspended'] },{ key: 'country', label: 'countries', value: countryFilter, onChange: setCountryFilter, options: serverList.facets.country || availableCountries },{ key: 'role', label: 'roles', value: roleFilter, onChange: setRoleFilter, options: serverList.facets.role || dbAdminRoles.map(r => r.name) }]} onReset={() => { setSearchTerm(''); setStatusFilter('All'); setCountryFilter('All'); setRoleFilter('All'); setCurrentPage(1); }} loading={serverList.loading} error={serverList.error} onRetry={serverList.reload} />
+        
         <div className="overflow-x-auto">
           {filteredStaff.length > 0 ? (
-            <table className="w-full text-left border-collapse">
+            <table className="workspace-table w-full text-left border-collapse">
               <thead>
                 <tr className="bg-slate-50 border-b border-[#E2E8F0]">
                   <th className="px-6 py-3 text-slate-400 text-[10px] font-extrabold uppercase tracking-wider w-[60px]">SI.NO.</th>
@@ -477,7 +420,10 @@ export default function Staff({ staffList, setStaffList, applications }) {
 
                   return (
                     <React.Fragment key={staff._id || staff.id}>
-                      <tr className="hover:bg-slate-50/50 transition-colors">
+                      <tr tabIndex={0} onKeyDown={event => { if (event.target === event.currentTarget && event.key === "Enter") { event.preventDefault(); event.currentTarget.click(); } }} 
+                        className="hover:bg-slate-50/50 transition-colors cursor-pointer"
+                        onClick={() => navigateToStaff(staff._id || staff.id)}
+                      >
                         <td className="px-6 py-4 font-bold text-slate-400">{startIndex + idx + 1}</td>
                         <td className="px-6 py-4 flex items-center gap-3">
                           <div className="w-8 h-8 rounded-full flex items-center justify-center font-bold text-white text-xs bg-gradient-to-tr from-[#D99A1C] to-[#F5B025]">
@@ -522,60 +468,29 @@ export default function Staff({ staffList, setStaffList, applications }) {
                           </span>
                         </td>
 
-                        {/* Actions Column (Edit & Delete) */}
+                        {/* Actions Column (3-dot ActionMenu) */}
                         <td className="px-6 py-4 text-right" onClick={(e) => e.stopPropagation()}>
-                          <div className="flex items-center justify-end gap-1.5">
-                            <ActionButton
-                              type="button"
-                              onClick={() => navigateToStaff(staff._id || staff.id)}
-                              className="p-1.5 text-slate-500 hover:text-[#D99A1C] hover:bg-amber-50 rounded-lg transition-colors cursor-pointer"
-                              title="View Staff Details"
-                              aria-label={`View details for ${staff.name || 'staff member'}`}
-                            >
-                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z" /><circle cx="12" cy="12" r="3" strokeWidth="2" /></svg>
-                            </ActionButton>
-                            <ActionButton
-                              type="button"
-                              onClick={() => handleOpenEditModal(staff)}
-                              className="p-1.5 text-slate-500 hover:text-[#D99A1C] hover:bg-amber-50 rounded-lg transition-colors cursor-pointer"
-                              title="Edit Staff Member"
-                            >
-                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                              </svg>
-                            </ActionButton>
-
-                            {deleteConfirmId === (staff._id || staff.id) ? (
-                              <div className="flex items-center gap-1 bg-rose-50 border border-rose-200 rounded-lg p-1">
-                                <ActionButton
-                                  type="button"
-                                  onClick={() => handleDeleteStaff(staff)}
-                                  disabled={isDeleting}
-                                  className="px-2 py-0.5 bg-rose-600 hover:bg-rose-700 text-white font-extrabold text-[10px] rounded transition-all cursor-pointer"
-                                >
-                                  {isDeleting ? '...' : 'Confirm'}
-                                </ActionButton>
-                                <ActionButton
-                                  type="button"
-                                  onClick={() => setDeleteConfirmId(null)}
-                                  className="px-1.5 py-0.5 text-slate-500 text-[10px] hover:text-slate-700 cursor-pointer"
-                                >
-                                  Cancel
-                                </ActionButton>
-                              </div>
-                            ) : (
-                              <ActionButton
-                                type="button"
-                                onClick={() => setDeleteConfirmId(staff._id || staff.id)}
-                                className="p-1.5 text-slate-500 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
-                                title="Delete Staff Member"
-                              >
-                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                </svg>
-                              </ActionButton>
-                            )}
-                          </div>
+                          <ActionMenu
+                            items={[
+                              {
+                                label: 'View Staff Details',
+                                onClick: () => navigateToStaff(staff._id || staff.id)
+                              },
+                              {
+                                label: 'Edit Staff Member',
+                                onClick: () => handleOpenEditModal(staff)
+                              },
+                              {
+                                label: 'Delete Staff Member',
+                                danger: true,
+                                onClick: () => {
+                                  if (window.confirm(`Are you sure you want to remove staff member "${staff.name}"?`)) {
+                                    handleDeleteStaff(staff);
+                                  }
+                                }
+                              }
+                            ]}
+                          />
                         </td>
                       </tr>
 

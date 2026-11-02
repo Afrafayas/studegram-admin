@@ -1,3 +1,5 @@
+import Notice from './pages/Notice';
+import NoticePopup from './components/NoticePopup';
 import { getDisplayId } from './utils/displayId';
 import { getAssignedExecutiveName } from './utils/applicationAssignment';
 import React, { useState, useEffect, useRef } from 'react';
@@ -28,6 +30,7 @@ import API from './api/axios';
 import { useToast } from './context/ToastContext';
 
 export default function AdminPortal({ onLogout }) {
+  const [selectedNoticeId, setSelectedNoticeId] = useState(null);
   const toast = useToast();
   const { currentUser, checkScope } = useAuth();
 
@@ -367,6 +370,7 @@ export default function AdminPortal({ onLogout }) {
   });
 
   const renderActiveTabContent = () => {
+    if (activeTab === 'notices') return <Notice selectedNoticeId={selectedNoticeId} setSelectedNoticeId={setSelectedNoticeId} />;
     if (activeTab === 'daily-report') {
       return (
         <DailyReport 
@@ -421,7 +425,8 @@ export default function AdminPortal({ onLogout }) {
     
     if (activeTab === 'admin-report') {
       return (
-        <AdminReport 
+        <AdminReport
+          onOpenApplication={appId => { setSelectedAppIdForSingleView(appId); setActiveTab('applications'); }}
           applications={scopedApplications} 
           activeSubTab={activeSubTab}
           referralAgents={referralAgents}
@@ -555,6 +560,7 @@ export default function AdminPortal({ onLogout }) {
   }, []);
 
   const handleSelectTab = (tabId) => {
+    if (tabId === 'notices') setSelectedNoticeId(null);
     if (tabId === 'applications') {
       setSelectedAppIdForSingleView(null);
       localStorage.removeItem('studegram_admin_single_view_app_id');
@@ -607,7 +613,7 @@ export default function AdminPortal({ onLogout }) {
   };
 
   return (
-    <div className="h-screen w-full bg-[#F0F2F5] flex font-sans text-slate-900 select-text overflow-hidden">
+    <div className="workspace-shell fixed inset-0 h-dvh w-full bg-[#F0F2F5] flex font-sans text-slate-900 select-text overflow-hidden">
       <AdminSidebar 
         activeTab={activeTab}
         setActiveTab={handleSelectTab}
@@ -618,7 +624,7 @@ export default function AdminPortal({ onLogout }) {
         onClose={() => setSidebarOpen(false)}
       />
 
-      <div className="flex-1 flex flex-col h-screen min-w-0 overflow-hidden">
+      <div className="flex-1 flex flex-col h-full min-h-0 min-w-0 overflow-hidden">
         <AdminHeader 
           activeTab={activeTab}
           activeSubTab={activeSubTab}
@@ -642,12 +648,13 @@ export default function AdminPortal({ onLogout }) {
           }}
         />
 
-        <main id="admin-main-content" key={`${activeTab}-${activeSubTab}`} className="flex-1 min-w-0 overflow-y-auto overflow-x-hidden pb-16 animate-fade-in scroll-smooth">
+        <main id="admin-main-content" key={`${activeTab}-${activeSubTab}`} className="workspace-main flex-1 min-h-0 min-w-0 overflow-y-auto overflow-x-hidden overscroll-y-contain pb-4 animate-fade-in scroll-smooth">
           {dataLoadError && <p role="alert" className="mx-6 mt-4 p-3 rounded-xl bg-amber-50 border border-amber-200 text-xs text-amber-800">{dataLoadError}</p>}
           {renderActiveTabContent()}
         </main>
       </div>
 
+      <NoticePopup onViewNotice={id => { setSelectedNoticeId(id); setActiveSubTab(null); setActiveTab('notices'); }} />
       {/* Logout Confirmation Modal */}
       <LogoutConfirmModal
         isOpen={showLogoutConfirmModal}

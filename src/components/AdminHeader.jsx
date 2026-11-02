@@ -263,6 +263,8 @@ export default function AdminHeader({
       crumbs.push('Become our Partner');
     } else if (activeTab === 'partners') {
       crumbs.push('Partners');
+    } else if (activeTab === 'notices') {
+      crumbs.push('Notices & Announcements');
     } else if (activeTab === 'students') {
       crumbs.push('Students');
     } else if (activeTab === 'commissions') {
@@ -294,7 +296,7 @@ export default function AdminHeader({
   const breadcrumbs = getBreadcrumbs();
 
   return (
-    <header className="flex flex-col select-none z-30 shrink-0 sticky top-0 bg-[#0A0A0F] text-white border-b border-slate-900 shadow-xs">
+    <header className="workspace-header flex flex-col select-none z-30 shrink-0 sticky top-0 bg-[#0A0A0F] text-white border-b border-slate-900 shadow-xs">
       {/* Top Navigation Bar */}
       <div className="h-[64px] min-h-[64px] px-3 sm:px-6 flex items-center justify-between gap-2">
         {/* Left Side: Hamburger & Breadcrumbs */}
@@ -415,11 +417,14 @@ export default function AdminHeader({
                               <span>{comm.camsId && !/[0-9a-fA-F]{24}/.test(comm.camsId) ? `${comm.camsId} · ` : ''}{comm.studentName}</span>
                             </h5>
                             <span className="text-[9px] text-slate-400 font-semibold shrink-0">
-                              {comm.createdAt ? new Date(comm.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Just now'}
+                              {comm.createdAt ? new Date(comm.createdAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }) : 'Just now'}
                             </span>
                           </div>
                           <p className="text-[10px] text-slate-400 font-medium truncate mt-0.5">{comm.universityName} - {comm.courseName}</p>
-                          <p className="text-[11px] font-semibold mt-1 leading-snug break-words">"{comm.text}"</p>
+                          <div className="flex items-start gap-2 mt-1">
+                            <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-slate-800 text-[#D99A1C]"><svg aria-hidden="true" className="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="8" r="4" /><path d="M5 21v-2a7 7 0 0 1 14 0v2" /></svg></span>
+                            <p className="min-w-0 text-[11px] font-semibold leading-snug break-words">"{comm.text}"</p>
+                          </div>
                           <div className="mt-2 flex items-center justify-between text-[9px]">
                             <span className={`px-2 py-0.5 rounded font-extrabold uppercase ${comm.isUnreplied ? 'bg-blue-600 text-white' : 'bg-slate-800 text-slate-400'}`}>
                               {comm.isUnreplied ? '💬 Unreplied Message' : '✓ Replied / Read'}

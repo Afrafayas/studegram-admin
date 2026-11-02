@@ -1,3 +1,7 @@
+import ListFilterTabs from '../components/ListFilterTabs';
+import useServerList from '../hooks/useServerList';
+import ListToolbar, { ListPager } from '../components/ListToolbar';
+import ActionMenu from '../components/ActionMenu';
 import SearchableSelect from '../components/SearchableSelect';
 import { ActionButton } from '../components/ActionControls';
 import React, { useState, useEffect } from 'react';
@@ -127,7 +131,7 @@ export default function StaffActivityLogs() {
 
   // Data States
   const [staffSummary, setStaffSummary] = useState([]);
-  const [sessionLogs, setSessionLogs] = useState([]);
+  const [backgroundLogs, setSessionLogs] = useState([]);
   const [stats, setStats] = useState({
     onlineNow: 0,
     totalSessionsToday: 0,
@@ -151,6 +155,10 @@ export default function StaffActivityLogs() {
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [totalSessionsCount, setTotalSessionsCount] = useState(0);
 
+  const isSummaryView = activeSubView === 'summary';
+  const serverList = useServerList(isSummaryView ? '/activity-logs/staff-summary' : '/activity-logs', { search: searchTerm, filters: { role: roleFilter, status: isSummaryView ? statusFilter : statusFilter === 'Online' ? 'Active' : statusFilter === 'Offline' ? 'Completed' : 'All' }, params: { timeframe }, page: currentPage, limit: itemsPerPage, onPageChange: setCurrentPage, enabled: !selectedStaffId, reloadKey: JSON.stringify(staffSummary) });
+  const sessionLogs = isSummaryView ? [] : serverList.data;
+  useEffect(() => { setCurrentPage(1); }, [searchTerm, roleFilter, statusFilter, timeframe, activeSubView]);
   const getTimeframeLabel = (tf) => {
     switch (tf) {
       case 'today': return 'Today';
@@ -208,7 +216,7 @@ export default function StaffActivityLogs() {
 
   useEffect(() => {
     fetchOverviewData();
-  }, [searchTerm, roleFilter, statusFilter, timeframe, currentPage, itemsPerPage]);
+  }, [timeframe]);
 
   // Periodic background refresh every 30s
   useEffect(() => {
@@ -216,32 +224,10 @@ export default function StaffActivityLogs() {
       fetchOverviewData();
     }, 30000);
     return () => clearInterval(timer);
-  }, []);
+  }, [timeframe]);
 
   // Filtered staff summary list
-  const filteredStaffSummary = staffSummary.filter(staff => {
-    const matchesSearch =
-      (staff.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (staff.email || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (staff.role || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (staff.phone || '').includes(searchTerm);
-
-    const matchesRole = roleFilter === 'All' || staff.role === roleFilter;
-
-    const matchesStatus =
-      statusFilter === 'All' ||
-      (statusFilter === 'Online' && staff.isOnline) ||
-      (statusFilter === 'Offline' && !staff.isOnline);
-
-    const matchesTimeframe =
-      timeframe === 'All' ||
-      searchTerm.trim() !== '' ||
-      staff.wasActiveInPeriod ||
-      (staff.periodMinutes > 0) ||
-      (timeframe === 'today' && (staff.isOnline || staff.todayMinutes > 0));
-
-    return matchesSearch && matchesRole && matchesStatus && matchesTimeframe;
-  });
+  const filteredStaffSummary = isSummaryView ? serverList.data : [];
 
   // Unique roles for dropdown filter
   const availableRoles = Array.from(
@@ -269,7 +255,7 @@ export default function StaffActivityLogs() {
   }
 
   return (
-    <div className="flex-1 p-6 lg:p-8 space-y-6 max-w-7xl mx-auto w-full">
+    <div className="workspace-page flex-1 p-6 lg:p-8 space-y-6 max-w-7xl mx-auto w-full">
       {/* Header and Live Sync Controls */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
@@ -304,186 +290,16 @@ export default function StaffActivityLogs() {
         </div>
       </div>
 
-      {/* Top Key Metrics Overview */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* Card 1: Staff Online Now */}
-        <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-xs flex items-center justify-between">
-          <div>
-            <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">Staff Online Now</span>
-            <div className="flex items-baseline gap-2 mt-1">
-              <span className="text-2xl font-black text-slate-900">{stats.onlineNow || 0}</span>
-              <span className="text-xs font-bold text-emerald-600">Active</span>
-            </div>
-            <span className="text-[10px] text-slate-400 font-semibold block mt-1">Connected in last 10m</span>
-          </div>
-          <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold text-xl relative">
-            <span className="w-3 h-3 rounded-full bg-emerald-500 absolute top-2 right-2 animate-ping"></span>
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5.636 18.364a9 9 0 010-12.728m12.728 0a9 9 0 010 12.728m-9.9-2.829a5 5 0 010-7.07m7.072 0a5 5 0 010 7.07M13 12a1 1 0 11-2 0 1 1 0 012 0z" />
-            </svg>
-          </div>
-        </div>
-
-        {/* Card 2: Total Portal Time Today */}
-        <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-xs flex items-center justify-between">
-          <div>
-            <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">Portal Time Today</span>
-            <div className="flex items-baseline gap-2 mt-1">
-              <span className="text-2xl font-black text-amber-600">{stats.totalPortalTimeFormatted || '0m'}</span>
-            </div>
-            <span className="text-[10px] text-slate-400 font-semibold block mt-1">Total staff hours today</span>
-          </div>
-          <div className="w-12 h-12 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center font-bold text-xl">
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-          </div>
-        </div>
-
-        {/* Card 3: Sessions Today */}
-        <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-xs flex items-center justify-between">
-          <div>
-            <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">Sessions Today</span>
-            <div className="flex items-baseline gap-2 mt-1">
-              <span className="text-2xl font-black text-indigo-600">{stats.totalSessionsToday || 0}</span>
-              <span className="text-xs font-semibold text-slate-400">logins</span>
-            </div>
-            <span className="text-[10px] text-slate-400 font-semibold block mt-1">
-              Across {stats.activeStaffToday || 0} staff members
-            </span>
-          </div>
-          <div className="w-12 h-12 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold text-xl">
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
-            </svg>
-          </div>
-        </div>
-
-        {/* Card 4: Registered Staff Monitored */}
-        <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-xs flex items-center justify-between">
-          <div>
-            <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">Monitored Staff</span>
-            <div className="flex items-baseline gap-2 mt-1">
-              <span className="text-2xl font-black text-slate-900">{stats.totalStaffRegistered || staffSummary.length}</span>
-              <span className="text-xs font-semibold text-slate-400">staff</span>
-            </div>
-            <span className="text-[10px] text-slate-400 font-semibold block mt-1">Active roster accounts</span>
-          </div>
-          <div className="w-12 h-12 rounded-2xl bg-slate-100 text-slate-700 flex items-center justify-center font-bold text-xl">
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
-            </svg>
-          </div>
-        </div>
-      </div>
-
-      {/* Tabs and Controls Bar */}
-      <div className="bg-white rounded-2xl border border-slate-200 p-4 space-y-4 shadow-xs">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-3 border-b border-slate-100">
-          {/* View Mode Toggle: Staff Summary vs All Session Logs */}
-          <div className="flex items-center gap-2 bg-slate-100 p-1 rounded-xl w-fit">
-            <ActionButton
-              onClick={() => setActiveSubView('summary')}
-              className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                activeSubView === 'summary'
-                  ? 'bg-white text-slate-900 shadow-xs'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              <svg className="w-4 h-4 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-              </svg>
-              <span>Staff Summary Overview ({filteredStaffSummary.length})</span>
-            </ActionButton>
-
-            <ActionButton
-              onClick={() => setActiveSubView('sessions')}
-              className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                activeSubView === 'sessions'
-                  ? 'bg-white text-slate-900 shadow-xs'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              <svg className="w-4 h-4 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-              </svg>
-              <span>All Session Logs ({totalSessionsCount})</span>
-            </ActionButton>
-          </div>
-
-          {/* Quick Info text */}
-          <div className="text-xs text-slate-400 font-semibold hidden md:block">
-            Showing records with active login/logout duration metrics
-          </div>
-        </div>
-
-        {/* Filter Inputs Row */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-          {/* Search */}
-          <div className="relative">
-            <svg className="w-4 h-4 text-slate-400 absolute left-3 top-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-            </svg>
-            <input
-              type="text"
-              placeholder="Search staff name, email, role..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-amber-500 focus:bg-white"
-            />
-          </div>
-
-          {/* Role Filter */}
-          <div>
-            <SearchableSelect
-              value={roleFilter}
-              onChange={(e) => setRoleFilter(e.target.value)}
-              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 focus:outline-none focus:ring-1 focus:ring-amber-500"
-            >
-              <option value="All">All Staff Roles</option>
-              {availableRoles.map(r => (
-                <option key={r} value={r}>{r}</option>
-              ))}
-            </SearchableSelect>
-          </div>
-
-          {/* Status Filter */}
-          <div>
-            <SearchableSelect
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 focus:outline-none focus:ring-1 focus:ring-amber-500"
-            >
-              <option value="All">All Online Statuses</option>
-              <option value="Online">🟢 Online Now Only</option>
-              <option value="Offline">Offline Staff</option>
-            </SearchableSelect>
-          </div>
-
-          {/* Timeframe Filter */}
-          <div>
-            <SearchableSelect
-              value={timeframe}
-              onChange={(e) => setTimeframe(e.target.value)}
-              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 focus:outline-none focus:ring-1 focus:ring-amber-500"
-            >
-              <option value="All">All Timeframes</option>
-              <option value="today">Today</option>
-              <option value="yesterday">Yesterday</option>
-              <option value="week">Past 7 Days</option>
-              <option value="15days">Past 15 Days</option>
-              <option value="month">Past 30 Days</option>
-            </SearchableSelect>
-          </div>
-        </div>
-      </div>
+      {/* Scoping Tabs */}
+      <ListFilterTabs value={activeSubView==='sessions'?'Sessions':statusFilter} onChange={value=>{setActiveSubView(value==='Sessions'?'sessions':'summary');setStatusFilter(value==='Sessions'?'All':value);setCurrentPage(1);}} query={{endpoint:'/activity-logs/staff-summary',search:searchTerm,filters:{role:roleFilter},params:{timeframe},reloadKey:JSON.stringify(staffSummary)}} options={[{value:'All',label:'All monitored staff',filters:{status:'All'}},{value:'Online',label:'Online',filters:{status:'Online'}},{value:'Offline',label:'Offline',filters:{status:'Offline'}},{value:'Sessions',label:'Session logs',endpoint:'/activity-logs',filters:{status:'All'}}]} />
 
       {/* Main Content Area based on Active SubView */}
       {activeSubView === 'summary' ? (
         /* ================= SUBVIEW 1: STAFF SUMMARY LIST ================= */
-        <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-xs">
+        <div className="workspace-list-frame bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-xs">
+<ListToolbar search={searchTerm} onSearchChange={setSearchTerm} filters={[{key:'role',label:'roles',value:roleFilter,onChange:setRoleFilter,options:serverList.facets.role || availableRoles},{key:'status',label:'online status',value:statusFilter,onChange:setStatusFilter,options:['Online','Offline']},{key:'timeframe',label:'timeframes',value:timeframe,onChange:setTimeframe,options:[{value:'today',label:'Today'},{value:'yesterday',label:'Yesterday'},{value:'week',label:'Past 7 days'},{value:'15days',label:'Past 15 days'},{value:'month',label:'Past 30 days'}]}]} onReset={() => { setSearchTerm(''); setRoleFilter('All'); setStatusFilter('All'); setTimeframe('All'); }} loading={serverList.loading} error={serverList.error} onRetry={serverList.reload} />
           <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
+            <table className="workspace-table w-full text-left border-collapse">
               <thead>
                 <tr className="bg-slate-50 border-b border-slate-200 text-[10px] font-black uppercase text-slate-400 tracking-wider">
                   <th className="py-3 px-4">Staff Member</th>
@@ -509,7 +325,7 @@ export default function StaffActivityLogs() {
                   </tr>
                 ) : (
                   filteredStaffSummary.map((staff) => (
-                    <tr
+                    <tr tabIndex={0} onKeyDown={event => { if (event.target === event.currentTarget && event.key === "Enter") { event.preventDefault(); event.currentTarget.click(); } }}
                       key={staff.userId || staff.email}
                       className="hover:bg-slate-50/70 transition-colors group cursor-pointer"
                       onClick={() => setSelectedStaffId(staff.userId || staff.email)}
@@ -606,20 +422,16 @@ export default function StaffActivityLogs() {
                         </div>
                       </td>
 
-                      {/* Action: View Timeline Button */}
-                      <td className="py-3.5 px-4 text-right">
-                        <ActionButton
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setSelectedStaffId(staff.userId || staff.email);
-                          }}
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-900 hover:bg-amber-500 text-white rounded-lg text-xs font-bold transition-all shadow-xs"
-                        >
-                          <span>Timeline</span>
-                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M9 5l7 7-7 7" />
-                          </svg>
-                        </ActionButton>
+                      {/* ActionMenu */}
+                      <td className="py-3.5 px-4 text-right pr-6" onClick={(e) => e.stopPropagation()}>
+                        <ActionMenu
+                          items={[
+                            {
+                              label: 'View Activity Timeline',
+                              onClick: () => setSelectedStaffId(staff.userId || staff.email)
+                            }
+                          ]}
+                        />
                       </td>
                     </tr>
                   ))
@@ -627,12 +439,14 @@ export default function StaffActivityLogs() {
               </tbody>
             </table>
           </div>
+<ListPager list={serverList} page={currentPage} onPageChange={setCurrentPage} limit={itemsPerPage} onLimitChange={setItemsPerPage} />
         </div>
       ) : (
         /* ================= SUBVIEW 2: GRANULAR SESSION LOGS ================= */
-        <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-xs">
+        <div className="workspace-list-frame bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-xs">
+<ListToolbar search={searchTerm} onSearchChange={setSearchTerm} filters={[{key:'role',label:'roles',value:roleFilter,onChange:setRoleFilter,options:serverList.facets.role || availableRoles},{key:'status',label:'online status',value:statusFilter,onChange:setStatusFilter,options:['Online','Offline']},{key:'timeframe',label:'timeframes',value:timeframe,onChange:setTimeframe,options:[{value:'today',label:'Today'},{value:'yesterday',label:'Yesterday'},{value:'week',label:'Past 7 days'},{value:'15days',label:'Past 15 days'},{value:'month',label:'Past 30 days'}]}]} onReset={() => { setSearchTerm(''); setRoleFilter('All'); setStatusFilter('All'); setTimeframe('All'); }} loading={serverList.loading} error={serverList.error} onRetry={serverList.reload} />
           <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
+            <table className="workspace-table w-full text-left border-collapse">
               <thead>
                 <tr className="bg-slate-50 border-b border-slate-200 text-[10px] font-black uppercase text-slate-400 tracking-wider">
                   <th className="py-3 px-4">Staff Member</th>
@@ -654,7 +468,7 @@ export default function StaffActivityLogs() {
                   </tr>
                 ) : (
                   sessionLogs.map((sess) => (
-                    <tr
+                    <tr tabIndex={0} onKeyDown={event => { if (event.target === event.currentTarget && event.key === "Enter") { event.preventDefault(); event.currentTarget.click(); } }}
                       key={sess._id}
                       className="hover:bg-slate-50/70 transition-colors cursor-pointer"
                       onClick={() => setSelectedStaffId(sess.user?._id || sess.user || sess.userEmail)}
@@ -717,17 +531,16 @@ export default function StaffActivityLogs() {
                         )}
                       </td>
 
-                      {/* Action */}
-                      <td className="py-3.5 px-4 text-right">
-                        <ActionButton
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setSelectedStaffId(sess.user?._id || sess.user || sess.userEmail);
-                          }}
-                          className="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-bold transition-all"
-                        >
-                          View Timeline
-                        </ActionButton>
+                      {/* ActionMenu */}
+                      <td className="py-3.5 px-4 text-right pr-6" onClick={(e) => e.stopPropagation()}>
+                        <ActionMenu
+                          items={[
+                            {
+                              label: 'View Staff Timeline',
+                              onClick: () => setSelectedStaffId(sess.user?._id || sess.user || sess.userEmail)
+                            }
+                          ]}
+                        />
                       </td>
                     </tr>
                   ))
@@ -736,26 +549,7 @@ export default function StaffActivityLogs() {
             </table>
           </div>
 
-          {/* Pagination Controls */}
-          <div className="p-4 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-500 font-semibold">
-            <div className="flex items-center gap-2">
-              <ActionButton
-                disabled={currentPage <= 1}
-                onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-                className="px-3 py-1.5 rounded-lg border border-slate-200 hover:bg-slate-50 disabled:opacity-40 font-bold"
-              >
-                Previous
-              </ActionButton>
-              <span className="px-2 text-slate-700 font-bold">Page {currentPage}</span>
-              <ActionButton
-                disabled={currentPage * itemsPerPage >= totalSessionsCount}
-                onClick={() => setCurrentPage(prev => prev + 1)}
-                className="px-3 py-1.5 rounded-lg border border-slate-200 hover:bg-slate-50 disabled:opacity-40 font-bold"
-              >
-                Next
-              </ActionButton>
-            </div>
-          </div>
+<ListPager list={serverList} page={currentPage} onPageChange={setCurrentPage} limit={itemsPerPage} onLimitChange={setItemsPerPage} />
         </div>
       )}
     </div>
