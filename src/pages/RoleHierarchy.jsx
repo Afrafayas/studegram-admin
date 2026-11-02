@@ -1,3 +1,8 @@
+import ListRecordView from '../components/ListRecordView';
+import ListFilterTabs from '../components/ListFilterTabs';
+import useServerList from '../hooks/useServerList';
+import ListToolbar, { ListPager } from '../components/ListToolbar';
+import ActionMenu from '../components/ActionMenu';
 import SearchableSelect from '../components/SearchableSelect';
 import { ActionButton, ActionForm } from '../components/ActionControls';
 import React, { useState, useEffect } from 'react';
@@ -45,6 +50,8 @@ const FEATURE_ACTION_PERMISSIONS = [
 ];
 
 export default function RoleHierarchy() {
+  const [listRecord, setListRecord] = React.useState(null);
+
   const toast = useToast();
   const { currentUser, auditLogs, addAuditLog } = useAuth();
   
@@ -54,6 +61,16 @@ export default function RoleHierarchy() {
   // Database roles with instant preset fallback
   const [roles, setRoles] = useState([]);
   const [isLoadingRoles, setIsLoadingRoles] = useState(false);
+  const [listSearch, setListSearch] = useState('');
+  const [listPage, setListPage] = useState(1);
+  const [listLimit, setListLimit] = useState(15);
+  const [auditSearch, setAuditSearch] = useState('');
+  const [auditRole, setAuditRole] = useState('All');
+  const [auditAction, setAuditAction] = useState('All');
+  const [auditPage, setAuditPage] = useState(1);
+  const [auditLimit, setAuditLimit] = useState(15);
+  const auditList = useServerList('/lists/query', { localRecords: auditLogs, resource: 'role-audit', search: auditSearch, filters: { role: auditRole, action: auditAction }, page: auditPage, limit: auditLimit, onPageChange: setAuditPage });
+  useEffect(() => { setAuditPage(1); }, [auditSearch, auditRole, auditAction]);
   const [portalFilter, setPortalFilter] = useState('All'); // 'All' | 'Admin' | 'Agent'
 
   // Modal State for editing/creating role checklist
@@ -164,12 +181,14 @@ export default function RoleHierarchy() {
     }
   };
 
-  const filteredRoles = roles.filter(r => portalFilter === 'All' || r.portalType === portalFilter);
+  const serverList = useServerList('/roles', { search: listSearch, filters: { portalType: portalFilter }, page: listPage, limit: listLimit, onPageChange: setListPage, reloadKey: JSON.stringify(roles) });
+  useEffect(() => { setListPage(1); }, [listSearch, portalFilter]);
+  const filteredRoles = serverList.data;
 
   return (
-    <div className="flex-1 min-w-0 p-4 sm:p-6 space-y-6 bg-[#F0F2F5]">
+    listRecord ? <div className="workspace-page flex-1 p-4 sm:p-6"><ListRecordView record={listRecord} title={listRecord.displayName || listRecord.title || listRecord.name || listRecord.university || 'Record details'} onBack={() => setListRecord(null)} /></div> : (<div className="workspace-page flex-1 min-w-0 p-4 sm:p-6 space-y-6 bg-[#F0F2F5]">
       {/* Header */}
-      <div className="bg-white border border-[#E2E8F0] border-t-4 border-t-[#D99A1C] p-6 rounded-2xl shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="workspace-panel bg-white border border-[#E2E8F0] border-t-4 border-t-[#D99A1C] p-6 rounded-2xl shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="space-y-1">
           <div className="flex items-center gap-2">
             <h1 className="text-xl font-black text-slate-900 tracking-tight">Security & Role-Based Permissions (RBAC)</h1>
@@ -214,88 +233,75 @@ export default function RoleHierarchy() {
       {/* TAB 1: ROLE & PERMISSION CHECKLIST BUILDER */}
       {activeTab === 'checklist' && (
         <div className="space-y-6">
-          {/* Controls Bar */}
-          <div className="bg-white border border-[#E2E8F0] p-4 rounded-2xl shadow-xs flex flex-col sm:flex-row items-center justify-between gap-4">
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Portal View Filter:</span>
-              <div className="bg-slate-100 p-1 rounded-xl flex gap-1 text-xs font-bold">
-                {['All', 'Admin', 'Agent'].map(p => (
-                  <ActionButton
-                    key={p}
-                    onClick={() => setPortalFilter(p)}
-                    className={`px-3 py-1 rounded-lg transition-all ${
-                      portalFilter === p ? 'bg-white text-[#D99A1C] shadow-sm font-black' : 'text-slate-500 hover:text-slate-900'
-                    }`}
-                  >
-                    {p === 'All' ? 'All Roles' : p === 'Admin' ? '🏛️ Admin Roles' : '🏢 Agent Roles'}
-                  </ActionButton>
-                ))}
-              </div>
+          <div className="workspace-panel workspace-list-frame bg-white border border-[#E2E8F0] border-t-4 border-t-[#D99A1C] rounded-2xl shadow-xs overflow-hidden">
+            {/* Scoping Tabs on top of table */}
+            <ListFilterTabs value={portalFilter} onChange={value => { setPortalFilter(value); setListPage(1); }} options={[{value:'All',label:'All roles',filters:{portalType:'All'}},{value:'Admin',label:'Admin roles',filters:{portalType:'Admin'}},{value:'Agent',label:'Agent roles',filters:{portalType:'Agent'}}]} query={{endpoint:'/roles',search:listSearch,reloadKey:JSON.stringify(roles)}} />
+
+            <ListToolbar search={listSearch} onSearchChange={setListSearch} filters={[{ key:'portalType',label:'portals',value:portalFilter,onChange:setPortalFilter,options:['Admin','Agent'] }]} onReset={() => { setListSearch(''); setPortalFilter('All'); setListPage(1); }} loading={serverList.loading} error={serverList.error} onRetry={serverList.reload} />
+
+            
+
+            <div className="overflow-x-auto">
+              {filteredRoles.length > 0 ? (
+                <table className="workspace-table w-full text-left border-collapse">
+                  <thead>
+                    <tr className="bg-slate-50 border-b border-[#E2E8F0]">
+                      <th className="px-6 py-3.5 text-slate-400 text-[10px] font-extrabold uppercase tracking-wider pl-6">Role Name & Title</th>
+                      <th className="px-6 py-3.5 text-slate-400 text-[10px] font-extrabold uppercase tracking-wider">Portal Type</th>
+                      <th className="px-6 py-3.5 text-slate-400 text-[10px] font-extrabold uppercase tracking-wider">Classification</th>
+                      <th className="px-6 py-3.5 text-slate-400 text-[10px] font-extrabold uppercase tracking-wider">Description</th>
+                      <th className="px-6 py-3.5 text-slate-400 text-[10px] font-extrabold uppercase tracking-wider">Permissions</th>
+                      <th className="px-6 py-3.5 text-slate-400 text-[10px] font-extrabold uppercase tracking-wider text-right pr-6">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 text-xs font-semibold text-slate-700">
+                    {filteredRoles.map(role => (
+                      <tr tabIndex={0} onKeyDown={event => { if (event.target === event.currentTarget && event.key === "Enter") { event.preventDefault(); event.currentTarget.click(); } }}
+                        key={role._id || role.name}
+                        onClick={() => setListRecord(role)}
+                        className="hover:bg-slate-50/80 transition-colors cursor-pointer group"
+                      >
+                        <td className="px-6 py-4 font-black text-slate-900 pl-6">
+                          <span className="group-hover:text-[#D99A1C] transition-colors">{role.displayName || role.name}</span>
+                        </td>
+                        <td className="px-6 py-4">
+                          <span className={`px-2.5 py-0.5 rounded-full text-[9px] font-extrabold border ${
+                            role.portalType === 'Agent' ? 'bg-purple-50 text-purple-700 border-purple-200' : 'bg-indigo-50 text-indigo-700 border-indigo-200'
+                          }`}>
+                            {role.portalType === 'Agent' ? 'Agent Portal' : 'Admin Portal'}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4">
+                          <span className={`px-2 py-0.5 text-[9px] font-bold rounded border ${role.isPreset ? 'bg-slate-100 text-slate-600 border-slate-200' : 'bg-amber-50 text-amber-700 border-amber-200'}`}>
+                            {role.isPreset ? 'System Preset' : 'Custom'}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 text-slate-500 max-w-xs truncate">{role.description || 'Configured system security role.'}</td>
+                        <td className="px-6 py-4 font-bold text-slate-700">
+                          {role.permissions?.includes('*') ? (
+                            <span className="text-emerald-700 font-extrabold">Full Access (*)</span>
+                          ) : (
+                            <span>{role.permissions?.length || 0} permissions</span>
+                          )}
+                        </td>
+                        <td className="px-6 py-4 text-right pr-6" onClick={e => e.stopPropagation()}>
+                          <ActionMenu
+                            items={[
+                              { label: 'Edit Checklist Permissions', onClick: () => openEditRoleModal(role) },
+                              { label: 'View Role Details', onClick: () => openEditRoleModal(role) }
+                            ]}
+                          />
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              ) : (
+                <div className="p-8 text-center text-xs text-slate-400">No roles found</div>
+              )}
             </div>
 
-            <ActionButton
-              onClick={openCreateRoleModal}
-              className="bg-gradient-to-r from-[#D99A1C] to-[#F5B025] hover:scale-[1.02] text-black font-extrabold text-xs px-4 py-2.5 rounded-xl transition-all shadow-md flex items-center gap-2 active:scale-95"
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 4v16m8-8H4" />
-              </svg>
-              <span>Create Custom Role</span>
-            </ActionButton>
-          </div>
-
-          {/* Roles Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {filteredRoles.map((role) => (
-              <div key={role._id || role.name} className="bg-white border border-[#E2E8F0] hover:border-[#D99A1C] rounded-2xl p-5 shadow-xs flex flex-col justify-between space-y-4 transition-all">
-                <div className="space-y-2">
-                  <div className="flex items-start justify-between gap-2">
-                    <div>
-                      <span className={`px-2 py-0.5 rounded text-[9px] font-extrabold uppercase border ${
-                        role.portalType === 'Agent' ? 'bg-purple-50 text-purple-700 border-purple-200' : 'bg-indigo-50 text-indigo-700 border-indigo-200'
-                      }`}>
-                        {role.portalType === 'Agent' ? '🏢 Agent Portal Role' : '🏛️ Admin Portal Role'}
-                      </span>
-                      <h3 className="text-base font-black text-slate-900 pt-1 tracking-tight">{role.displayName || role.name}</h3>
-                    </div>
-                    {role.isPreset && (
-                      <span className="bg-slate-100 text-slate-600 text-[9px] font-extrabold px-2 py-0.5 rounded border border-slate-200 shrink-0">
-                        System Preset
-                      </span>
-                    )}
-                  </div>
-
-                  <p className="text-xs text-slate-500 font-medium leading-relaxed">
-                    {role.description || 'Configured system security role.'}
-                  </p>
-
-                  <div className="pt-2 border-t border-slate-100 space-y-1.5">
-                    <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider block">Assigned Permissions ({role.permissions?.length || 0}):</span>
-                    <div className="flex flex-wrap gap-1 max-h-24 overflow-y-auto">
-                      {role.permissions?.includes('*') ? (
-                        <span className="bg-emerald-100 text-emerald-800 text-[10px] font-extrabold px-2 py-0.5 rounded-full border border-emerald-300">
-                          ⚡ Full Access (*)
-                        </span>
-                      ) : role.permissions?.map((pKey) => (
-                        <span key={pKey} className="bg-slate-100 text-slate-700 text-[9px] font-bold px-2 py-0.5 rounded border border-slate-200">
-                          {pKey}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-
-                <ActionButton
-                  onClick={() => openEditRoleModal(role)}
-                  className="w-full mt-2 bg-slate-900 hover:bg-black text-white font-extrabold text-xs py-2 rounded-xl transition-all uppercase tracking-wider flex items-center justify-center gap-1.5"
-                >
-                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                  </svg>
-                  <span>Edit Checklist Permissions</span>
-                </ActionButton>
-              </div>
-            ))}
+            <ListPager list={serverList} page={listPage} onPageChange={setListPage} limit={listLimit} onLimitChange={setListLimit} />
           </div>
         </div>
       )}
@@ -343,11 +349,12 @@ export default function RoleHierarchy() {
       {/* TAB 3: AUDIT LOGS */}
       {activeTab === 'logs' && (
         <div className="bg-white border border-[#E2E8F0] rounded-2xl p-6 shadow-xs space-y-4">
+<ListToolbar search={auditSearch} onSearchChange={setAuditSearch} filters={[{key:'role',label:'roles',value:auditRole,onChange:setAuditRole,options:auditList.facets.role || []},{key:'action',label:'actions',value:auditAction,onChange:setAuditAction,options:auditList.facets.action || []}]} onReset={() => { setAuditSearch(''); setAuditRole('All'); setAuditAction('All'); }} loading={auditList.loading} error={auditList.error} onRetry={auditList.reload} />
           <h2 className="text-xs font-black text-slate-950 uppercase tracking-widest border-b border-slate-100 pb-3">
             Live System RBAC Audit Logs
           </h2>
           <div className="border border-slate-200 rounded-xl overflow-x-auto">
-            <table className="w-full text-left border-collapse text-xs">
+            <table className="workspace-table w-full text-left border-collapse text-xs">
               <thead>
                 <tr className="bg-slate-50 border-b border-slate-200 text-[10px] font-extrabold uppercase text-slate-400">
                   <th className="p-3">Timestamp</th>
@@ -358,7 +365,7 @@ export default function RoleHierarchy() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 font-semibold">
-                {auditLogs.map((log) => (
+                {auditList.data.map((log) => (
                   <tr key={log.id} className="hover:bg-slate-50/50">
                     <td className="p-3 text-slate-400 font-mono text-[10px]">{new Date(log.timestamp).toLocaleString('en-GB')}</td>
                     <td className="p-3 font-bold text-slate-900">{log.userName}</td>
@@ -370,13 +377,14 @@ export default function RoleHierarchy() {
               </tbody>
             </table>
           </div>
+<ListPager list={auditList} page={auditPage} onPageChange={setAuditPage} limit={auditLimit} onLimitChange={setAuditLimit} />
         </div>
       )}
 
       {/* EDIT / CREATE ROLE CHECKLIST MODAL */}
       {isRoleModalOpen && createPortal(
         <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-xs select-none p-4 overflow-y-auto">
-          <div className="bg-white border border-slate-200 rounded-2xl w-full max-w-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+          <div className="workspace-list-frame bg-white border border-slate-200 rounded-2xl w-full max-w-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
             <div className="flex justify-between items-center p-4 bg-slate-900 text-white border-b border-white/10">
               <div>
                 <h3 className="text-sm font-extrabold uppercase tracking-wider">
@@ -540,6 +548,6 @@ export default function RoleHierarchy() {
         </div>,
         document.body
       )}
-    </div>
+    </div>)
   );
 }

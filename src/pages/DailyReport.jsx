@@ -11,7 +11,11 @@ export default function DailyReport({ applications, onNavigateToBecomePartner, o
   // Compute stats dynamically based on actual applications
   const totalAppsToday = (applications || []).filter(app => new Date(app.createdAt || app.dateAdded).toDateString() === new Date().toDateString()).length;
   const activeLeads = (applications || []).filter(app => !/closed|enrolled|rejected|withdrawn/i.test(app.status || app.secondaryStatus || '')).length;
-  const successRate = applications && applications.length > 0 ? `${Math.round((applications.filter(a => a.secondaryStatus === 'Processed' || a.secondaryStatus === 'Offer Issued').length / applications.length) * 100)}%` : "0%";
+  const successfulApplications = (applications || []).filter(app =>
+    ['visa approved', 'enrolled / closed'].includes(String(app.status || app.secondaryStatus || '').trim().toLowerCase())
+  ).length;
+  const successRateValue = applications?.length ? Math.round((successfulApplications / applications.length) * 100) : 0;
+  const successRate = `${successRateValue}%`;
   const pendingVerification = applications ? applications.filter(a => a.secondaryStatus === 'Pending' || a.secondaryStatus === 'Document Verification').length : 0;
 
   const timelineData = Array.from({ length: 7 }, (_, index) => {
@@ -115,9 +119,9 @@ export default function DailyReport({ applications, onNavigateToBecomePartner, o
   }
 
   return (
-    <div className="flex-1 min-w-0 p-4 sm:p-6 space-y-6 bg-[#F8FAFC]">
+    <div className="workspace-page flex-1 min-w-0 p-4 sm:p-6 space-y-6 bg-[#F8FAFC]">
       {/* Welcome Banner */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white border border-[#E2E8F0] p-6 rounded-2xl shadow-xs">
+      <div className="workspace-panel flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white border border-[#E2E8F0] p-6 rounded-2xl shadow-xs">
         <div className="space-y-1">
           <h1 className="text-xl font-black text-slate-900 tracking-tight">Welcome back, {currentUser?.name}!</h1>
           <p className="text-xs text-slate-500 font-semibold">
@@ -203,14 +207,14 @@ export default function DailyReport({ applications, onNavigateToBecomePartner, o
         <div className="bg-white border border-[#E2E8F0] border-t-4 border-t-[#D99A1C] rounded-2xl p-5 shadow-xs flex flex-col justify-between transition-all duration-150">
           <div className="flex justify-between items-start">
             <span className="text-[10px] font-extrabold uppercase tracking-widest text-slate-400">Success Rate</span>
-            <span className="text-amber-600 bg-amber-50 text-[10px] font-bold px-2 py-0.5 rounded-full border border-amber-100">CAS Clear</span>
+            <span className="text-amber-600 bg-amber-50 text-[10px] font-bold px-2 py-0.5 rounded-full border border-amber-100">Visa / Enrolled</span>
           </div>
           <div className="mt-4 flex items-baseline gap-2">
             <span className="text-3xl font-black text-slate-900 tracking-tight">{successRate}</span>
-            <span className="text-[10px] font-bold text-slate-400 uppercase">Visa Issued</span>
+            <span className="text-[10px] font-bold text-slate-400 uppercase">{successfulApplications} of {applications?.length || 0} applications</span>
           </div>
           <div className="mt-4 w-full bg-slate-100 h-1 rounded-full overflow-hidden">
-            <div className="bg-[#D99A1C] h-full w-[94.2%]" />
+            <div role="progressbar" aria-label="Visa approved or enrolled application rate" aria-valuemin={0} aria-valuemax={100} aria-valuenow={successRateValue} className="bg-[#D99A1C] h-full transition-[width]" style={{ width: `${successRateValue}%` }} />
           </div>
         </div>
 
@@ -346,7 +350,7 @@ export default function DailyReport({ applications, onNavigateToBecomePartner, o
 
       {/* Recent Activity Logs */}
       {/*
-      <div className="bg-white border border-[#E2E8F0] rounded-2xl shadow-xs overflow-hidden">
+      <div className="workspace-panel workspace-list-frame bg-white border border-[#E2E8F0] rounded-2xl shadow-xs overflow-hidden">
         <div className="px-6 py-4 border-b border-[#E2E8F0] flex justify-between items-center">
           <h3 className="text-xs font-black text-slate-900 uppercase tracking-wider">System Operations Log</h3>
           <span className="text-[10px] text-slate-400 font-semibold">Latest 4 actions</span>

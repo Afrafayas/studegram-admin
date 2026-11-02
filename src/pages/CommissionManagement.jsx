@@ -1,3 +1,8 @@
+import RowActions, { rowViewProps } from '../components/RowActions';
+import ListFilterTabs from '../components/ListFilterTabs';
+import ListRecordView from '../components/ListRecordView';
+import useServerList, { restoreListRows } from '../hooks/useServerList';
+import ListToolbar from '../components/ListToolbar';
 import SearchableSelect from '../components/SearchableSelect';
 import { getDisplayId } from '../utils/displayId';
 import { parseFee, formatFee } from '../utils/courseFee';
@@ -13,9 +18,12 @@ export default function CommissionManagement({ clients = [], referralAgents = []
   const { currentUser, hasPermission, addAuditLog } = useAuth();
   
   const [commissions, setCommissions] = useState([]);
+  const [viewCommission, setViewCommission] = useState(null);
   const [filterStatus, setFilterStatus] = useState('All');
   const [isUpdatingId, setIsUpdatingId] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [countryFilter, setCountryFilter] = useState('All');
+  const [partnerFilter, setPartnerFilter] = useState('All');
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
 
@@ -93,45 +101,33 @@ export default function CommissionManagement({ clients = [], referralAgents = []
     return true;
   });
 
+  const serverList = useServerList('/commissions', { search: searchQuery, filters: { status: filterStatus, country: countryFilter, partner: partnerFilter }, page: currentPage, limit: itemsPerPage, onPageChange: setCurrentPage, reloadKey: JSON.stringify(commissions) });
   // Filtered by status and search query
-  const displayCommissions = scopedCommissions.filter(c => {
-    const matchesStatus = filterStatus === 'All' 
-      || c.status === filterStatus 
-      || (filterStatus === 'Pending Approval' && (c.status === 'Pending Approval' || c.status === 'Claimed'));
-    
-    if (!matchesStatus) return false;
-
-    if (searchQuery.trim()) {
-      const q = searchQuery.toLowerCase();
-      const sName = (c.studentName || '').toLowerCase();
-      const cId = (c.id || c.commissionId || '').toLowerCase();
-      const cName = (c.courseName || '').toLowerCase();
-      const pName = (c.partnerName || '').toLowerCase();
-      const country = (c.country || '').toLowerCase();
-      return sName.includes(q) || cId.includes(q) || cName.includes(q) || pName.includes(q) || country.includes(q);
-    }
-
-    return true;
-  });
+  const displayCommissions = restoreListRows(serverList.data, commissions, 'commissions');
 
   // Auto-reset page to 1 whenever search query, country, or status filter changes
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchQuery, filterStatus, currentUser?.country]);
+  }, [searchQuery, filterStatus, currentUser?.country, countryFilter, partnerFilter]);
 
   // Pagination Math
-  const totalItems = displayCommissions.length;
-  const totalPages = Math.ceil(totalItems / itemsPerPage) || 1;
+  const totalItems = serverList.totalCount;
+  const totalPages = serverList.totalPages;
   const startIndex = (currentPage - 1) * itemsPerPage;
-  const paginatedCommissions = displayCommissions.slice(startIndex, startIndex + itemsPerPage);
+  const paginatedCommissions = displayCommissions;
 
-  const handleExport = () => {
+  const handleExport = async () => {
     if (!hasPermission('commissions:export')) {
       toast.error("Permission Denied: You do not have permission to export financial reports.");
       return;
     }
 
+    let exportedCount = 0;
     try {
+      const response = await API.get('/commissions', { params: { list: 'true', export: 'true', search: searchQuery, filters: JSON.stringify({ status: filterStatus, country: countryFilter, partner: partnerFilter }) } });
+      if (!response.data?.success) throw new Error(response.data?.message || 'Unable to export commissions.');
+      const exportRows = restoreListRows(response.data.data, commissions, 'commissions');
+      exportedCount = exportRows.length;
       const headers = [
         'Commission ID', 
         'Student Name', 
@@ -145,7 +141,7 @@ export default function CommissionManagement({ clients = [], referralAgents = []
         'University Payment',
         'Status'
       ];
-      const rows = displayCommissions.map((c) => {
+      const rows = exportRows.map((c) => {
         const comId = getDisplayId(c);
         return [
           comId,
@@ -171,10 +167,11 @@ export default function CommissionManagement({ clients = [], referralAgents = []
       link.click();
       document.body.removeChild(link);
     } catch (exportErr) {
-      console.error('CSV generation error:', exportErr);
+      toast.error(exportErr.response?.data?.message || exportErr.message || 'Unable to export commission report.');
+      return;
     }
 
-    addAuditLog('EXPORT_FINANCIALS', 'Finance', 'COM-ALL', `Exported commission statement for ${displayCommissions.length} records.`);
+    addAuditLog('EXPORT_FINANCIALS', 'Finance', 'COM-ALL', `Exported commission statement for ${exportedCount} records.`);
     toast.success("Financial report exported successfully as CSV! (Logged to Audit Logs)");
   };
 
@@ -371,10 +368,41 @@ export default function CommissionManagement({ clients = [], referralAgents = []
   const paidAmount = scopedCommissions.filter(c => c.status === 'Paid').reduce((acc, c) => acc + (c.amount || 0), 0);
   const pendingAmount = scopedCommissions.filter(c => c.status === 'Pending Approval' || c.status === 'Claimed').reduce((acc, c) => acc + (c.amount || 0), 0);
 
+  const activeCommission = viewCommission
+    ? scopedCommissions.find(record => String(record._id || record.id) === String(viewCommission._id || viewCommission.id)) || viewCommission
+    : null;
+
+  const renderCommissionActions = (comm, inline = false) => {
+    if (!hasPermission('commissions:manage')) return <span className="px-3 py-2 text-xs text-slate-500">Read-only access</span>;
+    const updating = isUpdatingId === (comm._id || comm.id);
+    const paid = comm.status === 'Paid';
+    const actionClass = 'inline-flex items-center justify-center gap-2 rounded-lg border px-3 py-2 text-xs font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50';
+    return <span className={inline ? 'inline-flex max-w-full flex-wrap items-center gap-2' : 'flex flex-col gap-1'}>
+      <ActionButton type="button" disabled={updating} onClick={() => handleToggleUniversityPayment(comm)}
+        className={actionClass + ' border-slate-200 bg-white text-slate-700 hover:bg-slate-50'}>
+        <svg aria-hidden="true" className="h-4 w-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75"><path strokeLinecap="round" strokeLinejoin="round" d="M4 12h16M14 6l6 6-6 6M10 18l-6-6 6-6" /></svg>
+        <span>{comm.universityPaid ? 'Mark university unpaid' : 'Mark university paid'}</span>
+      </ActionButton>
+      <ActionButton type="button" onClick={() => openSetCommissionModal(comm)}
+        className={actionClass + ' border-indigo-200 bg-indigo-50 text-indigo-700 hover:bg-indigo-100'}>
+        <svg aria-hidden="true" className="h-4 w-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75"><path strokeLinecap="round" strokeLinejoin="round" d="m16 3 5 5M4 20l5-1L21 7a2 2 0 0 0-5-5L4 14l-1 7 6-2" /></svg>
+        <span>Set commission</span>
+      </ActionButton>
+      {paid ? <span role="status" className="inline-flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-700">Commission paid</span> :
+        <ActionButton type="button" disabled={!comm.universityPaid || updating} onClick={() => handleDirectPay(comm)}
+          title={!comm.universityPaid ? 'Confirm university payment before paying commission' : 'Disburse and mark as paid'}
+          className={actionClass + ' border-emerald-200 bg-emerald-600 text-white hover:bg-emerald-700'}>
+          <span>{updating ? 'Saving...' : 'Pay commission'}</span>
+        </ActionButton>}
+    </span>;
+  };
+
   return (
-    <div className="flex-1 min-w-0 p-4 sm:p-6 space-y-6 bg-[#F0F2F5]">
+    <div className="workspace-page flex-1 min-w-0 p-4 sm:p-6 space-y-6 bg-[#F0F2F5]">
+      {activeCommission && <ListRecordView record={activeCommission} title="Commission details" onBack={() => setViewCommission(null)} actions={renderCommissionActions(activeCommission, true)} />}
+      <div className={viewCommission ? 'hidden' : 'contents'}>
       {/* Header */}
-      <div className="flex flex-wrap gap-3 justify-between items-center bg-white border border-[#E2E8F0] border-t-4 border-t-[#D99A1C] p-6 rounded-2xl shadow-xs">
+      <div className="workspace-panel flex flex-wrap gap-3 justify-between items-center bg-white border border-[#E2E8F0] border-t-4 border-t-[#D99A1C] p-6 rounded-2xl shadow-xs">
         <div className="space-y-1">
           <h1 className="text-xl font-black text-slate-900 tracking-tight">Commission Management</h1>
           <p className="text-xs text-slate-500 font-medium">
@@ -396,94 +424,15 @@ export default function CommissionManagement({ clients = [], referralAgents = []
         </div>
       </div>
 
-      {/* Stats Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* Card 1: Total Agents */}
-        <div className="bg-white border border-[#E2E8F0] border-t-4 border-t-indigo-500 rounded-2xl p-5 shadow-xs flex flex-col justify-between">
-          <span className="text-[10px] font-extrabold uppercase tracking-widest text-slate-400">Total Agents</span>
-          <div className="mt-4 flex items-baseline gap-2">
-            <span className="text-2xl font-black text-slate-900 tracking-tight">{totalAgents}</span>
-            <span className="text-[9px] font-bold text-indigo-500 uppercase">Active</span>
-          </div>
-        </div>
-
-        {/* Card 2: Total Commission Volume */}
-        <div className="bg-white border border-[#E2E8F0] border-t-4 border-t-emerald-500 rounded-2xl p-5 shadow-xs flex flex-col justify-between">
-          <span className="text-[10px] font-extrabold uppercase tracking-widest text-slate-400">Total Commission Volume</span>
-          <div className="mt-4 flex items-baseline gap-2">
-            <span className="text-2xl font-black text-slate-900 tracking-tight">₹{(totalAmount || 0).toLocaleString()}</span>
-            <span className="text-[9px] font-bold text-slate-400 uppercase">INR</span>
-          </div>
-        </div>
-
-        {/* Card 3: Total Paid Commissions */}
-        <div className="bg-white border border-[#E2E8F0] border-t-4 border-t-blue-500 rounded-2xl p-5 shadow-xs flex flex-col justify-between">
-          <span className="text-[10px] font-extrabold uppercase tracking-widest text-slate-400">Total Paid Commissions</span>
-          <div className="mt-4 flex items-baseline gap-2">
-            <span className="text-2xl font-black text-slate-900 tracking-tight">₹{(paidAmount || 0).toLocaleString()}</span>
-            <span className="text-[9px] font-bold text-emerald-500 uppercase">Cleared</span>
-          </div>
-        </div>
-
-        {/* Card 4: Total Pending Commissions */}
-        <div className="bg-white border border-[#E2E8F0] border-t-4 border-t-amber-500 rounded-2xl p-5 shadow-xs flex flex-col justify-between">
-          <span className="text-[10px] font-extrabold uppercase tracking-widest text-slate-400">Total Pending Commissions</span>
-          <div className="mt-4 flex items-baseline gap-2">
-            <span className="text-2xl font-black text-slate-900 tracking-tight">₹{(pendingAmount || 0).toLocaleString()}</span>
-            <span className="text-[9px] font-bold text-amber-500 uppercase">In Review</span>
-          </div>
-        </div>
-      </div>
+<ListFilterTabs value={filterStatus} onChange={value => { setFilterStatus(value); setCurrentPage(1); }} options={[{value:'All',label:'All commissions',filters:{status:'All'}},{value:'Paid',label:'Paid',filters:{status:'Paid'}},{value:'Pending Approval',label:'Pending approval',filters:{status:'Pending Approval'}},{value:'Under Review',label:'Under review',filters:{status:'Under Review'}}]} query={{endpoint:'/commissions',search:searchQuery,filters:{country:countryFilter,partner:partnerFilter},reloadKey:JSON.stringify(commissions)}} />
 
       {/* Table */}
-      <div className="bg-white border border-[#E2E8F0] rounded-2xl shadow-xs overflow-hidden">
-        <div className="px-6 py-4 border-b border-[#E2E8F0] flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div className="space-y-0.5">
-            <div className="flex items-center gap-2">
-              <h2 className="text-xs font-black text-slate-900 uppercase tracking-wider">Calculated Partner Commissions</h2>
-              <span className="px-2 py-0.5 bg-slate-100 text-slate-600 rounded-md text-[10px] font-bold">
-                {displayCommissions.length} records
-              </span>
-            </div>
-            <p className="text-[10px] text-slate-400 font-semibold">
-              Commission amounts and rates are set per application. Enable University Payment toggle to unlock Pay button.
-            </p>
-          </div>
-
-          <div className="flex flex-col sm:flex-row items-center gap-3">
-            {/* Search Input */}
-            <div className="relative w-full sm:w-64">
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search student, partner, ID..."
-                className="w-full pl-8 pr-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#D99A1C] focus:bg-white transition-all font-medium"
-              />
-              <svg className="w-4 h-4 text-slate-400 absolute left-2.5 top-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-              </svg>
-            </div>
-
-            {/* Filter Tabs */}
-            <div className="bg-slate-100 p-1 rounded-xl flex gap-1 text-[10px] font-bold w-full sm:w-auto">
-              {['All', 'Paid', 'Pending Approval', 'Under Review'].map((status) => (
-                <ActionButton
-                  key={status}
-                  onClick={() => setFilterStatus(status)}
-                  className={`px-3 py-1 rounded-lg transition-all flex-1 sm:flex-none text-center ${
-                    filterStatus === status ? 'bg-white text-[#D99A1C] shadow-sm font-black' : 'text-slate-500 hover:text-slate-900'
-                  }`}
-                >
-                  {status}
-                </ActionButton>
-              ))}
-            </div>
-          </div>
-        </div>
+      <div className="workspace-panel workspace-list-frame bg-white border border-[#E2E8F0] rounded-2xl shadow-xs overflow-hidden">
+<ListToolbar search={searchQuery} onSearchChange={setSearchQuery} filters={[{ key: 'status', label: 'statuses', value: filterStatus, onChange: setFilterStatus, options: ['Paid', 'Pending Approval', 'Under Review'] },{ key: 'country', label: 'countries', value: countryFilter, onChange: setCountryFilter, options: serverList.facets.country || [] },{ key: 'partner', label: 'partners', value: partnerFilter, onChange: setPartnerFilter, options: serverList.facets.partner || [] }]} onReset={() => { setSearchQuery(''); setFilterStatus('All'); setCountryFilter('All'); setPartnerFilter('All'); setCurrentPage(1); }} loading={serverList.loading} error={serverList.error} onRetry={serverList.reload} />
+        
         <div className="overflow-x-auto">
           {displayCommissions.length > 0 ? (
-            <table className="w-full text-left border-collapse">
+            <table className="workspace-table w-full text-left border-collapse">
               <thead>
                 <tr className="bg-slate-50 border-b border-[#E2E8F0]">
                   <th className="px-5 py-3 text-slate-400 text-[10px] font-extrabold uppercase tracking-wider">Commission ID</th>
@@ -503,7 +452,7 @@ export default function CommissionManagement({ clients = [], referralAgents = []
                   const isUniPaid = comm.universityPaid;
 
                   return (
-                    <tr key={comm._id || comm.id || idx} className="hover:bg-slate-50/50 transition-colors">
+                    <tr key={comm._id || comm.id || idx} {...rowViewProps(() => setViewCommission(comm))} className="hover:bg-slate-50/50 transition-colors cursor-pointer">
                       <td className="px-5 py-4">
                         <span className="font-mono font-black text-xs text-[#2563EB] bg-blue-50 px-2.5 py-1 rounded-md border border-blue-200 inline-block shadow-2xs">
                           {getDisplayId(comm)}
@@ -535,21 +484,7 @@ export default function CommissionManagement({ clients = [], referralAgents = []
                       {/* University Payment Toggle Column */}
                       <td className="px-5 py-4">
                         <div className="flex flex-col items-center justify-center gap-1">
-                          <ActionButton
-                            type="button"
-                            onClick={() => handleToggleUniversityPayment(comm)}
-                            disabled={isUpdatingId === (comm._id || comm.id) || !hasPermission('commissions:manage')}
-                            className={`relative inline-flex h-5 w-10 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-                              isUniPaid ? 'bg-emerald-500' : 'bg-slate-300'
-                            } ${!hasPermission('commissions:manage') ? 'opacity-60 cursor-not-allowed' : ''}`}
-                            title={isUniPaid ? 'University has paid Unigather (Click to toggle)' : 'Waiting for University to pay (Click to toggle)'}
-                          >
-                            <span
-                              className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-md ring-0 transition duration-200 ease-in-out ${
-                                isUniPaid ? 'translate-x-5' : 'translate-x-0'
-                              }`}
-                            />
-                          </ActionButton>
+
                           <span className={`text-[9px] font-bold tracking-tight px-1.5 py-0.5 rounded ${
                             isUniPaid 
                               ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' 
@@ -578,54 +513,11 @@ export default function CommissionManagement({ clients = [], referralAgents = []
 
                       {/* Actions */}
                       <td className="px-5 py-4 text-right">
-                        {hasPermission('commissions:manage') ? (
-                          <div className="flex items-center justify-end gap-1.5">
-                            {/* Set Commission Button */}
-                            <ActionButton
-                              type="button"
-                              onClick={() => openSetCommissionModal(comm)}
-                              className="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 font-bold text-[10px] px-2.5 py-1 rounded-lg transition-all cursor-pointer inline-flex items-center gap-1 shadow-2xs active:scale-95"
-                              title="Set Commission Rate (% or Fixed)"
-                            >
-                              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                              </svg>
-                              <span>Set Comm</span>
-                            </ActionButton>
-
-                            {/* Pay / Approve Payout Button */}
-                            {!isPaidStatus ? (
-                              <ActionButton
-                                type="button"
-                                disabled={!isUniPaid || isUpdatingId === (comm._id || comm.id)}
-                                onClick={() => handleDirectPay(comm)}
-                                title={!isUniPaid ? 'Disabled: Toggle University Payment to Paid first' : 'Disburse & Mark as Paid'}
-                                className={`font-black text-[10px] uppercase px-3 py-1 rounded-lg transition-all inline-flex items-center gap-1 shadow-xs ${
-                                  isUniPaid
-                                    ? 'bg-emerald-600 hover:bg-emerald-700 text-white cursor-pointer active:scale-95'
-                                    : 'bg-slate-200 text-slate-400 border border-slate-300 cursor-not-allowed opacity-60'
-                                }`}
-                              >
-                                {isUpdatingId === (comm._id || comm.id) ? (
-                                  <span>Saving...</span>
-                                ) : (
-                                  <>
-                                    <span>Pay</span>
-                                    {!isUniPaid && <span className="text-[9px]">🔒</span>}
-                                  </>
-                                )}
-                              </ActionButton>
-                            ) : (
-                              <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-md inline-flex items-center gap-1">
-                                <span>Paid</span>
-                                <span>✓</span>
-                              </span>
-                            )}
-                          </div>
-                        ) : (
-                          <span className="text-[10px] text-slate-400 font-medium italic">Read-only</span>
-                        )}
-                      </td>
+<RowActions label="Commission actions">
+                          <ActionButton type="button" onClick={() => setViewCommission(comm)} className="rounded-lg px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50">View details</ActionButton>
+                          {renderCommissionActions(comm)}
+                        </RowActions>
+</td>
                     </tr>
                   );
                 })}
@@ -694,6 +586,7 @@ export default function CommissionManagement({ clients = [], referralAgents = []
         )}
       </div>
 
+      </div>
       {/* Set Commission Modal */}
       {modalCommission && createPortal(
         <div 
@@ -705,14 +598,7 @@ export default function CommissionManagement({ clients = [], referralAgents = []
           >
             {/* Modal Header */}
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <div>
-                <span className="text-[9px] font-black uppercase px-2 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-200">
-                  Commission Configuration
-                </span>
-                <h3 className="text-base font-black text-slate-900 mt-1">
-                  Set Commission for {modalCommission.studentName}
-                </h3>
-              </div>
+              
               <ActionButton
                 type="button"
                 onClick={() => setModalCommission(null)}

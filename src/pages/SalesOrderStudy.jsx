@@ -1,8 +1,10 @@
+import BatchDocumentUpload from '../components/BatchDocumentUpload';
+import StudentDobInput from '../components/StudentDobInput';
+import { getStudentDobError } from '../utils/studentAge.mjs';
 import SearchableSelect from '../components/SearchableSelect';
 import ValidatedInput from '../components/ValidatedInput';
 import { ActionButton, ActionForm } from '../components/ActionControls';
 import React, { useState } from 'react';
-import API from '../api/axios';
 import { useToast } from '../context/ToastContext';
 
 export default function SalesOrderStudy({ 
@@ -36,9 +38,9 @@ export default function SalesOrderStudy({
   }, [staffList]);
 
   const [uploadedFiles, setUploadedFiles] = useState([]);
+  const [hasQueuedDocuments, setHasQueuedDocuments] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [uploadError, setUploadError] = useState('');
   
   // Set default values based on whether items are objects or strings
   const getInitialId = (items) => {
@@ -72,6 +74,9 @@ export default function SalesOrderStudy({
 
   const selectedUnivObj = (universities || []).find(u => (typeof u === 'object' ? (u._id || u.id) : u) === university);
   const selectedUnivName = typeof selectedUnivObj === 'object' ? selectedUnivObj.name : selectedUnivObj;
+  const selectedStudentRecord = (students || []).find(student =>
+    String(student._id || student.id || '') === String(selectedStudent || '')
+  );
 
   const filteredCourses = (courses || []).filter(c => {
     if (!university) return false;
@@ -94,6 +99,12 @@ export default function SalesOrderStudy({
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (hasQueuedDocuments || isUploading) { toast.error('Upload or remove queued documents before submitting.'); return; }
+    const dobError = getStudentDobError(studentSelectionMode === 'new' ? dob : students.find(student => (student._id || student.id) === selectedStudent)?.dob);
+    if (dobError) {
+      toast.error(dobError);
+      return;
+    }
     if (studentSelectionMode === 'new' && (!fullName || !studentEmail || !phoneNumber || !dob)) {
       toast.error("Please fill in all required fields.");
       return;
@@ -209,13 +220,13 @@ export default function SalesOrderStudy({
   const selectedCountry = countries.find(c => c.code === phoneCode) || countries[0];
 
   return (
-    <div className="flex-1 min-w-0 p-4 sm:p-6 space-y-6 bg-[#F0F2F5]">
+    <div className="workspace-page flex-1 min-w-0 p-4 sm:p-6 space-y-6 bg-[#F0F2F5]">
       {/* Header with Back Arrow */}
-      <div className="flex items-center gap-4 bg-white border border-[#E2E8F0] border-t-4 border-t-[#D99A1C] p-6 rounded-2xl shadow-xs">
+      <div className="workspace-panel flex items-start sm:items-center gap-4 bg-white border border-[#E2E8F0] border-t-4 border-t-[#D99A1C] p-6 rounded-2xl shadow-xs">
         <ActionButton
           onClick={onBack}
           className="p-2 text-slate-500 hover:text-[#D99A1C] bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl transition-all"
-          title="Back to Dashboard"
+          title="Back" aria-label="Back"
         >
           <svg className="w-4.5 h-4.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
@@ -223,7 +234,7 @@ export default function SalesOrderStudy({
         </ActionButton>
         <div className="space-y-1">
           <h1 className="text-xl font-black text-slate-900 tracking-tight">Create Student Application</h1>
-          <p className="text-xs text-slate-500 font-medium">Sales Order intake form. Fill in client metadata and university assignments.</p>
+          <p className="text-xs text-slate-500 font-medium">Add student details, choose an academic program and upload supporting documents.</p>
         </div>
       </div>
 
@@ -243,13 +254,16 @@ export default function SalesOrderStudy({
       )}
 
       {/* Card Form */}
-      <ActionForm onSubmit={handleSubmit} className="bg-white border border-[#E2E8F0] border-t-4 border-t-[#2563EB] rounded-2xl shadow-sm p-6 max-w-3xl space-y-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="space-y-4">
-            <h3 className="text-xs font-black text-slate-950 uppercase tracking-wider pb-1 border-b border-slate-100">Client Demographics</h3>
+      <ActionForm onSubmit={handleSubmit} className="w-full min-w-0 space-y-6 [overflow-wrap:anywhere]">
+        <div className="grid grid-cols-1 items-stretch gap-6 xl:grid-cols-2">
+          <section className="min-w-0 h-full space-y-5 bg-white border border-slate-200 rounded-2xl p-4 sm:p-6 shadow-sm">
+            <div className="space-y-1 border-b border-slate-200 pb-4">
+              <h2 className="text-base font-bold text-slate-900">Student information</h2>
+              <p className="text-xs text-slate-600">Register a student or select an existing student record.</p>
+            </div>
             
             <div className="space-y-1.5">
-              <label className="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">Application Type</label>
+              <label className="block text-xs font-extrabold text-slate-500 uppercase tracking-wider">Application Type</label>
               <SearchableSelect
                 disabled
                 className="w-full bg-slate-100 border border-slate-200 rounded-xl px-3 py-2.5 text-xs font-bold text-slate-700 cursor-not-allowed"
@@ -260,9 +274,9 @@ export default function SalesOrderStudy({
             </div>
 
             <div className="space-y-3">
-              <label className="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">Student Information</label>
+              <label className="block text-xs font-extrabold text-slate-500 uppercase tracking-wider">Student Information</label>
               
-              <div className="flex gap-4">
+              <div className="flex flex-wrap gap-x-4 gap-y-3">
                 <label className="flex items-center gap-2 cursor-pointer text-xs font-semibold text-slate-700">
                   <input
                     type="radio"
@@ -291,7 +305,7 @@ export default function SalesOrderStudy({
                     required={studentSelectionMode === 'existing'}
                     value={selectedStudent}
                     onChange={(e) => setSelectedStudent(e.target.value)}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs font-semibold focus:outline-none focus:bg-white focus:ring-1 focus:ring-[#D99A1C] focus:border-[#D99A1C] text-slate-900 cursor-pointer"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-sm font-medium focus:outline-none focus:bg-white focus:ring-1 focus:ring-[#D99A1C] focus:border-[#D99A1C] text-slate-900 cursor-pointer"
                   >
                     <option value="">-- Choose Student --</option>
                     {students.map(s => (
@@ -300,23 +314,42 @@ export default function SalesOrderStudy({
                       </option>
                     ))}
                   </SearchableSelect>
+                  {selectedStudentRecord && (
+                    <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50/60 p-3.5">
+                      <div className="flex min-w-0 items-start gap-3">
+                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#D99A1C] text-xs font-black text-white">
+                          {(selectedStudentRecord.name || 'S').trim().charAt(0).toUpperCase()}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-sm font-black text-slate-900">{selectedStudentRecord.name || 'Student'}</p>
+                          <p className="mt-0.5 text-[10px] font-bold uppercase tracking-wide text-[#a56d08]">Selected student</p>
+                        </div>
+                      </div>
+                      <dl className="mt-3 grid grid-cols-1 gap-x-4 gap-y-2 border-t border-amber-200/80 pt-3 text-xs sm:grid-cols-2">
+                        <div className="min-w-0"><dt className="text-[10px] font-bold uppercase tracking-wide text-slate-500">Email</dt><dd className="mt-0.5 truncate font-semibold text-slate-800" title={selectedStudentRecord.email || ''}>{selectedStudentRecord.email || 'Not provided'}</dd></div>
+                        <div className="min-w-0"><dt className="text-[10px] font-bold uppercase tracking-wide text-slate-500">Phone</dt><dd className="mt-0.5 truncate font-semibold text-slate-800" title={selectedStudentRecord.phone || ''}>{selectedStudentRecord.phone || 'Not provided'}</dd></div>
+                        <div className="min-w-0"><dt className="text-[10px] font-bold uppercase tracking-wide text-slate-500">Passport</dt><dd className="mt-0.5 truncate font-semibold text-slate-800" title={selectedStudentRecord.passportNo || ''}>{selectedStudentRecord.passportNo || 'Not provided'}</dd></div>
+                        <div className="min-w-0"><dt className="text-[10px] font-bold uppercase tracking-wide text-slate-500">Date of birth</dt><dd className="mt-0.5 truncate font-semibold text-slate-800">{selectedStudentRecord.dob || 'Not provided'}</dd></div>
+                      </dl>
+                    </div>
+                  )}
                 </div>
               ) : (
                 <div className="space-y-4 bg-slate-50/50 border border-slate-100 rounded-xl p-4 shadow-3xs">
                   <div className="space-y-1.5">
-                    <label className="block text-[9px] font-extrabold text-slate-500 uppercase tracking-wider">Full Name <span className="text-rose-500">*</span></label>
+                    <label className="block text-xs font-extrabold text-slate-500 uppercase tracking-wider">Full Name <span className="text-rose-500">*</span></label>
                     <input
                       type="text"
                       required={studentSelectionMode === 'new'}
                       value={fullName}
                       onChange={(e) => setFullName(e.target.value)}
-                      className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs font-semibold focus:outline-none focus:border-[#D99A1C] focus:ring-1 focus:ring-[#D99A1C] transition-all text-slate-900"
+                      className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-sm font-medium focus:outline-none focus:border-[#D99A1C] focus:ring-1 focus:ring-[#D99A1C] transition-all text-slate-900"
                       placeholder="Enter student first and last name"
                     />
                   </div>
 
                   <div className="space-y-1.5 relative">
-                    <label className="block text-[9px] font-extrabold text-slate-500 uppercase tracking-wider">Phone Number <span className="text-rose-500">*</span></label>
+                    <label className="block text-xs font-extrabold text-slate-500 uppercase tracking-wider">Phone Number <span className="text-rose-500">*</span></label>
                     <div className="flex border border-slate-200 rounded-xl overflow-visible bg-white focus-within:border-[#D99A1C] focus-within:ring-1 focus-within:ring-[#D99A1C] transition-all">
                       <ActionButton
                         type="button"
@@ -333,7 +366,7 @@ export default function SalesOrderStudy({
                       {isFlagDropdownOpen && (
                         <>
                           <div className="fixed inset-0 z-10" onClick={() => setIsFlagDropdownOpen(false)}></div>
-                          <div className="absolute left-0 top-[110px] w-48 bg-white border border-slate-200 rounded-xl shadow-xl py-1 z-20 text-xs font-semibold text-slate-700 animate-in fade-in slide-in-from-top-1 duration-150">
+                          <div className="absolute left-0 top-full mt-1 w-48 bg-white border border-slate-200 rounded-xl shadow-xl py-1 z-20 text-xs font-semibold text-slate-700 animate-in fade-in slide-in-from-top-1 duration-150">
                             {countries.map(c => (
                               <ActionButton
                                 key={c.code}
@@ -358,32 +391,45 @@ export default function SalesOrderStudy({
                         required={studentSelectionMode === 'new'}
                         value={phoneNumber}
                         onChange={(e) => setPhoneNumber(e.target.value)}
-                        className="w-full bg-transparent px-3 py-2 text-xs font-semibold focus:outline-none text-slate-900"
+                        className="w-full bg-transparent px-3 py-2 text-sm font-medium focus:outline-none text-slate-900"
                         placeholder="98765 43210"
                       />
                     </div>
                   </div>
 
                   <div className="space-y-1.5">
-                    <label className="block text-[9px] font-extrabold text-slate-500 uppercase tracking-wider">Date of Birth <span className="text-rose-500">*</span></label>
-                    <input
-                      type="date"
+                    <label className="block text-xs font-extrabold text-slate-500 uppercase tracking-wider">Date of Birth <span className="text-rose-500">*</span></label>
+                    <StudentDobInput
                       required={studentSelectionMode === 'new'}
                       value={dob}
                       onChange={(e) => setDob(e.target.value)}
-                      className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs font-semibold focus:outline-none focus:border-[#D99A1C] focus:ring-1 focus:ring-[#D99A1C] transition-all text-slate-900"
+                      className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-sm font-medium focus:outline-none focus:border-[#D99A1C] focus:ring-1 focus:ring-[#D99A1C] transition-all text-slate-900"
                     />
                   </div>
                 </div>
               )}
             </div>
-          </div>
+        {studentSelectionMode === 'new' && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <label className="text-xs font-bold text-slate-600">Student Email *
+            <input type="email" required value={studentEmail} onChange={e => setStudentEmail(e.target.value)} className="mt-2 w-full border border-slate-200 rounded-xl p-3" />
+          </label>
+          <label className="text-xs font-bold text-slate-600">Passport Number
+            <ValidatedInput validationKind="passport" value={passportNo} onChange={e => setPassportNo(e.target.value)} className="mt-2 w-full border border-slate-200 rounded-xl p-3" />
+          </label>
+        </div>
+      )}
+          </section>
 
-          <div className="space-y-4">
-            <h3 className="text-xs font-black text-slate-950 uppercase tracking-wider pb-1 border-b border-slate-100">Study Specific Fields</h3>
+          <section className="min-w-0 h-full space-y-5 bg-white border border-slate-200 rounded-2xl p-4 sm:p-6 shadow-sm">
+            <div className="space-y-1 border-b border-slate-200 pb-4">
+              <h2 className="text-base font-bold text-slate-900">Academic program &amp; assignment</h2>
+              <p className="text-xs text-slate-600">Choose a destination and program, then review the assignment.</p>
+            </div>
 
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <div className="space-y-1.5">
-              <label className="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">
+              <label className="block text-xs font-extrabold text-slate-500 uppercase tracking-wider">
                 Destination Country <span className="text-rose-500">*</span>
               </label>
               <SearchableSelect
@@ -394,7 +440,7 @@ export default function SalesOrderStudy({
                   setCourse('');
                 }}
                 required
-                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs font-semibold focus:outline-none focus:bg-white focus:ring-1 focus:ring-[#D99A1C] focus:border-[#D99A1C] cursor-pointer"
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-sm font-medium focus:outline-none focus:bg-white focus:ring-1 focus:ring-[#D99A1C] focus:border-[#D99A1C] cursor-pointer"
               >
                 <option value="">-- Choose Country First --</option>
                 {availableCountries.map(c => (
@@ -404,15 +450,10 @@ export default function SalesOrderStudy({
             </div>
 
             <div className="space-y-1.5">
-              <div className="flex items-center justify-between">
-                <label className="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">
+              <div className="flex flex-wrap items-start justify-between gap-2">
+                <label className="block text-xs font-extrabold text-slate-500 uppercase tracking-wider">
                   Destination University <span className="text-rose-500">*</span>
                 </label>
-                {destinationCountry && (
-                  <span className="text-[10px] font-bold text-[#D99A1C]">
-                    {filteredUniversities.length} institution{filteredUniversities.length !== 1 ? 's' : ''} in {destinationCountry}
-                  </span>
-                )}
               </div>
               <SearchableSelect searchLabel="Search universities..."
                 value={university}
@@ -422,7 +463,7 @@ export default function SalesOrderStudy({
                   setCourse('');
                 }}
                 required
-                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs font-semibold focus:outline-none focus:bg-white focus:ring-1 focus:ring-[#D99A1C] focus:border-[#D99A1C] disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-sm font-medium focus:outline-none focus:bg-white focus:ring-1 focus:ring-[#D99A1C] focus:border-[#D99A1C] disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
               >
                 <option value="">
                   {!destinationCountry 
@@ -437,15 +478,21 @@ export default function SalesOrderStudy({
                   return <option key={value} value={value}>{label}</option>;
                 })}
               </SearchableSelect>
+              {destinationCountry && (
+                <p className="text-[11px] font-bold text-[#D99A1C]">
+                  {filteredUniversities.length} institution{filteredUniversities.length !== 1 ? 's' : ''} in {destinationCountry}
+                </p>
+              )}
               {destinationCountry && filteredUniversities.length === 0 && (
-                <p className="text-[10px] text-amber-600 font-semibold mt-1">
+                <p className="text-xs text-amber-600 font-semibold mt-1">
                   ⚠️ No partner institutions found in {destinationCountry}. Please select another country.
                 </p>
               )}
             </div>
+            </div>
 
             <div className="space-y-1.5">
-              <label className="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">
+              <label className="block text-xs font-extrabold text-slate-500 uppercase tracking-wider">
                 Academic Program <span className="text-rose-500">*</span>
               </label>
               <SearchableSelect searchLabel="Search courses..."
@@ -453,7 +500,7 @@ export default function SalesOrderStudy({
                 disabled={!university}
                 onChange={(e) => setCourse(e.target.value)}
                 required
-                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs font-semibold focus:outline-none focus:bg-white focus:ring-1 focus:ring-[#D99A1C] focus:border-[#D99A1C] disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-sm font-medium focus:outline-none focus:bg-white focus:ring-1 focus:ring-[#D99A1C] focus:border-[#D99A1C] disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
               >
                 <option value="">
                   {!university ? '-- Please Select a University First --' : '-- Choose Course --'}
@@ -465,21 +512,22 @@ export default function SalesOrderStudy({
                 })}
               </SearchableSelect>
               {university && filteredCourses.length === 0 && (
-                <p className="text-[10px] text-amber-600 font-semibold mt-1">
+                <p className="text-xs text-amber-600 font-semibold mt-1">
                   ⚠️ No courses registered under this university.
                 </p>
               )}
             </div>
 
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <div className="space-y-1.5">
-              <label className="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">
+              <label className="block text-xs font-extrabold text-slate-500 uppercase tracking-wider">
                 Level of Study <span className="text-rose-500">*</span>
               </label>
               <SearchableSelect
                 value={level}
                 onChange={(e) => setLevel(e.target.value)}
                 required
-                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs font-semibold focus:outline-none focus:bg-white focus:ring-1 focus:ring-[#D99A1C] focus:border-[#D99A1C] cursor-pointer"
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-sm font-medium focus:outline-none focus:bg-white focus:ring-1 focus:ring-[#D99A1C] focus:border-[#D99A1C] cursor-pointer"
               >
                 <option value="Undergraduate (UG)">Undergraduate (UG)</option>
                 <option value="Postgraduate (PG)">Postgraduate (PG)</option>
@@ -488,11 +536,11 @@ export default function SalesOrderStudy({
             </div>
 
             <div className="space-y-1.5">
-              <label className="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">Intake Season</label>
+              <label className="block text-xs font-extrabold text-slate-500 uppercase tracking-wider">Intake Season</label>
               <SearchableSelect
                 value={intake}
                 onChange={(e) => setIntake(e.target.value)}
-                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs font-semibold focus:outline-none focus:bg-white focus:ring-1 focus:ring-[#D99A1C] focus:border-[#D99A1C]"
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-sm font-medium focus:outline-none focus:bg-white focus:ring-1 focus:ring-[#D99A1C] focus:border-[#D99A1C]"
               >
                 {intakes.map(i => {
                   const value = typeof i === 'object' ? i._id : i;
@@ -501,13 +549,14 @@ export default function SalesOrderStudy({
                 })}
               </SearchableSelect>
             </div>
+            </div>
 
             <div className="space-y-1.5">
-              <label className="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">B2B Referral Partner</label>
+              <label className="block text-xs font-extrabold text-slate-500 uppercase tracking-wider">B2B Referral Partner</label>
               <SearchableSelect
                 value={partner}
                 onChange={(e) => setPartner(e.target.value)}
-                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs font-semibold focus:outline-none focus:bg-white focus:ring-1 focus:ring-[#D99A1C] focus:border-[#D99A1C]"
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-sm font-medium focus:outline-none focus:bg-white focus:ring-1 focus:ring-[#D99A1C] focus:border-[#D99A1C]"
               >
                 <option value="">Direct (No Partner)</option>
                 {partners.map(p => {
@@ -519,11 +568,11 @@ export default function SalesOrderStudy({
             </div>
 
             <div className="space-y-1.5">
-              <label className="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">Assigned Operations Manager</label>
+              <label className="block text-xs font-extrabold text-slate-500 uppercase tracking-wider">Assigned Operations Manager</label>
               <SearchableSelect
                 value={assignedTo}
                 onChange={(e) => setAssignedTo(e.target.value)}
-                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs font-semibold focus:outline-none focus:bg-white focus:ring-1 focus:ring-[#D99A1C] focus:border-[#D99A1C]"
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-sm font-medium focus:outline-none focus:bg-white focus:ring-1 focus:ring-[#D99A1C] focus:border-[#D99A1C]"
               >
                 {staffList && staffList.length > 0 ? (
                   staffList.map(s => (
@@ -537,83 +586,20 @@ export default function SalesOrderStudy({
                 )}
               </SearchableSelect>
             </div>
-          </div>
+          </section>
         </div>
 
-        {studentSelectionMode === 'new' && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <label className="text-xs font-bold text-slate-600">Student Email *
-            <input type="email" required value={studentEmail} onChange={e => setStudentEmail(e.target.value)} className="mt-2 w-full border border-slate-200 rounded-xl p-3" />
-          </label>
-          <label className="text-xs font-bold text-slate-600">Passport Number
-            <ValidatedInput validationKind="passport" value={passportNo} onChange={e => setPassportNo(e.target.value)} className="mt-2 w-full border border-slate-200 rounded-xl p-3" />
-          </label>
-        </div>
-      )}
       {/* Document Upload Section */}
-          <div className="space-y-4 bg-white border border-slate-250/70 p-5 rounded-2xl">
-            <h3 className="text-xs font-black text-slate-950 uppercase tracking-wider pb-1 border-b border-slate-105/60">Supporting Documents *</h3>
+          <div className="space-y-4 bg-white border border-slate-200 p-5 rounded-2xl">
+            <h3 className="text-xs font-black text-slate-950 uppercase tracking-wider pb-1 border-b border-slate-200">Supporting Documents *</h3>
             
-            <div className="border-2 border-dashed border-slate-200 hover:border-[#D99A1C] transition-colors rounded-xl p-6 text-center cursor-pointer relative bg-slate-50">
-              <input
-                type="file"
-                multiple
-                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                onChange={async (e) => {
-                  const files = Array.from(e.target.files || []);
-                  if (files.length === 0) return;
-                  setIsUploading(true);
-                  setUploadError('');
-                  try {
-                    const uploadPromises = files.map(async (file) => {
-                      const formData = new FormData();
-                      formData.append('file', file);
-                      const res = await API.post('/upload', formData, {
-                        headers: { 'Content-Type': 'multipart/form-data' }
-                      });
-                      return { name: file.name, url: res.data.url };
-                    });
-                    const results = await Promise.all(uploadPromises);
-                    setUploadedFiles(prev => [...prev, ...results]);
-                  } catch (err) {
-                    console.error('File upload failed:', err);
-                    setUploadError('Failed to upload some documents. Please check your connection.');
-                  } finally {
-                    setIsUploading(false);
-                  }
-                }}
-              />
-              <div className="space-y-1 text-slate-500">
-                {isUploading ? (
-                  <div className="flex flex-col items-center justify-center py-2 space-y-1">
-                    <svg className="animate-spin h-6 w-6 text-[#D99A1C]" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                    </svg>
-                    <p className="text-xs font-bold text-[#D99A1C] animate-pulse">Uploading files, please wait...</p>
-                  </div>
-                ) : (
-                  <>
-                    <span className="text-xl">📄</span>
-                    <p className="text-xs font-semibold text-slate-700">Click or drag files here to upload</p>
-                    <p className="text-[10px] text-slate-400 font-semibold">Upload at least one document (PDF, PNG, JPG, Word)</p>
-                  </>
-                )}
-              </div>
-            </div>
-
-            {isUploading && (
-              <p className="text-[10px] text-[#D99A1C] font-semibold animate-pulse">⏳ Uploading files, please wait...</p>
-            )}
-            {uploadError && (
-              <p className="text-[10px] text-red-500 font-semibold">❌ {uploadError}</p>
-            )}
+            <BatchDocumentUpload role="Student" disabled={isSubmitting} onBusyChange={setIsUploading} onPendingChange={setHasQueuedDocuments} onComplete={async uploaded => { setUploadedFiles(prev => [...prev, ...uploaded]); }} />
 
             {/* Uploaded File Badges */}
             {uploadedFiles.length > 0 && (
               <div className="flex flex-wrap gap-2 pt-1.5">
                 {uploadedFiles.map((file, idx) => (
-                  <div key={idx} className="flex items-center gap-1.5 bg-[#D99A1C]/10 border border-[#D99A1C]/25 text-[#D99A1C] text-[10px] px-2.5 py-1 rounded-lg font-bold">
+                  <div key={idx} className="flex items-center gap-1.5 bg-[#D99A1C]/10 border border-[#D99A1C]/25 text-[#D99A1C] text-xs px-2.5 py-1 rounded-lg font-bold">
                     <span>📄</span>
                     <span className="truncate max-w-[150px]">{file.name}</span>
                     <ActionButton
@@ -630,18 +616,18 @@ export default function SalesOrderStudy({
           </div>
 
         {/* Comments / Notes */}
-        <div className="space-y-4 bg-white border border-slate-250/70 p-5 rounded-2xl">
-          <h3 className="text-xs font-black text-slate-950 uppercase tracking-wider pb-1 border-b border-slate-105/60">Comments / Notes</h3>
+        <div className="space-y-4 bg-white border border-slate-200 p-5 rounded-2xl">
+          <h3 className="text-xs font-black text-slate-950 uppercase tracking-wider pb-1 border-b border-slate-200">Comments / Notes</h3>
           <textarea
             rows="3"
-            className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs font-semibold focus:outline-none focus:bg-white focus:ring-1 focus:ring-[#D99A1C] focus:border-[#D99A1C] text-slate-900 resize-none"
+            className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-sm font-medium focus:outline-none focus:bg-white focus:ring-1 focus:ring-[#D99A1C] focus:border-[#D99A1C] text-slate-900 resize-none"
             placeholder="Add any comments or notes for this application..."
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
           />
         </div>
 
-        <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-100">
+        <div className="bg-white border border-slate-200 rounded-2xl p-4 sm:p-5 flex flex-wrap items-center justify-end gap-3">
           <ActionButton
             type="button"
             onClick={onBack}
@@ -652,7 +638,7 @@ export default function SalesOrderStudy({
           
           <ActionButton
             type="submit"
-            disabled={isSubmitting || isUploading || uploadedFiles.length === 0}
+            disabled={isSubmitting || isUploading || hasQueuedDocuments || uploadedFiles.length === 0}
             className="px-6 py-2.5 bg-gradient-to-r from-[#D99A1C] to-[#F5B025] hover:scale-[1.01] hover:shadow-lg text-white font-extrabold text-xs rounded-xl transition-all duration-150 shadow-md uppercase tracking-wider disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center justify-center gap-1.5"
           >
             {isSubmitting && (

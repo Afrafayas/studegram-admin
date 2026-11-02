@@ -1,3 +1,8 @@
+import RowActions, { rowViewProps } from '../components/RowActions';
+import ListRecordView from '../components/ListRecordView';
+import useServerList, { restoreListRows } from '../hooks/useServerList';
+import ListToolbar from '../components/ListToolbar';
+import ActionMenu from '../components/ActionMenu';
 import SearchableSelect from '../components/SearchableSelect';
 import { getDisplayId } from '../utils/displayId';
 import { normalizeKey, normalizeIntake, readRow, headerErrors, mapCurrency, mapFeePeriod, mapDegreeLevel, mapCategory, validFee, splitIntakes, buildLookup } from '../utils/courseImport';
@@ -24,6 +29,10 @@ export default function SettingsPortal({
   verificationDocuments, setVerificationDocuments,
   stagedActions, setStagedActions
 }) {
+const [listRecord,setListRecord]=useState(null);
+const showListRecord=record=>setListRecord(typeof record==='object'?{...record,name:record.name || record.title || record.agentName || record.label}:{name:String(record)});
+useEffect(()=>setListRecord(null),[activeSubTab]);
+
   const { currentUser, addAuditLog, hasPermission } = useAuth();
   const toast = useToast();
   const isWritable = ['SuperAdmin', 'Super Admin', 'Admin', 'Director'].includes(currentUser?.role) || (typeof hasPermission === 'function' && hasPermission('settings:edit'));
@@ -38,6 +47,18 @@ export default function SettingsPortal({
   useEffect(() => {
     setCurrentPage(1);
   }, [activeSubTab]);
+
+  const [listSearch, setListSearch] = useState('');
+  const [listFilters, setListFilters] = useState({});
+  const settingsSources = { 'settings-university': universities, 'settings-course': courses, 'settings-intake': intakes, 'settings-agent': referralAgents, 'settings-course-docs': courseDocuments, 'settings-stages': stages, 'settings-formats': fileFormats, 'settings-qualifications': qualifications, 'settings-documents': verificationDocuments || [], 'settings-actions': stagedActions || [] };
+  const settingsEndpoints = { 'settings-university': '/universities', 'settings-course': '/courses', 'settings-intake': '/intakes', 'settings-agent': '/partners' };
+  const settingsSource = settingsSources[activeSubTab] || [];
+  const serverList = useServerList(settingsEndpoints[activeSubTab] || '/lists/query', { search: listSearch, filters: listFilters, page: currentPage, limit: itemsPerPage, onPageChange: setCurrentPage, enabled: Boolean(settingsSources[activeSubTab]), resource: activeSubTab, localRecords: settingsEndpoints[activeSubTab] ? undefined : settingsSource, reloadKey: JSON.stringify(settingsSource) });
+  const settingsRows = settingsEndpoints[activeSubTab] ? restoreListRows(serverList.data, settingsSource) : serverList.data;
+  useEffect(() => { setCurrentPage(1); }, [listSearch, JSON.stringify(listFilters)]);
+  useEffect(() => { setListSearch(''); setListFilters({}); }, [activeSubTab]);
+  const settingsFilterKeys = activeSubTab === 'settings-university' ? ['country', 'status'] : activeSubTab === 'settings-course' ? ['university', 'degreeLevel', 'status'] : activeSubTab === 'settings-course-docs' ? ['format'] : activeSubTab === 'settings-agent' ? ['country', 'status'] : ['status'];
+  const settingsToolbar = <><ListToolbar search={listSearch} onSearchChange={setListSearch} filters={settingsFilterKeys.filter(key => (serverList.facets[key] || []).length).map(key => ({ key, label: key === 'degreeLevel' ? 'degree levels' : key, value: listFilters[key] || 'All', onChange: value => setListFilters(prev => ({ ...prev, [key]: value })), options: serverList.facets[key] || [] }))} onReset={() => { setListSearch(''); setListFilters({}); }} loading={serverList.loading} error={serverList.error} onRetry={serverList.reload} />{!serverList.loading && !serverList.error && settingsRows.length === 0 && <p role="status" className="px-4 py-3 text-xs text-slate-500">No matching records.</p>}</>;
 
   // University Full State
   const [univName, setUnivName] = useState('');
@@ -946,7 +967,7 @@ if (!token) throw new Error('Please sign in to save changes.');
     switch (activeSubTab) {
       case 'settings-university': {
         const univStartIndex = (currentPage - 1) * itemsPerPage;
-        const paginatedUnivs = universities.slice(univStartIndex, univStartIndex + itemsPerPage);
+        const paginatedUnivs = settingsRows;
 
         return (
           <div className="space-y-4">
@@ -962,9 +983,10 @@ if (!token) throw new Error('Please sign in to save changes.');
                 <span>+ Add University</span>
               </ActionButton>
             </div>
+            {settingsToolbar}
 
-            <div className="bg-white border border-[#E2E8F0] border-t-4 border-t-[#D99A1C] rounded-2xl shadow-xs overflow-hidden">
-              <div className="w-full min-w-0 overflow-x-auto"><table className="w-full text-left border-collapse">
+            <div className="workspace-list-frame bg-white border border-[#E2E8F0] border-t-4 border-t-[#D99A1C] rounded-2xl shadow-xs overflow-hidden">
+              <div className="w-full min-w-0 overflow-x-auto"><table className="workspace-table w-full text-left border-collapse">
                 <thead>
                   <tr className="bg-slate-50 border-b border-[#E2E8F0]">
                     <th className="px-5 py-3 text-slate-400 text-[10px] font-extrabold uppercase tracking-wider">University</th>
@@ -988,7 +1010,7 @@ if (!token) throw new Error('Please sign in to save changes.');
                       const courseCount = getResolvedAssignedCourses(univ).length;
                       const reqs = Array.isArray(univ.requirements) ? univ.requirements : (univ.requirements ? [univ.requirements] : []);
                       return (
-                        <tr key={uId} className="hover:bg-slate-50/60 transition-colors">
+                        <tr {...rowViewProps(()=>showListRecord(univ))} key={uId} className="hover:bg-slate-50/60 transition-colors">
                           <td className="px-5 py-3.5">
                             <div className="flex items-center gap-3">
                               {univ.logoUrl ? (
@@ -1035,7 +1057,7 @@ if (!token) throw new Error('Please sign in to save changes.');
                               {univ.status || 'Active'}
                             </span>
                           </td>
-                          <td className="px-5 py-3.5 text-right">
+                          <td className="px-5 py-3.5 text-right"><RowActions>
                             <div className="flex items-center justify-end gap-1.5">
                               <ActionButton
                                 onClick={() => setViewingUniv(univ)}
@@ -1059,7 +1081,7 @@ if (!token) throw new Error('Please sign in to save changes.');
                                 🗑️ Delete
                               </ActionButton>
                             </div>
-                          </td>
+                          </RowActions></td>
                         </tr>
                       );
                     })
@@ -1067,7 +1089,7 @@ if (!token) throw new Error('Please sign in to save changes.');
                 </tbody>
               </table></div>
               <PaginationFooter
-                totalItems={universities.length}
+                totalItems={serverList.totalCount}
                 currentPage={currentPage}
                 setCurrentPage={setCurrentPage}
                 itemsPerPage={itemsPerPage}
@@ -1080,7 +1102,7 @@ if (!token) throw new Error('Please sign in to save changes.');
 
       case 'settings-course': {
         const courseStartIndex = (currentPage - 1) * itemsPerPage;
-        const paginatedCourses = courses.slice(courseStartIndex, courseStartIndex + itemsPerPage);
+        const paginatedCourses = settingsRows;
 
         return (
           <div className="space-y-4">
@@ -1112,9 +1134,10 @@ if (!token) throw new Error('Please sign in to save changes.');
                 </ActionButton>
               </div>
             </div>
+            {settingsToolbar}
 
-            <div className="bg-white border border-[#E2E8F0] border-t-4 border-t-[#D99A1C] rounded-2xl shadow-xs overflow-hidden">
-              <div className="w-full min-w-0 overflow-x-auto"><table className="w-full text-left border-collapse">
+            <div className="workspace-list-frame bg-white border border-[#E2E8F0] border-t-4 border-t-[#D99A1C] rounded-2xl shadow-xs overflow-hidden">
+              <div className="w-full min-w-0 overflow-x-auto"><table className="workspace-table w-full text-left border-collapse">
                 <thead>
                   <tr className="bg-slate-50 border-b border-[#E2E8F0]">
                     <th className="px-5 py-3 text-slate-400 text-[10px] font-extrabold uppercase tracking-wider">Course Title</th>
@@ -1138,7 +1161,7 @@ if (!token) throw new Error('Please sign in to save changes.');
                       const uniName = typeof course.university === 'object' ? (course.university?.name || 'Assigned') : 'Assigned';
                       const intakeList = Array.isArray(course.intakes) ? course.intakes : [];
                       return (
-                        <tr key={cId} className="hover:bg-slate-50/60 transition-colors">
+                        <tr {...rowViewProps(()=>showListRecord(course))} key={cId} className="hover:bg-slate-50/60 transition-colors">
                           <td className="px-5 py-3.5 font-black text-slate-900">
                             <div>
                               <p className="text-xs font-black text-slate-900">{course.title}</p><p className="text-[10px] text-slate-500 font-mono">{getDisplayId(course)}</p>
@@ -1175,7 +1198,7 @@ if (!token) throw new Error('Please sign in to save changes.');
                               )}
                             </div>
                           </td>
-                          <td className="px-5 py-3.5 text-right">
+                          <td className="px-5 py-3.5 text-right"><RowActions>
                             <div className="flex items-center justify-end gap-1.5">
                               <ActionButton
                                 onClick={() => setViewingCourse(course)}
@@ -1199,7 +1222,7 @@ if (!token) throw new Error('Please sign in to save changes.');
                                 🗑️ Delete
                               </ActionButton>
                             </div>
-                          </td>
+                          </RowActions></td>
                         </tr>
                       );
                     })
@@ -1207,7 +1230,7 @@ if (!token) throw new Error('Please sign in to save changes.');
                 </tbody>
               </table></div>
               <PaginationFooter
-                totalItems={courses.length}
+                totalItems={serverList.totalCount}
                 currentPage={currentPage}
                 setCurrentPage={setCurrentPage}
                 itemsPerPage={itemsPerPage}
@@ -1220,7 +1243,7 @@ if (!token) throw new Error('Please sign in to save changes.');
 
       case 'settings-intake': {
         const intakeStartIndex = (currentPage - 1) * itemsPerPage;
-        const paginatedIntakes = intakes.slice(intakeStartIndex, intakeStartIndex + itemsPerPage);
+        const paginatedIntakes = settingsRows;
 
         return (
           <div className="space-y-4">
@@ -1236,9 +1259,10 @@ if (!token) throw new Error('Please sign in to save changes.');
                 <span>+ Add Intake Season</span>
               </ActionButton>
             </div>
+            {settingsToolbar}
 
-            <div className="bg-white border border-[#E2E8F0] border-t-4 border-t-[#D99A1C] rounded-2xl shadow-xs overflow-hidden">
-              <div className="w-full min-w-0 overflow-x-auto"><table className="w-full text-left border-collapse">
+            <div className="workspace-list-frame bg-white border border-[#E2E8F0] border-t-4 border-t-[#D99A1C] rounded-2xl shadow-xs overflow-hidden">
+              <div className="w-full min-w-0 overflow-x-auto"><table className="workspace-table w-full text-left border-collapse">
                 <thead>
                   <tr className="bg-slate-50 border-b border-[#E2E8F0]">
                     <th className="px-5 py-3 text-slate-400 text-[10px] font-extrabold uppercase tracking-wider">Intake Season Title</th>
@@ -1258,7 +1282,7 @@ if (!token) throw new Error('Please sign in to save changes.');
                     paginatedIntakes.map((intake) => {
                       const iId = intake._id || intake.id;
                       return (
-                        <tr key={iId} className="hover:bg-slate-50/60 transition-colors">
+                        <tr {...rowViewProps(()=>showListRecord(intake))} key={iId} className="hover:bg-slate-50/60 transition-colors">
                           <td className="px-5 py-3.5">
                             <div className="flex items-center gap-2">
                               <span className="text-base">📅</span>
@@ -1273,7 +1297,7 @@ if (!token) throw new Error('Please sign in to save changes.');
                               Active Season
                             </span>
                           </td>
-                          <td className="px-5 py-3.5 text-right">
+                          <td className="px-5 py-3.5 text-right"><RowActions>
                             <div className="flex items-center justify-end gap-1.5">
                               <ActionButton
                                 onClick={() => setViewingIntake(intake)}
@@ -1297,7 +1321,7 @@ if (!token) throw new Error('Please sign in to save changes.');
                                 🗑️ Delete
                               </ActionButton>
                             </div>
-                          </td>
+                          </RowActions></td>
                         </tr>
                       );
                     })
@@ -1305,7 +1329,7 @@ if (!token) throw new Error('Please sign in to save changes.');
                 </tbody>
               </table></div>
               <PaginationFooter
-                totalItems={intakes.length}
+                totalItems={serverList.totalCount}
                 currentPage={currentPage}
                 setCurrentPage={setCurrentPage}
                 itemsPerPage={itemsPerPage}
@@ -1318,7 +1342,7 @@ if (!token) throw new Error('Please sign in to save changes.');
 
       case 'settings-course-docs': {
         const docStartIndex = (currentPage - 1) * itemsPerPage;
-        const paginatedCourseDocs = courseDocuments.slice(docStartIndex, docStartIndex + itemsPerPage);
+        const paginatedCourseDocs = settingsRows;
 
         return (
           <div className="space-y-4">
@@ -1331,9 +1355,10 @@ if (!token) throw new Error('Please sign in to save changes.');
                 Add New Document Rule
               </ActionButton>
             </div>
+            {settingsToolbar}
             
-            <div className="bg-white border border-[#E2E8F0] border-t-4 border-t-[#D99A1C] rounded-2xl shadow-xs overflow-hidden">
-              <div className="w-full min-w-0 overflow-x-auto"><table className="w-full text-left border-collapse">
+            <div className="workspace-list-frame bg-white border border-[#E2E8F0] border-t-4 border-t-[#D99A1C] rounded-2xl shadow-xs overflow-hidden">
+              <div className="w-full min-w-0 overflow-x-auto"><table className="workspace-table w-full text-left border-collapse">
                 <thead>
                   <tr className="bg-slate-50 border-b border-[#E2E8F0]">
                     <th className="px-6 py-3 text-slate-400 text-[10px] font-extrabold uppercase tracking-wider w-[80px]">SI.NO.</th>
@@ -1346,26 +1371,26 @@ if (!token) throw new Error('Please sign in to save changes.');
                 </thead>
                 <tbody className="divide-y divide-slate-100 text-xs font-semibold text-slate-700">
                   {paginatedCourseDocs.map((doc, idx) => (
-                    <tr key={doc.siNo || idx} className="hover:bg-slate-50/50 transition-colors">
+                    <tr {...rowViewProps(()=>showListRecord(doc))} key={doc.siNo || idx} className="hover:bg-slate-50/50 transition-colors">
                       <td className="px-6 py-4 font-bold text-slate-400">{docStartIndex + idx + 1}</td>
                       <td className="px-6 py-4 text-slate-950 font-black">{doc.name}</td>
                       <td className="px-6 py-4"><span className="bg-blue-50 border border-blue-100 text-blue-700 font-extrabold rounded-md px-2 py-0.5 text-[9px]">{doc.format}</span></td>
                       <td className="px-6 py-4 text-slate-500">{doc.minSize} MB</td>
                       <td className="px-6 py-4 text-slate-500">{doc.maxSize} MB</td>
-                      <td className="px-6 py-4 text-right">
+                      <td className="px-6 py-4 text-right"><RowActions>
                         <ActionButton
                           onClick={() => handleDeleteDoc(doc.siNo, doc.name)}
                           className="text-rose-600 hover:text-rose-900 font-bold cursor-pointer"
                         >
                           Delete
                         </ActionButton>
-                      </td>
+                      </RowActions></td>
                     </tr>
                   ))}
                 </tbody>
               </table></div>
               <PaginationFooter
-                totalItems={courseDocuments.length}
+                totalItems={serverList.totalCount}
                 currentPage={currentPage}
                 setCurrentPage={setCurrentPage}
                 itemsPerPage={itemsPerPage}
@@ -1378,7 +1403,7 @@ if (!token) throw new Error('Please sign in to save changes.');
 
       case 'settings-agent': {
         const agentStartIndex = (currentPage - 1) * itemsPerPage;
-        const paginatedAgents = referralAgents.slice(agentStartIndex, agentStartIndex + itemsPerPage);
+        const paginatedAgents = settingsRows;
 
         return (
           <div className="space-y-4">
@@ -1391,9 +1416,10 @@ if (!token) throw new Error('Please sign in to save changes.');
                 Invite/Add Agent
               </ActionButton>
             </div>
+            {settingsToolbar}
             
-            <div className="bg-white border border-[#E2E8F0] border-t-4 border-t-[#D99A1C] rounded-2xl shadow-xs overflow-hidden">
-              <div className="w-full min-w-0 overflow-x-auto"><table className="w-full text-left border-collapse">
+            <div className="workspace-list-frame bg-white border border-[#E2E8F0] border-t-4 border-t-[#D99A1C] rounded-2xl shadow-xs overflow-hidden">
+              <div className="w-full min-w-0 overflow-x-auto"><table className="workspace-table w-full text-left border-collapse">
                 <thead>
                   <tr className="bg-slate-50 border-b border-[#E2E8F0]">
                     <th className="px-6 py-3 text-slate-400 text-[10px] font-extrabold uppercase tracking-wider w-[80px]">SI.NO.</th>
@@ -1404,24 +1430,24 @@ if (!token) throw new Error('Please sign in to save changes.');
                 </thead>
                 <tbody className="divide-y divide-slate-100 text-xs font-semibold text-slate-700">
                   {paginatedAgents.map((agent, idx) => (
-                    <tr key={agent.siNo || idx} className="hover:bg-slate-50/50 transition-colors">
+                    <tr {...rowViewProps(()=>showListRecord(agent))} key={agent.siNo || idx} className="hover:bg-slate-50/50 transition-colors">
                       <td className="px-6 py-4 font-bold text-slate-400">{agentStartIndex + idx + 1}</td>
                       <td className="px-6 py-4 text-slate-950 font-black">{agent.agentName}</td>
                       <td className="px-6 py-4 text-[#2563EB] font-bold">{agent.email}</td>
-                      <td className="px-6 py-4 text-right">
+                      <td className="px-6 py-4 text-right"><RowActions>
                         <ActionButton
                           onClick={() => handleDeleteAgent(agent.siNo, agent.agentName)}
                           className="text-rose-600 hover:text-rose-900 font-bold cursor-pointer"
                         >
                           Revoke Access
                         </ActionButton>
-                      </td>
+                      </RowActions></td>
                     </tr>
                   ))}
                 </tbody>
               </table></div>
               <PaginationFooter
-                totalItems={referralAgents.length}
+                totalItems={serverList.totalCount}
                 currentPage={currentPage}
                 setCurrentPage={setCurrentPage}
                 itemsPerPage={itemsPerPage}
@@ -1434,7 +1460,7 @@ if (!token) throw new Error('Please sign in to save changes.');
 
       case 'settings-stages': {
         const stageStartIndex = (currentPage - 1) * itemsPerPage;
-        const paginatedStages = stages.slice(stageStartIndex, stageStartIndex + itemsPerPage);
+        const paginatedStages = settingsRows;
 
         return (
           <div className="space-y-4">
@@ -1450,51 +1476,12 @@ if (!token) throw new Error('Please sign in to save changes.');
                 Add Stage
               </ActionButton>
             </div>
+            {settingsToolbar}
 
-            <div className="bg-white border border-[#E2E8F0] border-t-4 border-t-[#D99A1C] rounded-2xl shadow-xs overflow-hidden">
-              <div className="p-6 space-y-4">
-                {paginatedStages.map((stage, idx) => {
-                  const globalIdx = stageStartIndex + idx;
-                  return (
-                    <div 
-                      key={stage}
-                      className="flex items-center justify-between p-4 bg-slate-50 border border-slate-200 rounded-xl hover:border-[#D99A1C] hover:bg-white transition-all group"
-                    >
-                      <div className="flex items-center gap-3">
-                        <span className="w-6 h-6 rounded-full bg-slate-200 text-slate-700 flex items-center justify-center font-bold text-xs">
-                          {globalIdx + 1}
-                        </span>
-                        <span className="text-xs font-black text-slate-900">{stage}</span>
-                      </div>
-
-                      <div className="flex items-center gap-2">
-                        <ActionButton
-                          onClick={() => moveStage(globalIdx, 'up')}
-                          disabled={globalIdx === 0}
-                          className="p-1.5 bg-white text-slate-400 hover:text-slate-950 border border-slate-200 rounded-lg hover:shadow-2xs disabled:opacity-30 disabled:pointer-events-none cursor-pointer"
-                        >
-                          ▲
-                        </ActionButton>
-                        <ActionButton
-                          onClick={() => moveStage(globalIdx, 'down')}
-                          disabled={globalIdx === stages.length - 1}
-                          className="p-1.5 bg-white text-slate-400 hover:text-slate-950 border border-slate-200 rounded-lg hover:shadow-2xs disabled:opacity-30 disabled:pointer-events-none cursor-pointer"
-                        >
-                          ▼
-                        </ActionButton>
-                        <ActionButton
-                          onClick={() => handleDeleteItem(stage, setStages, 'stage')}
-                          className="p-1.5 bg-rose-50 hover:bg-rose-100 text-rose-500 rounded-lg cursor-pointer"
-                        >
-                          ✕
-                        </ActionButton>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
+            <div className="workspace-list-frame bg-white border border-[#E2E8F0] border-t-4 border-t-[#D99A1C] rounded-2xl shadow-xs overflow-hidden">
+              <div className="overflow-x-auto"><table className="workspace-table w-full text-left"><thead><tr><th>Order</th><th>Stage</th><th className="text-right">Actions</th></tr></thead><tbody>{paginatedStages.map(stage=>{const globalIdx=stages.indexOf(stage); return <tr key={stage} {...rowViewProps(()=>showListRecord({name:stage,description:'Pipeline position '+(globalIdx+1)}))} className="cursor-pointer hover:bg-slate-50"><td>{globalIdx+1}</td><td className="font-semibold">{stage}</td><td className="text-right"><RowActions><ActionButton className="rounded-lg px-3 py-2 text-left text-xs font-semibold hover:bg-slate-50" onClick={()=>showListRecord({name:stage,description:'Pipeline position '+(globalIdx+1)})}>View stage</ActionButton><ActionButton className="rounded-lg px-3 py-2 text-left text-xs font-semibold hover:bg-slate-50" disabled={globalIdx===0} onClick={()=>moveStage(globalIdx,'up')}>Move up</ActionButton><ActionButton className="rounded-lg px-3 py-2 text-left text-xs font-semibold hover:bg-slate-50" disabled={globalIdx===stages.length-1} onClick={()=>moveStage(globalIdx,'down')}>Move down</ActionButton><ActionButton className="rounded-lg px-3 py-2 text-left text-xs font-semibold hover:bg-slate-50" onClick={()=>handleDeleteItem(stage,setStages,'stage')}>Delete stage</ActionButton></RowActions></td></tr>})}</tbody></table></div>
               <PaginationFooter
-                totalItems={stages.length}
+                totalItems={serverList.totalCount}
                 currentPage={currentPage}
                 setCurrentPage={setCurrentPage}
                 itemsPerPage={itemsPerPage}
@@ -1525,35 +1512,10 @@ if (!token) throw new Error('Please sign in to save changes.');
           <div className="space-y-6">
             <div className="bg-white border border-[#E2E8F0] border-t-4 border-t-[#D99A1C] p-6 rounded-2xl shadow-xs">
               <h2 className="text-sm font-black text-slate-900 uppercase tracking-wider">System Settings Directory</h2>
-              <p className="text-xs text-slate-500 font-semibold mt-1">Select a settings card below to customize active portal configurations, workflows, and master metadata lists.</p>
+              <p className="text-xs text-slate-500 font-semibold mt-1">Select a configuration below to customize active portal configurations, workflows, and master metadata lists.</p>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-              {configCards.map((card) => (
-                <div key={card.id} className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-xs flex flex-col justify-between hover:border-[#D99A1C] transition-all group hover:shadow-sm">
-                  <div className="space-y-2">
-                    <div className="flex justify-between items-start">
-                      <span className="text-2xl">{card.icon}</span>
-                      <span className="px-2 py-0.5 bg-slate-100 border border-slate-200 text-slate-500 rounded-full text-[9px] font-bold">
-                        {card.count} Items
-                      </span>
-                    </div>
-                    <div>
-                      <h3 className="text-xs font-black text-slate-900 uppercase tracking-tight group-hover:text-[#D99A1C] transition-colors">{card.title}</h3>
-                      <p className="text-[11px] text-slate-400 font-medium mt-1 leading-relaxed">{card.desc}</p>
-                    </div>
-                  </div>
-                  <div className="pt-4 border-t border-slate-50 mt-4">
-                    <ActionButton
-                      onClick={() => setActiveSubTab && setActiveSubTab(card.id)}
-                      className="w-full bg-slate-50 border border-slate-200 hover:bg-slate-100 text-slate-700 text-[10px] font-extrabold py-2 rounded-xl transition-all uppercase tracking-wider cursor-pointer"
-                    >
-                      Open Configuration
-                    </ActionButton>
-                  </div>
-                </div>
-              ))}
-            </div>
+            <div className="workspace-list-frame overflow-x-auto"><table className="workspace-table w-full text-left"><thead><tr><th>Configuration</th><th>Description</th><th>Items</th><th className="text-right">Actions</th></tr></thead><tbody>{configCards.map(card=><tr key={card.id} {...rowViewProps(()=>setActiveSubTab?.(card.id))} className="cursor-pointer hover:bg-slate-50"><td className="font-semibold">{card.title}</td><td>{card.desc}</td><td>{card.count}</td><td className="text-right"><RowActions><ActionButton className="rounded-lg px-3 py-2 text-left text-xs font-semibold hover:bg-slate-50" onClick={()=>setActiveSubTab?.(card.id)}>Open configuration</ActionButton></RowActions></td></tr>)}</tbody></table></div>
           </div>
         );
       }
@@ -1602,7 +1564,7 @@ if (!token) throw new Error('Please sign in to save changes.');
         }
 
         const listStartIndex = (currentPage - 1) * itemsPerPage;
-        const paginatedList = list.slice(listStartIndex, listStartIndex + itemsPerPage);
+        const paginatedList = settingsRows;
 
         return (
           <div className="space-y-4">
@@ -1617,59 +1579,12 @@ if (!token) throw new Error('Please sign in to save changes.');
                 </ActionButton>
               )}
             </div>
+            {settingsToolbar}
 
-            <div className="bg-white border border-[#E2E8F0] border-t-4 border-t-[#D99A1C] rounded-2xl shadow-xs overflow-hidden">
-              <div className="p-6 space-y-3">
-                {paginatedList.map((item, idx) => {
-                  const itemId = typeof item === 'object' ? item._id : item;
-                  
-                  let displayName = '';
-                  let detailsLabel = '';
-
-                  if (activeSubTab === 'settings-university') {
-                    displayName = typeof item === 'object' ? item.name : item;
-                    detailsLabel = typeof item === 'object' ? `Country: ${item.country}` : '';
-                  } else if (activeSubTab === 'settings-course') {
-                    displayName = typeof item === 'object' ? item.title : item;
-                    const uniName = typeof item === 'object' ? (item.university?.name || 'Assigned') : '';
-                    detailsLabel = typeof item === 'object' ? `${item.degreeLevel || 'Master'} Degree | University: ${uniName}` : '';
-                  } else if (activeSubTab === 'settings-intake') {
-                    displayName = typeof item === 'object' ? item.title : item;
-                    detailsLabel = typeof item === 'object' ? item.description : '';
-                  } else {
-                    displayName = item;
-                  }
-
-                  return (
-                    <div key={itemId || idx} className="flex items-center justify-between p-3.5 bg-slate-50 border border-slate-200 rounded-xl hover:border-slate-350 transition-colors">
-                      <div>
-                        <p className="text-xs font-bold text-slate-800">{displayName}</p>
-                        {detailsLabel && <p className="text-[10px] text-slate-400 font-semibold mt-0.5">{detailsLabel}</p>}
-                      </div>
-                      <div className="flex items-center gap-2">
-                        {activeSubTab === 'settings-intake' && listSetter && (
-                          <ActionButton
-                            onClick={() => openEditIntakeModal(item)}
-                            className="text-indigo-500 hover:text-indigo-700 font-extrabold text-xs cursor-pointer bg-white px-2.5 py-1 border border-slate-200 rounded-lg hover:border-indigo-200 hover:bg-indigo-50/20 transition-all shadow-3xs"
-                          >
-                            Edit
-                          </ActionButton>
-                        )}
-                        {listSetter && (
-                          <ActionButton
-                            onClick={() => handleDeleteSettingItem(item, listSetter, activeSubTab.replace('settings-', ''))}
-                            className="text-rose-500 hover:text-rose-700 font-extrabold text-xs cursor-pointer bg-white px-2.5 py-1 border border-slate-200 rounded-lg hover:border-rose-200 hover:bg-rose-50/20 transition-all shadow-3xs"
-                          >
-                            Delete
-                          </ActionButton>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
+            <div className="workspace-list-frame bg-white border border-[#E2E8F0] border-t-4 border-t-[#D99A1C] rounded-2xl shadow-xs overflow-hidden">
+              <div className="overflow-x-auto"><table className="workspace-table w-full text-left"><thead><tr><th>Item</th><th className="text-right">Actions</th></tr></thead><tbody>{paginatedList.map((item,idx)=>{const label=typeof item==='object' ? item.name || item.title || item.label || 'Configuration' : item;return <tr key={typeof item==='object' ? item._id || idx : item} {...rowViewProps(()=>showListRecord(item))} className="cursor-pointer hover:bg-slate-50"><td className="font-semibold">{label}</td><td className="text-right"><RowActions><ActionButton className="rounded-lg px-3 py-2 text-left text-xs font-semibold hover:bg-slate-50" onClick={()=>showListRecord(item)}>View item</ActionButton>{activeSubTab==='settings-intake' && listSetter && <ActionButton className="rounded-lg px-3 py-2 text-left text-xs font-semibold hover:bg-slate-50" onClick={()=>openEditIntakeModal(item)}>Edit intake</ActionButton>}{listSetter && <ActionButton className="rounded-lg px-3 py-2 text-left text-xs font-semibold hover:bg-slate-50" onClick={()=>handleDeleteSettingItem(item,listSetter,activeSubTab.replace('settings-',''))}>Delete item</ActionButton>}</RowActions></td></tr>})}</tbody></table></div>
               <PaginationFooter
-                totalItems={list.length}
+                totalItems={serverList.totalCount}
                 currentPage={currentPage}
                 setCurrentPage={setCurrentPage}
                 itemsPerPage={itemsPerPage}
@@ -1683,14 +1598,14 @@ if (!token) throw new Error('Please sign in to save changes.');
   };
 
   return (
-    <div className="flex-1 p-6 bg-[#F0F2F5]">
+    <div className="workspace-page flex-1 p-6 bg-[#F0F2F5]">
       {!isWritable && (
         <div className="bg-blue-50 border border-blue-200 text-blue-700 text-[11.5px] font-bold py-2.5 px-4 rounded-xl flex items-center gap-2 shadow-xs mb-5">
           <span>ℹ️</span>
           <span>View-Only Mode: You are logged in as {currentUser?.role}. Portal configuration changes are reserved for Administrator and Director roles.</span>
         </div>
       )}
-      {renderSettingsView()}
+      {listRecord ? <ListRecordView record={listRecord} title="Configuration details" onBack={()=>setListRecord(null)} /> : renderSettingsView()}
 
       {modalType && createPortal(
         <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-xs select-none p-4 overflow-hidden">
@@ -2224,14 +2139,14 @@ if (!token) throw new Error('Please sign in to save changes.');
             )}
 
             {modalType === 'edit-intake' && (
-              <ActionForm onSubmit={handleUpdateIntake} className="space-y-4">
+              <ActionForm onSubmit={handleSaveIntake} className="space-y-4">
                 <div className="space-y-1.5">
                   <label className="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">Intake Title</label>
                   <input
                     type="text"
                     required
-                    value={editIntakeTitle}
-                    onChange={(e) => setEditIntakeTitle(e.target.value)}
+                    value={intakeTitle}
+                    onChange={(e) => setIntakeTitle(e.target.value)}
                     className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs font-semibold focus:outline-none focus:bg-white focus:border-[#D99A1C] focus:ring-1 focus:ring-[#D99A1C] text-slate-950"
                     placeholder="e.g. September intake"
                   />
@@ -2240,8 +2155,8 @@ if (!token) throw new Error('Please sign in to save changes.');
                   <label className="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">Intake Description</label>
                   <input
                     type="text"
-                    value={editIntakeDesc}
-                    onChange={(e) => setEditIntakeDesc(e.target.value)}
+                    value={intakeDesc}
+                    onChange={(e) => setIntakeDesc(e.target.value)}
                     className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs font-semibold focus:outline-none focus:bg-white focus:border-[#D99A1C] text-slate-950"
                     placeholder="e.g. Fall intake starts in September"
                   />
@@ -2327,27 +2242,7 @@ if (!token) throw new Error('Please sign in to save changes.');
               ✕
             </ActionButton>
 
-            <div className="flex items-center gap-4 border-b pb-4">
-              {viewingUniv.logoUrl ? (
-                <img src={viewingUniv.logoUrl} alt={viewingUniv.name} className="w-16 h-16 object-contain border p-1 rounded-xl bg-white shadow-xs" />
-              ) : (
-                <div className="w-16 h-16 rounded-xl bg-[#D99A1C]/10 text-[#D99A1C] flex items-center justify-center text-xl font-black shrink-0">
-                  🏛️
-                </div>
-              )}
-              <div>
-                <div className="flex items-center gap-2">
-                  <h2 className="text-lg font-black text-slate-900">{viewingUniv.name}</h2>
-                  <span className={`px-2.5 py-0.5 text-[10px] font-extrabold rounded-full ${viewingUniv.status === 'Inactive' ? 'bg-slate-100 text-slate-600' : 'bg-emerald-50 text-emerald-700 border border-emerald-200'}`}>
-                    {viewingUniv.status || 'Active'}
-                  </span>
-                </div>
-                <div className="flex items-center gap-3 text-xs text-slate-500 font-semibold mt-1">
-                  <span>📍 {viewingUniv.city ? `${viewingUniv.city}, ` : ''}{viewingUniv.country}</span>
-                  {viewingUniv.ranking && <span className="bg-amber-50 text-amber-700 px-2 py-0.5 rounded-md font-bold text-[10px] border border-amber-200">🏆 {viewingUniv.ranking}</span>}
-                </div>
-              </div>
-            </div>
+            
 
             {/* Entry Requirements */}
             <div className="space-y-1.5">
@@ -2441,22 +2336,7 @@ if (!token) throw new Error('Please sign in to save changes.');
               ✕
             </ActionButton>
 
-            <div className="border-b pb-4 space-y-1">
-              <div className="flex items-center gap-2">
-                <span className="bg-indigo-50 text-indigo-700 border border-indigo-100 px-2 py-0.5 text-[10px] font-extrabold rounded-md">
-                  🎓 {viewingCourse.degreeLevel || 'Bachelor'}
-                </span>
-                {viewingCourse.category && (
-                  <span className="bg-slate-100 text-slate-600 px-2 py-0.5 text-[10px] font-bold rounded-md">
-                    {viewingCourse.category}
-                  </span>
-                )}
-              </div>
-              <h2 className="text-lg font-black text-slate-900">{viewingCourse.title}</h2>
-              <p className="text-xs text-slate-500 font-bold">
-                🏛️ {typeof viewingCourse.university === 'object' ? (viewingCourse.university?.name || 'Assigned University') : 'Assigned University'}
-              </p>
-            </div>
+            
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-slate-50 p-3 rounded-xl border border-slate-200">
               <div>
@@ -2530,20 +2410,7 @@ if (!token) throw new Error('Please sign in to save changes.');
               ✕
             </ActionButton>
 
-            <div className="border-b pb-4 flex items-center gap-3">
-              <div className="w-12 h-12 rounded-xl bg-amber-100 text-amber-800 flex items-center justify-center text-xl font-bold">
-                📅
-              </div>
-              <div>
-                <div className="flex items-center gap-2">
-                  <h2 className="text-lg font-black text-slate-900">{viewingIntake.title}</h2>
-                  <span className="px-2 py-0.5 bg-emerald-50 text-emerald-700 text-[10px] font-extrabold rounded-full border border-emerald-200">
-                    Active Intake
-                  </span>
-                </div>
-                <p className="text-xs text-slate-400 font-semibold mt-0.5">Global Admission Season Calendar Window</p>
-              </div>
-            </div>
+            
 
             {/* Description */}
             <div className="space-y-1.5 bg-slate-50 p-4 rounded-xl border border-slate-200">
@@ -2737,7 +2604,7 @@ if (!token) throw new Error('Please sign in to save changes.');
                   </div>
 
                   <div className="max-h-48 overflow-auto border border-slate-100 rounded-xl scrollbar-thin">
-                    <table className="w-full text-left text-xs border-collapse">
+                    <table className="workspace-table w-full text-left text-xs border-collapse">
                       <thead className="bg-slate-50 text-[9.5px] font-black uppercase text-slate-400 sticky top-0 border-b border-slate-100">
                         <tr>
                           <th className="px-3 py-2">Course Title</th>
@@ -2892,7 +2759,7 @@ if (!token) throw new Error('Please sign in to save changes.');
                   Actionable Error Details ({importSummaryData.failedRows.length} Rows Failed)
                 </h4>
                 <div className="overflow-x-auto">
-                  <table className="w-full text-left text-xs border-collapse">
+                  <table className="workspace-table w-full text-left text-xs border-collapse">
                     <thead>
                       <tr className="border-b border-slate-200 text-[10px] font-extrabold text-slate-400 uppercase tracking-wider">
                         <th className="py-2 px-2.5">Excel Row</th>

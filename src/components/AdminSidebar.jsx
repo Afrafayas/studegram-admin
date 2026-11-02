@@ -50,14 +50,14 @@ export default function AdminSidebar({
         ></div>
       )}
 
-      <aside className={`fixed inset-y-0 left-0 z-50 lg:z-30 lg:static w-[260px] min-w-[260px] bg-[#0A0A0F] border-r border-slate-900 text-slate-300 h-screen flex flex-col justify-between py-5 select-none shrink-0 transform ${
+      <aside className={`workspace-sidebar fixed inset-y-0 left-0 z-50 lg:z-30 lg:static w-[260px] min-w-[260px] bg-[#0A0A0F] border-r border-slate-900 text-slate-300 h-dvh lg:h-full min-h-0 overflow-hidden flex flex-col justify-between py-5 select-none shrink-0 transform ${
         isOpen ? 'translate-x-0' : '-translate-x-full'
       } lg:translate-x-0 transition-transform duration-200 ease-in-out`}>
         
-        <div className="flex flex-col gap-6 overflow-y-auto px-4 scrollbar-thin">
+        <div className="flex-1 min-h-0 flex flex-col gap-6 overflow-y-auto overscroll-y-contain px-4 scrollbar-thin">
           {/* Brand Header */}
           <div className="px-2 pb-4 border-b border-slate-900 flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-[#D99A1C] to-[#F5B025] flex items-center justify-center font-extrabold text-white text-base shadow-lg shadow-[#D99A1C]/20">
+            <div className="w-8 h-8 rounded-lg bg-[#EFB62C] text-[#191b1f] flex items-center justify-center font-extrabold text-white text-base shadow-lg shadow-[#D99A1C]/20">
               U
             </div>
             <div className="flex flex-col">
@@ -68,6 +68,7 @@ export default function AdminSidebar({
 
           {/* Navigation Links */}
           <nav className="space-y-1.5">
+
             {/* Daily Report */}
             <ActionButton
               onClick={() => handleTabClick('daily-report')}
@@ -229,6 +230,18 @@ export default function AdminSidebar({
               </ActionButton>
             )}
 
+            <ActionButton
+              type="button"
+              onClick={() => handleTabClick('notices')}
+              title="Create, view, edit and delete notices"
+              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left text-xs font-semibold transition-all duration-150 ${activeTab === 'notices' ? 'bg-[#161622] text-white border-l-2 border-[#D99A1C] pl-2.5' : 'hover:bg-[#161622]/50 hover:text-white'}`}
+            >
+              <svg className="w-4 h-4 shrink-0 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0a3 3 0 01-6 0m6 0H9" />
+              </svg>
+              <span>Notices &amp; Announcements</span>
+            </ActionButton>
+
             {/* Staff Activity Log */}
             {(hasPermission('staff:view') || hasPermission('activity_logs:view') || ['SuperAdmin', 'Super Admin', 'Admin', 'Director', 'COO', 'Country Head'].includes(currentUser.role)) && (
               <ActionButton
@@ -337,7 +350,7 @@ export default function AdminSidebar({
         </div>
 
         {/* Footer actions inside Sidebar */}
-        <div className="px-4 mt-auto pt-4 border-t border-slate-900 flex flex-col gap-2">
+        <div className="shrink-0 px-4 mt-auto pt-4 border-t border-slate-900 flex flex-col gap-2">
           {/* Logout */}
           <ActionButton
             onClick={onLogout}

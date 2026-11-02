@@ -1,14 +1,24 @@
-import SearchableSelect from '../components/SearchableSelect';
+import RowActions, { rowViewProps } from '../components/RowActions';
+import ListRecordView from '../components/ListRecordView';
+import API from '../api/axios';
+import useServerList from '../hooks/useServerList';
+import ListToolbar, { ListPager } from '../components/ListToolbar';
 import { getDisplayId } from '../utils/displayId';
 import { ActionButton } from '../components/ActionControls';
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 
 export default function AdminReport({ 
   applications = [], 
   activeSubTab = null,
   referralAgents = [],
-  universities = []
+  universities = [],
+  onOpenApplication
 }) {
+  const [selectedReport, setSelectedReport] = useState(null);
+  const [listSearch, setListSearch] = useState('');
+  const [listStatus, setListStatus] = useState('All');
+  const [listPage, setListPage] = useState(1);
+  const [listLimit, setListLimit] = useState(15);
   const [selectedAgent, setSelectedAgent] = useState('All');
   const [selectedUniversity, setSelectedUniversity] = useState('All');
   const [selectedCountry, setSelectedCountry] = useState('All');
@@ -69,6 +79,7 @@ export default function AdminReport({
       }
 
       return {
+        id: app.id || app._id || app.camsId,
         camsId: getDisplayId(app),
         name: app.studentName || `${app.firstName || ''} ${app.lastName || ''}`.trim() || 'N/A',
         agent: agentName,
@@ -132,24 +143,17 @@ export default function AdminReport({
     return Array.from(set).sort((a, b) => a.localeCompare(b));
   }, [allReportApps, universities, referralAgents]);
 
-  const filteredApps = allReportApps.filter(app => {
-    let agentMatch = true;
-    if (selectedAgent !== 'All') {
-      if (selectedAgent === 'Direct') {
-        agentMatch = (app.agent || '').toLowerCase() === 'direct';
-      } else {
-        agentMatch = (app.agent || '').toLowerCase().includes(selectedAgent.toLowerCase());
-      }
-    }
-    const univMatch = selectedUniversity === 'All' || (app.university || '').toLowerCase().includes(selectedUniversity.toLowerCase());
-    const countryMatch = selectedCountry === 'All' || (app.country || '').toLowerCase().includes(selectedCountry.toLowerCase());
-    return agentMatch && univMatch && countryMatch;
-  });
+  const serverList = useServerList('/lists/query', { localRecords: allReportApps, resource: 'admin-report', search: listSearch, filters: { agent: selectedAgent, university: selectedUniversity, country: selectedCountry, status: listStatus }, page: listPage, limit: listLimit, onPageChange: setListPage });
+  const filteredApps = serverList.data;
+  useEffect(() => { setListPage(1); }, [listSearch, selectedAgent, selectedUniversity, selectedCountry, listStatus]);
 
-  const handleExport = () => {
+  const handleExport = async () => {
     try {
+      const response = await API.post('/lists/query', { resource: 'admin-report', records: allReportApps }, { params: { export: 'true', search: listSearch, filters: JSON.stringify({ agent: selectedAgent, university: selectedUniversity, country: selectedCountry, status: listStatus }) } });
+      if (!response.data?.success) throw new Error(response.data?.message || 'Unable to export report.');
+      const exportRows = response.data.data;
       const headers = ['Application ID', 'Student Name', 'Agent Channel', 'University', 'Course', 'Intake', 'Country', 'Status'];
-      const rows = filteredApps.map(app => [
+      const rows = exportRows.map(app => [
         `"${(app.camsId || '').replace(/"/g, '""')}"`,
         `"${(app.name || '').replace(/"/g, '""')}"`,
         `"${(app.agent || '').replace(/"/g, '""')}"`,
@@ -169,14 +173,16 @@ export default function AdminReport({
       document.body.removeChild(link);
     } catch (e) {
       console.error('Export error:', e);
-      alert("Exporting report as CSV database download...");
+      alert(e.response?.data?.message || e.message || "Unable to export report.");
     }
   };
 
+  const openReportApplication = app => onOpenApplication ? onOpenApplication(app.id) : setSelectedReport(app);
+  if (selectedReport) return <div className="workspace-page p-4 sm:p-6"><ListRecordView record={{...selectedReport,studentName:selectedReport.name,universityName:selectedReport.university,courseName:selectedReport.course,partnerName:selectedReport.agent}} title="Application report" onBack={()=>setSelectedReport(null)} /></div>;
   return (
-    <div className="flex-1 min-w-0 p-4 sm:p-6 space-y-6 bg-[#F0F2F5]">
+    <div className="workspace-page flex-1 min-w-0 p-4 sm:p-6 space-y-6 bg-[#F0F2F5]">
       {/* Header */}
-      <div className="flex flex-wrap gap-3 justify-between items-center bg-white border border-[#E2E8F0] border-t-4 border-t-[#D99A1C] p-6 rounded-2xl shadow-xs">
+      <div className="workspace-panel flex flex-wrap gap-3 justify-between items-center bg-white border border-[#E2E8F0] border-t-4 border-t-[#D99A1C] p-6 rounded-2xl shadow-xs">
         <div className="space-y-1">
           <div className="flex items-center gap-2">
             <h1 className="text-xl font-black text-slate-900 tracking-tight">Admin-Report Generator</h1>
@@ -209,91 +215,13 @@ export default function AdminReport({
         </ActionButton>
       </div>
 
-      {/* Query Filters */}
-      <div className="bg-white border border-[#E2E8F0] border-t-4 border-t-[#2563EB] rounded-2xl p-5 shadow-xs grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className={`space-y-1.5 p-2 rounded-xl transition-all ${activeSubTab === 'report-agent' ? 'bg-[#D99A1C]/5 ring-1 ring-[#D99A1C]/30' : ''}`}>
-          <div className="flex items-center justify-between">
-            <label className="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">Referral Agent</label>
-            {activeSubTab === 'report-agent' && (
-              <span className="text-[9px] font-extrabold text-[#D99A1C] bg-[#D99A1C]/10 px-1.5 py-0.5 rounded">Active Subtab</span>
-            )}
-          </div>
-          <SearchableSelect
-            value={selectedAgent} 
-            onChange={(e) => setSelectedAgent(e.target.value)}
-            className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-semibold focus:outline-none focus:bg-white focus:ring-1 focus:ring-[#D99A1C] focus:border-[#D99A1C]"
-          >
-            <option value="All">All Agents ({availableAgents.length + 1})</option>
-            <option value="Direct">Direct Applicant</option>
-            {availableAgents.map(ag => (
-              <option key={ag} value={ag}>{ag}</option>
-            ))}
-          </SearchableSelect>
-        </div>
-
-        <div className={`space-y-1.5 p-2 rounded-xl transition-all ${activeSubTab === 'report-university' ? 'bg-[#2563EB]/5 ring-1 ring-[#2563EB]/30' : ''}`}>
-          <div className="flex items-center justify-between">
-            <label className="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">University Destination</label>
-            {activeSubTab === 'report-university' && (
-              <span className="text-[9px] font-extrabold text-[#2563EB] bg-[#2563EB]/10 px-1.5 py-0.5 rounded">Active Subtab</span>
-            )}
-          </div>
-          <SearchableSelect searchLabel="Search universities..."
-            value={selectedUniversity} 
-            onChange={(e) => setSelectedUniversity(e.target.value)}
-            className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-semibold focus:outline-none focus:bg-white focus:ring-1 focus:ring-[#D99A1C] focus:border-[#D99A1C]"
-          >
-            <option value="All">All Universities ({availableUniversities.length})</option>
-            {availableUniversities.map(univ => (
-              <option key={univ} value={univ}>{univ}</option>
-            ))}
-          </SearchableSelect>
-        </div>
-
-        <div className={`space-y-1.5 p-2 rounded-xl transition-all ${activeSubTab === 'report-country' ? 'bg-emerald-50/50 ring-1 ring-emerald-200' : ''}`}>
-          <div className="flex items-center justify-between">
-            <label className="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">Country</label>
-            {activeSubTab === 'report-country' && (
-              <span className="text-[9px] font-extrabold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded">Active Subtab</span>
-            )}
-          </div>
-          <SearchableSelect
-            value={selectedCountry} 
-            onChange={(e) => setSelectedCountry(e.target.value)}
-            className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-semibold focus:outline-none focus:bg-white focus:ring-1 focus:ring-[#D99A1C] focus:border-[#D99A1C]"
-          >
-            <option value="All">All Countries ({availableCountries.length})</option>
-            {availableCountries.map(country => (
-              <option key={country} value={country}>{country}</option>
-            ))}
-          </SearchableSelect>
-        </div>
-      </div>
-
       {/* Query Results Table */}
-      <div className="bg-white border border-[#E2E8F0] border-t-4 border-t-[#D99A1C] rounded-2xl shadow-xs overflow-hidden">
-        <div className="px-6 py-4 border-b border-[#E2E8F0] flex justify-between items-center">
-          <h2 className="text-xs font-black text-slate-900 uppercase tracking-wider">Query Results ({filteredApps.length} entries)</h2>
-          <div className="flex items-center gap-2">
-            <span className="text-[10px] font-bold text-slate-400">Filters: Agent={selectedAgent}, Univ={selectedUniversity}, Country={selectedCountry}</span>
-            {(selectedAgent !== 'All' || selectedUniversity !== 'All' || selectedCountry !== 'All') && (
-              <ActionButton
-                type="button"
-                onClick={() => {
-                  setSelectedAgent('All');
-                  setSelectedUniversity('All');
-                  setSelectedCountry('All');
-                }}
-                className="text-[10px] font-extrabold text-[#D99A1C] hover:underline cursor-pointer ml-1"
-              >
-                Reset
-              </ActionButton>
-            )}
-          </div>
-        </div>
+      <div className="workspace-panel workspace-list-frame bg-white border border-[#E2E8F0] border-t-4 border-t-[#D99A1C] rounded-2xl shadow-xs overflow-hidden">
+<ListToolbar search={listSearch} onSearchChange={setListSearch} filters={[{key:'agent',label:'agents',value:selectedAgent,onChange:setSelectedAgent,options:['Direct',...availableAgents]},{key:'university',label:'universities',value:selectedUniversity,onChange:setSelectedUniversity,options:availableUniversities},{key:'country',label:'countries',value:selectedCountry,onChange:setSelectedCountry,options:availableCountries},{key:'status',label:'statuses',value:listStatus,onChange:setListStatus,options:serverList.facets.status || []}]} onReset={() => { setListSearch(''); setSelectedAgent('All'); setSelectedUniversity('All'); setSelectedCountry('All'); setListStatus('All'); }} loading={serverList.loading} error={serverList.error} onRetry={serverList.reload} />
+        
         <div className="overflow-x-auto">
           {filteredApps.length > 0 ? (
-            <table className="w-full text-left border-collapse">
+            <table className="workspace-table w-full text-left border-collapse">
               <thead>
                 <tr className="bg-slate-50 border-b border-[#E2E8F0]">
                   <th className="px-6 py-3 text-slate-400 text-[10px] font-extrabold uppercase tracking-wider">Application ID</th>
@@ -302,12 +230,12 @@ export default function AdminReport({
                   <th className="px-6 py-3 text-slate-400 text-[10px] font-extrabold uppercase tracking-wider">University</th>
                   <th className="px-6 py-3 text-slate-400 text-[10px] font-extrabold uppercase tracking-wider">Course</th>
                   <th className="px-6 py-3 text-slate-400 text-[10px] font-extrabold uppercase tracking-wider">Intake</th>
-                  <th className="px-6 py-3 text-slate-400 text-[10px] font-extrabold uppercase tracking-wider text-right">Status</th>
+                  <th className="px-6 py-3 text-slate-400 text-[10px] font-extrabold uppercase tracking-wider text-right">Status</th><th>Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 text-xs font-semibold text-slate-700">
                 {filteredApps.map((app) => (
-                  <tr key={app.camsId} className="hover:bg-[#F8FAFC] transition-colors duration-100">
+                  <tr key={app.id || app.camsId} {...rowViewProps(()=>openReportApplication(app))} className="cursor-pointer hover:bg-[#F8FAFC] transition-colors duration-100">
                     <td className="px-6 py-4 font-bold text-[#2563EB]">{app.camsId}</td>
                     <td className="px-6 py-4 text-slate-950 font-black">{app.name}</td>
                     <td className="px-6 py-4">{app.agent}</td>
@@ -325,6 +253,7 @@ export default function AdminReport({
                         {app.status}
                       </span>
                     </td>
+                    <td className="text-right"><RowActions><ActionButton className="rounded-lg px-3 py-2 text-left text-xs font-semibold hover:bg-slate-50" onClick={()=>openReportApplication(app)}>View application</ActionButton></RowActions></td>
                   </tr>
                 ))}
               </tbody>
@@ -339,6 +268,7 @@ export default function AdminReport({
             </div>
           )}
         </div>
+<ListPager list={serverList} page={listPage} onPageChange={setListPage} limit={listLimit} onLimitChange={setListLimit} />
       </div>
     </div>
   );

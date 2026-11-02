@@ -1,3 +1,4 @@
+import BatchDocumentUpload from './BatchDocumentUpload';
 import { getAssignedExecutiveName } from '../utils/applicationAssignment';
 import { ActionButton, ActionForm } from './ActionControls';
 import React, { useState, useEffect, useRef } from 'react';
@@ -68,10 +69,6 @@ function ApplicationChatDrawerContent({ app, onClose }) {
   const [activeTab, setActiveTab] = useState('chat'); // 'chat' or 'details'
 
   const [localDocuments, setLocalDocuments] = useState(() => Array.isArray(app?.documents) ? app.documents : []);
-  const [isUploadingDoc, setIsUploadingDoc] = useState(false);
-  const [uploadDocError, setUploadDocError] = useState('');
-  const [uploadComment, setUploadComment] = useState('');
-  const [selectedUploadFile, setSelectedUploadFile] = useState(null);
   const [editingDocIdx, setEditingDocIdx] = useState(null);
   const [editDocComment, setEditDocComment] = useState('');
   const [replaceFile, setReplaceFile] = useState(null);
@@ -97,55 +94,11 @@ function ApplicationChatDrawerContent({ app, onClose }) {
   useEffect(() => {
     if (app) {
       setLocalDocuments(Array.isArray(app?.documents) ? app.documents : []);
-      setUploadComment('');
-      setSelectedUploadFile(null);
       setEditingDocIdx(null);
       setEditDocComment('');
       setReplaceFile(null);
     }
   }, [app]);
-
-  const handleUploadNewDoc = async () => {
-    if (!selectedUploadFile) return;
-    setIsUploadingDoc(true);
-    setUploadDocError('');
-    try {
-      const formData = new FormData();
-      formData.append('file', selectedUploadFile);
-      const res = await API.post('/upload', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' }
-      });
-
-      const newDoc = { 
-        name: selectedUploadFile.name, 
-        url: res.data.url,
-        comment: uploadComment.trim(),
-        uploadedAt: new Date().toISOString()
-      };
-      const currentDocs = Array.isArray(localDocuments) ? localDocuments : [];
-      const updatedDocs = [...currentDocs, newDoc];
-      
-      const targetAppId = app?.id || app?._id || app?.camsId;
-      if (targetAppId) {
-        await API.put(`/applications/${targetAppId}`, { documents: updatedDocs });
-      }
-      setLocalDocuments(updatedDocs);
-      setSelectedUploadFile(null);
-      setUploadComment('');
-      if (toast?.success) {
-        toast.success('Document uploaded successfully!');
-      }
-    } catch (err) {
-      console.error('File upload failed:', err);
-      const errMessage = err?.response?.data?.message || err?.message || 'Failed to upload document.';
-      setUploadDocError(errMessage);
-      if (toast?.error) {
-        toast.error(errMessage);
-      }
-    } finally {
-      setIsUploadingDoc(false);
-    }
-  };
 
   const handleSaveEditedDoc = async (idx) => {
     setIsReplacing(true);
@@ -305,7 +258,7 @@ function ApplicationChatDrawerContent({ app, onClose }) {
   const formatTime = (isoString) => {
     if (!isoString) return '';
     const date = new Date(isoString);
-    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
   };
 
   const getRelativeDate = (isoString) => {
@@ -429,7 +382,7 @@ function ApplicationChatDrawerContent({ app, onClose }) {
                 messages.map((msg, index) => {
                   const isSystem = msg.isSystemLog;
                   const isFromMe = msg.senderModel === 'User';
-                  const senderInitials = msg.sender?.name?.split(' ').map(n=>n[0]).join('') || 'U';
+
 
                   if (isSystem) {
                     return (
@@ -446,15 +399,13 @@ function ApplicationChatDrawerContent({ app, onClose }) {
                       key={msg._id || index} 
                       className={`flex items-start gap-2.5 max-w-[85%] ${isFromMe ? 'ml-auto justify-end' : ''}`}
                     >
-                      {!isFromMe && (
-                        <div className="w-8 h-8 rounded-full flex items-center justify-center font-bold text-white text-xs bg-gradient-to-tr from-[#D99A1C] to-[#F5B025] shrink-0 shadow-sm uppercase">
-                          {senderInitials}
-                        </div>
-                      )}
+                      <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white shrink-0 shadow-sm ${isFromMe ? 'bg-slate-700' : 'bg-[#D99A1C]'}`}>
+                        <svg aria-hidden="true" className="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="8" r="4" /><path d="M5 21v-2a7 7 0 0 1 14 0v2" /></svg>
+                      </div>
 
-                      <div className="space-y-1 max-w-[85%]">
+                      <div className="space-y-1 min-w-0 flex-1">
                         {/* Sender Name & Meta */}
-                        <div className={`flex items-baseline gap-2 ${isFromMe ? 'justify-end' : ''}`}>
+                        <div className={`flex flex-wrap items-baseline gap-x-2 gap-y-1 ${isFromMe ? 'justify-end' : ''}`}>
                           <div className="flex items-center gap-1.5">
                             <span className="text-[10px] font-extrabold text-slate-800">
                               {msg.sender?.name || (isFromMe ? 'Admin' : (msg.senderModel === 'PartnerStaff' ? 'Agent Staff' : 'Agent'))}
@@ -745,81 +696,16 @@ function ApplicationChatDrawerContent({ app, onClose }) {
                 </span>
               </div>
 
-              {/* Additional File Uploader */}
-              {selectedUploadFile ? (
-                <div className="bg-slate-50 border border-slate-200 rounded-xl p-3.5 space-y-2 text-left shadow-3xs">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2 truncate pr-2">
-                      <div className="w-6 h-6 rounded-lg bg-amber-50 border border-amber-200/60 flex items-center justify-center text-amber-600 shrink-0">
-                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
-                      </div>
-                      <span className="text-xs font-bold text-slate-800 truncate max-w-[220px]">
-                        {selectedUploadFile.name}
-                      </span>
-                    </div>
-                    <ActionButton
-                      type="button"
-                      onClick={() => {
-                        setSelectedUploadFile(null);
-                        setUploadComment('');
-                      }}
-                      className="text-xs text-rose-500 hover:text-rose-700 font-bold transition-colors cursor-pointer shrink-0"
-                    >
-                      ✕ Remove
-                    </ActionButton>
-                  </div>
-                  <input
-                    type="text"
-                    placeholder="Document description (e.g. Passport Front Page, Semester 1-6 Marksheet)..."
-                    value={uploadComment}
-                    onChange={(e) => setUploadComment(e.target.value)}
-                    className="w-full bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-slate-800 focus:outline-none focus:ring-1 focus:ring-[#D99A1C] shadow-3xs"
-                  />
-                </div>
-              ) : (
-                <div className="border-2 border-dashed border-[#E2E8F0] hover:border-[#D99A1C] transition-colors rounded-xl p-4 text-center cursor-pointer relative bg-slate-50">
-                  <input
-                    type="file"
-                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                    onChange={(e) => {
-                      const file = e.target.files?.[0];
-                      if (file) {
-                        setSelectedUploadFile(file);
-                        setUploadDocError('');
-                      }
-                    }}
-                  />
-                  <div className="space-y-1 text-slate-500">
-                    <svg className="w-6 h-6 mx-auto text-[#D99A1C]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>
-                    <p className="text-xs font-semibold text-slate-700">Click to upload additional document</p>
-                    <p className="text-[10px] text-slate-400 font-semibold">Attach any supporting file (PDF, PNG, JPG, Word)</p>
-                  </div>
-                </div>
-              )}
+              <BatchDocumentUpload key={app?.id || app?._id} role="Student" onComplete={async uploaded => {
+                      const id = app?.id || app?._id;
+                      if (!id) throw new Error('Application ID is missing. Refresh and retry.');
+                      const updatedDocs = [...localDocuments, ...uploaded];
+                      const response = await API.put('/applications/' + id, { documents: updatedDocs });
+                      if (!response.data?.success) throw new Error(response.data?.message || 'Documents could not be saved.');
+                      setLocalDocuments(updatedDocs);
+                    }} />
 
-              {/* Submit Button */}
-              <div className="flex justify-end pt-1">
-                <ActionButton
-                  type="button"
-                  disabled={isUploadingDoc || !selectedUploadFile}
-                  onClick={handleUploadNewDoc}
-                  className="bg-[#D99A1C] hover:bg-[#C28410] disabled:opacity-50 text-white font-bold px-4 py-2 rounded-xl text-[10px] uppercase tracking-wider transition-all duration-150 active:scale-95 shadow-md flex items-center gap-1.5 cursor-pointer"
-                >
-                  {isUploadingDoc && (
-                    <svg className="animate-spin h-3.5 w-3.5 text-white" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                    </svg>
-                  )}
-                  {isUploadingDoc ? 'Uploading...' : 'Upload Document'}
-                </ActionButton>
-              </div>
-
-              {uploadDocError && (
-                <p className="text-[10px] text-rose-500 font-semibold">❌ {uploadDocError}</p>
-              )}
-
-              {/* Documents List */}
+                    {/* Documents List */}
               <div className="divide-y divide-slate-100 border border-slate-100 bg-white rounded-xl overflow-hidden shadow-sm">
                 {localDocuments.length > 0 ? (
                   localDocuments.map((doc, idx) => {

@@ -1,3 +1,5 @@
+import DocumentUploadQueue from './DocumentUploadQueue';
+import { planQueuedDocuments } from '../utils/documentQueue.mjs';
 import React, { useEffect, useState } from 'react';
 import API from '../api/axios';
 import { ActionButton, ActionForm } from './ActionControls';
@@ -64,18 +66,29 @@ export default function PartnerDocumentRequests({ partnerId, onUpdate }) {
       <p className="text-xs text-slate-500">Requested {new Date(request.requestedAt).toLocaleString()} · Email: {request.emailStatus} · Replies: {request.replyTo.join(', ')}</p>
       {request.status === 'Open' && canRequest && <div className="space-y-2">
         <ActionButton type="button" disabled={busy} className="text-sm underline disabled:opacity-50" onClick={() => run(() => API.post(`/partners/${partnerId}/document-requests`, { requestId: request._id, documents: request.documents, message: request.message }))}>Resend email</ActionButton>
-        <label className="block text-sm font-semibold">Attach documents received by email (all files for this request)
-          <input type="file" multiple disabled={busy} className="block mt-2" onChange={e => {
-            const files = Array.from(e.target.files || []); e.target.value = '';
-            if (!files.length) return;
-            if (files.length > 10 || files.some(file => file.size > 15 * 1024 * 1024)) { setNotice('Upload up to 10 files, maximum 15 MB each.'); return; }
-            const data = new FormData(); files.forEach(file => data.append('documents', file));
-            run(() => API.post(`/partners/${partnerId}/document-requests/${request._id}/documents`, data, { headers: { 'Content-Type': 'multipart/form-data' } }));
-          }} />
-        </label>
+<ReceiptDocumentUpload key={request._id} busy={busy} run={run} partnerId={partnerId} requestId={request._id} setNotice={setNotice} />
       </div>}
       {request.receivedDocuments?.map((doc, index) => <ActionButton type="button" key={index} onClick={() => download(doc)} className="block text-blue-700 underline text-sm">Download {doc.fileName}</ActionButton>)}
     </article>)}
   </section>}
+  </div>;
+}
+
+function ReceiptDocumentUpload({ busy, run, partnerId, requestId, setNotice }) {
+  const [entries, setEntries] = useState([]);
+  return <div className="space-y-3">
+    <DocumentUploadQueue role="Agent" entries={entries} onChange={setEntries} disabled={busy} />
+    <ActionButton type="button" disabled={busy || !entries.length} className="rounded-xl bg-amber-500 px-4 py-2 text-xs font-bold text-white disabled:opacity-50" onClick={() => {
+      try {
+        const plan = planQueuedDocuments(entries);
+        if (plan.length > 10) throw new Error('Upload up to 10 files for this request.');
+        const data = new FormData(); plan.forEach(entry => data.append('documents', entry.file)); data.append('documentNames', JSON.stringify(plan.map(entry => entry.name)));
+        return run(async () => {
+          const response = await API.post('/partners/' + partnerId + '/document-requests/' + requestId + '/documents', data, { headers: { 'Content-Type': 'multipart/form-data' } });
+          if (!response.data?.success) throw new Error(response.data?.message || 'Unable to save documents.');
+          setEntries([]); return response;
+        });
+      } catch (err) { setNotice(err.message); }
+    }}>Upload All Documents</ActionButton>
   </div>;
 }

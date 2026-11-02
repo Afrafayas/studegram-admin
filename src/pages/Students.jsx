@@ -1,3 +1,9 @@
+import ListFilterTabs from '../components/ListFilterTabs';
+import useServerList, { restoreListRows } from '../hooks/useServerList';
+import ListToolbar from '../components/ListToolbar';
+import ActionMenu from '../components/ActionMenu';
+import StudentDobInput from '../components/StudentDobInput';
+import { getStudentDobError } from '../utils/studentAge.mjs';
 import SearchableSelect from '../components/SearchableSelect';
 import ValidatedInput from '../components/ValidatedInput';
 import { getDisplayId } from '../utils/displayId';
@@ -376,80 +382,9 @@ support@unigather.app`;
     }
   });
 
+  const serverList = useServerList('/students', { search: searchTerm, filters: { status: statusFilter, partner: partnerFilter, intake: intakeFilter }, page: currentPage, limit: itemsPerPage, onPageChange: setCurrentPage, reloadKey: JSON.stringify(students) });
   // Filter students
-  const filteredStudents = students.filter(s => {
-    const name = s.name || '';
-    const passport = s.passportNo || '';
-    const email = s.email || '';
-    const phone = s.phone || '';
-    const ref = s.referredBy || '';
-    
-    const searchMatch = name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                        passport.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                        email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                        phone.includes(searchTerm) ||
-                        ref.toLowerCase().includes(searchTerm.toLowerCase());
-                        
-    const studentApps = getStudentApplications(s);
-    const hasPaidApp = studentApps.some(app => app.secondaryStatus === 'Paid Students' || app.status === 'Paid Students' || app.paymentStatus === 'Paid');
-    
-    const statusMatch = statusFilter === 'All' ? true :
-                        statusFilter === 'Paid Students' ? hasPaidApp :
-                        s.status === statusFilter;
-
-    const hasIntakeApp = intakeFilter === 'All' || studentApps.some(app => app.intake && app.intake.toLowerCase().includes(intakeFilter.toLowerCase()));
-
-    let partnerMatch = true;
-    if (partnerFilter !== 'All') {
-      if (partnerFilter === 'Direct') {
-        const isStudentDirect = (s.referredBy || '').toLowerCase() === 'direct';
-        const hasDirectApp = studentApps.length > 0 && studentApps.some(app => 
-          !app.partner || app.partnerName === 'Direct' || app.partnerCompanyName === 'Direct' || app.assignedBdm === 'Direct'
-        );
-        const hasNoAgentApp = studentApps.every(app => 
-          !app.partner || app.partnerName === 'Direct' || app.partnerCompanyName === 'Direct' || app.assignedBdm === 'Direct'
-        );
-        partnerMatch = isStudentDirect || (!s.partner && (s.referredBy || '').toLowerCase() !== 'agent' && hasNoAgentApp) || hasDirectApp;
-      } else {
-        const pf = partnerFilter.toLowerCase().trim();
-        const sRef = (s.referredBy || '').toLowerCase().trim();
-        const sPartnerId = String(s.partner?._id || s.partner?.id || s.partner || '').toLowerCase().trim();
-        const sPartnerName = (s.partner?.name || s.partnerName || '').toLowerCase().trim();
-        const sPartnerCompany = (s.partner?.companyName || s.partnerCompanyName || '').toLowerCase().trim();
-
-        const matchedP = partners.find(p => 
-          (p.name && p.name.toLowerCase().trim() === pf) ||
-          (p.companyName && p.companyName.toLowerCase().trim() === pf) ||
-          String(p.id || p._id || '').toLowerCase().trim() === pf
-        );
-
-        const targetIds = [pf, String(matchedP?.id || matchedP?._id || '').toLowerCase().trim()].filter(Boolean);
-        const targetNames = [
-          pf,
-          matchedP?.name?.toLowerCase()?.trim(),
-          matchedP?.companyName?.toLowerCase()?.trim()
-        ].filter(Boolean);
-
-        const studentDirectMatch = targetIds.includes(sPartnerId) ||
-          targetNames.includes(sRef) ||
-          targetNames.includes(sPartnerName) ||
-          targetNames.includes(sPartnerCompany);
-
-        const appPartnerMatch = studentApps.some(app => {
-          const appPId = String(app.partner?._id || app.partner?.id || (typeof app.partner === 'string' && app.partner.match(/^[0-9a-fA-F]{24}$/) ? app.partner : '')).toLowerCase().trim();
-          const appPName = (app.partnerName || app.partner?.name || (typeof app.partner === 'string' ? app.partner : '')).toLowerCase().trim();
-          const appPCompany = (app.partnerCompanyName || app.partner?.companyName || app.assignedBdm || '').toLowerCase().trim();
-
-          return targetIds.includes(appPId) ||
-            targetNames.some(tn => tn && (appPName === tn || appPCompany === tn || appPName.includes(tn) || appPCompany.includes(tn) || tn.includes(appPName) || tn.includes(appPCompany)));
-        });
-
-        partnerMatch = studentDirectMatch || appPartnerMatch;
-      }
-    }
-    
-    return searchMatch && statusMatch && partnerMatch && hasIntakeApp;
-  });
+  const filteredStudents = restoreListRows(serverList.data, students);
 
   const hasActiveFilters = Boolean(
     searchTerm !== '' || 
@@ -476,10 +411,10 @@ support@unigather.app`;
   };
 
   // Pagination Math
-  const totalItems = filteredStudents.length;
-  const totalPages = Math.ceil(totalItems / itemsPerPage) || 1;
+  const totalItems = serverList.totalCount;
+  const totalPages = serverList.totalPages;
   const startIndex = (currentPage - 1) * itemsPerPage;
-  const paginatedStudents = filteredStudents.slice(startIndex, startIndex + itemsPerPage);
+  const paginatedStudents = filteredStudents;
 
   const toggleExpand = (id) => {
     setExpandedId(expandedId === id ? null : id);
@@ -526,6 +461,11 @@ support@unigather.app`;
 
   const handleOnboardStudent = async (e) => {
     e.preventDefault();
+    const dobError = getStudentDobError(newStudentDob);
+    if (dobError) {
+      toast.error(dobError);
+      return;
+    }
     if (!canOnboard) return;
     if (!newStudentName || !newStudentEmail || !newStudentPhone) {
       toast.error("Please fill out required fields.");
@@ -572,7 +512,7 @@ support@unigather.app`;
   };
 
   return (
-    <div className="flex-1 min-w-0 p-4 sm:p-6 space-y-6 bg-[#F0F2F5]">
+    <div className="workspace-page flex-1 min-w-0 p-4 sm:p-6 space-y-6 bg-[#F0F2F5]">
       {/* 1. DIRECTORY TABLE VIEW (when no student single view is active) */}
       {!singleViewStudent ? (
         <>
@@ -595,106 +535,16 @@ support@unigather.app`;
             )}
           </div>
 
-          {/* Search & Filters */}
-          <div className="bg-white border border-[#E2E8F0] border-t-4 border-t-[#2563EB] rounded-2xl p-5 shadow-xs flex flex-col sm:flex-row sm:flex-wrap gap-4 items-center justify-between">
-            <div className="bg-slate-100 p-1 rounded-xl flex w-full sm:w-auto">
-              {['All', /* 'Active', 'Inactive', */ 'Paid Students'].map((status) => (
-                <ActionButton
-                  key={status}
-                  onClick={() => setStatusFilter(status)}
-                  className={`flex-1 sm:flex-none px-4 py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer ${
-                    statusFilter === status 
-                      ? 'bg-white text-[#D99A1C] shadow-sm font-black' 
-                      : 'text-slate-500 hover:text-slate-900'
-                  }`}
-                >
-                  {status}
-                </ActionButton>
-              ))}
-            </div>
-
-            <div className="flex min-w-0 w-full sm:w-auto items-center gap-3 flex-wrap">
-              <SearchableSelect
-                value={intakeFilter}
-                onChange={(e) => setIntakeFilter(e.target.value)}
-                className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs text-slate-900 focus:outline-none focus:border-[#D99A1C] focus:ring-1 focus:ring-[#D99A1C] font-semibold cursor-pointer"
-              >
-                <option value="All">All Intakes</option>
-                {availableIntakes.map((intake) => (
-                  <option key={intake} value={intake}>{intake}</option>
-                ))}
-              </SearchableSelect>
-
-              <SearchableSelect
-                value={partnerFilter}
-                onChange={(e) => setPartnerFilter(e.target.value)}
-                className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs text-slate-900 focus:outline-none focus:border-[#D99A1C] focus:ring-1 focus:ring-[#D99A1C] font-semibold cursor-pointer"
-              >
-                <option value="All">All Partners / Channels</option>
-                <option value="Direct">Direct Applications</option>
-                {partners.map(p => {
-                  const displayName = p.companyName && p.companyName !== p.name
-                    ? `${p.companyName} (${p.name})`
-                    : (p.companyName || p.name || 'Partner');
-                  const optionVal = p.companyName || p.name;
-                  return (
-                    <option key={p.id || p._id} value={optionVal}>{displayName}</option>
-                  );
-                })}
-              </SearchableSelect>
-
-              <div className="relative w-full sm:max-w-xs">
-                <span className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-slate-400">
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                  </svg>
-                </span>
-                <input
-                  type="text"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-8 py-2.5 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:bg-white focus:border-[#D99A1C] focus:ring-1 focus:ring-[#D99A1C] transition-all font-medium"
-                  placeholder="Search by name, passport, email, referral..."
-                />
-                {searchTerm && (
-                  <ActionButton
-                    type="button"
-                    onClick={() => setSearchTerm('')}
-                    className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600 font-bold text-xs cursor-pointer"
-                    title="Clear search"
-                  >
-                    ✕
-                  </ActionButton>
-                )}
-              </div>
-
-              <ActionButton
-                type="button"
-                onClick={handleResetFilters}
-                disabled={!hasActiveFilters}
-                className={`px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shrink-0 shadow-xs ${
-                  hasActiveFilters
-                    ? 'bg-rose-50 text-rose-600 border border-rose-200 hover:bg-rose-100 hover:border-rose-300 cursor-pointer'
-                    : 'bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed opacity-60'
-                }`}
-                title={hasActiveFilters ? "Reset all active filters" : "No filters applied"}
-              >
-                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                </svg>
-                <span>Reset Filters</span>
-              </ActionButton>
-            </div>
-          </div>
-
           {/* Directory Table */}
-          <div className="bg-white border border-[#E2E8F0] border-t-4 border-t-[#D99A1C] rounded-2xl shadow-xs overflow-hidden">
-            <div className="px-6 py-4 border-b border-[#E2E8F0] flex justify-between items-center">
-              <h2 className="text-xs font-black text-slate-900 uppercase tracking-wider">Registered Student Profiles</h2>
-            </div>
+          <div className="workspace-list-frame bg-white border border-[#E2E8F0] border-t-4 border-t-[#D99A1C] rounded-2xl shadow-xs overflow-hidden">
+            {/* Scoping Tabs on top of table */}
+            <ListFilterTabs value={statusFilter} onChange={value => { setStatusFilter(value); setCurrentPage(1); }} options={[{value:'All',label:'All students',filters:{status:'All'}},{value:'Active',label:'Active',filters:{status:'Active'}},{value:'Paid Students',label:'Paid students',filters:{status:'Paid Students'}},{value:'Inactive',label:'Inactive',filters:{status:'Inactive'}}]} query={{endpoint:'/students',search:searchTerm,filters:{partner:partnerFilter,intake:intakeFilter},reloadKey:JSON.stringify(students)}} />
+
+            <ListToolbar search={searchTerm} onSearchChange={setSearchTerm} filters={[{ key: 'status', label: 'statuses', value: statusFilter, onChange: setStatusFilter, options: ['Paid Students', ...(serverList.facets.status || [])] },{ key: 'intake', label: 'intakes', value: intakeFilter, onChange: setIntakeFilter, options: serverList.facets.intake || availableIntakes },{ key: 'partner', label: 'channels', value: partnerFilter, onChange: setPartnerFilter, options: serverList.facets.partner || partners.map(p => p.companyName || p.name) }]} onReset={handleResetFilters} loading={serverList.loading} error={serverList.error} onRetry={serverList.reload} />
+            
             <div className="overflow-x-auto">
               {filteredStudents.length > 0 ? (
-                <table className="w-full text-left border-collapse">
+                <table className="workspace-table w-full text-left border-collapse">
                   <thead>
                     <tr className="bg-slate-50 border-b border-[#E2E8F0]">
                       <th className="px-6 py-3 text-slate-400 text-[10px] font-extrabold uppercase tracking-wider w-[60px]">SI.NO.</th>
@@ -710,7 +560,7 @@ support@unigather.app`;
                   <tbody className="divide-y divide-slate-100 text-xs font-semibold text-slate-700">
                     {paginatedStudents.map((student, idx) => {
                       return (
-                        <tr 
+                        <tr tabIndex={0} onKeyDown={event => { if (event.target === event.currentTarget && event.key === "Enter") { event.preventDefault(); event.currentTarget.click(); } }} 
                           key={student.id} 
                           className="hover:bg-amber-50/40 transition-colors cursor-pointer group" 
                           onClick={() => handleOpenSingleView(student)}
@@ -761,16 +611,18 @@ support@unigather.app`;
                             </span>
                           </td>
                           <td className="px-6 py-4 text-right pr-6" onClick={(e) => e.stopPropagation()}>
-                            <div className="flex items-center justify-end gap-1.5">
-                              <ActionButton
-                                type="button"
-                                onClick={() => handleOpenSingleView(student)}
-                                className="bg-slate-800 hover:bg-slate-900 text-white font-extrabold text-[9px] px-2.5 py-1.5 rounded-xl transition-all shadow-3xs inline-flex items-center gap-1 cursor-pointer uppercase tracking-wider"
-                                title="View Full Student Profile Dossier"
-                              >
-                                <span>👁️ View</span>
-                              </ActionButton>
-                            </div>
+                            <ActionMenu
+                              items={[
+                                {
+                                  label: 'View Student Profile',
+                                  onClick: () => handleOpenSingleView(student)
+                                },
+                                {
+                                  label: 'Send Email',
+                                  onClick: () => handleOpenEmailModal(student)
+                                }
+                              ]}
+                            />
                           </td>
                         </tr>
                       );
@@ -959,18 +811,7 @@ support@unigather.app`;
                   <div className="space-y-6 lg:col-span-1">
                     {/* Personal Profile Info Card */}
                     <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm space-y-4">
-                      <div className="flex items-center gap-3.5 pb-3 border-b border-slate-100">
-                        <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-slate-900 via-slate-800 to-[#D99A1C] text-white flex items-center justify-center font-black text-base shadow-md">
-                          {singleViewStudent.name ? singleViewStudent.name.split(' ').map(n=>n[0]).join('').slice(0, 2) : 'ST'}
-                        </div>
-                        <div>
-                          <h3 className="font-black text-slate-900 text-base">{singleViewStudent.name}</h3>
-                          <p className="text-xs text-indigo-600 font-bold">{singleViewStudent.email}</p>
-                          <span className="inline-block mt-1 px-2.5 py-0.5 bg-blue-50 text-blue-700 border border-blue-200 rounded text-[10px] font-mono font-bold">
-                            Passport: {singleViewStudent.passportNo || 'Pending'}
-                          </span>
-                        </div>
-                      </div>
+                      
 
                       <div className="space-y-3 text-xs">
                         <div className="flex justify-between py-1 border-b border-slate-100">
@@ -1041,17 +882,7 @@ support@unigather.app`;
                   <div className="space-y-6 lg:col-span-2">
                     {/* Associated University Applications Table */}
                     <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm space-y-4">
-                      <div className="flex justify-between items-center pb-3 border-b border-slate-100">
-                        <div>
-                          <span className="text-[10px] font-extrabold text-[#D99A1C] uppercase tracking-wider block">Academic Records</span>
-                          <h3 className="text-sm font-black text-slate-900 uppercase tracking-wider">
-                            Associated Applications ({studentApps.length})
-                          </h3>
-                        </div>
-                        <span className="text-[10px] font-black text-blue-700 bg-blue-50 px-3 py-1 rounded-full border border-blue-200">
-                          {studentApps.length} Logged Case{studentApps.length !== 1 ? 's' : ''}
-                        </span>
-                      </div>
+                      
 
                       {studentApps.length > 0 ? (
                         <div className="border border-slate-200 rounded-2xl overflow-x-auto shadow-2xs">
@@ -1127,15 +958,7 @@ support@unigather.app`;
 
                     {/* Submitted Verification Documents Gallery */}
                     <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm space-y-5">
-                      <div className="flex justify-between items-center pb-3 border-b border-slate-100">
-                        <div>
-                          <span className="text-[10px] font-extrabold text-[#D99A1C] uppercase tracking-wider block">Student Proofs &amp; KYC</span>
-                          <h3 className="text-sm font-black text-slate-900 uppercase tracking-wider">
-                            Submitted Verification Documents
-                          </h3>
-                        </div>
-
-                      </div>
+                      
 
                       {(() => {
                         const uploadedDocs = [
@@ -1176,7 +999,7 @@ support@unigather.app`;
                                   </div>
 
                                   {/* Inline Document Preview Box */}
-                                  <div className="h-44 bg-white border border-slate-200 rounded-xl overflow-hidden flex items-center justify-center p-2 shadow-inner">
+                                  <div className="workspace-list-frame h-44 bg-white border border-slate-200 rounded-xl overflow-hidden flex items-center justify-center p-2 shadow-inner">
                                     {isImg ? (
                                       <img src={docBlobUrl} alt={docTitle} className="max-h-full max-w-full object-contain rounded" />
                                     ) : (
@@ -1267,8 +1090,7 @@ support@unigather.app`;
                 </div>
                 <div className="space-y-1.5">
                   <label className="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">Date of Birth</label>
-                  <input
-                    type="date"
+                  <StudentDobInput
                     value={newStudentDob}
                     onChange={(e) => setNewStudentDob(e.target.value)}
                     className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs font-semibold focus:outline-none focus:bg-white focus:border-[#D99A1C] focus:ring-1 focus:ring-[#D99A1C] transition-all text-slate-900"

@@ -1,0 +1,13 @@
+import React from 'react';
+const fieldLabels = {title:'Title',task:'Task',priority:'Priority',completed:'Completed',ranking:'Ranking',rating:'Rating',duration:'Duration',tuitionFee:'Tuition fee',appDeadline:'Application deadline',scholarshipDeadline:'Scholarship deadline',category:'Category',speaker:'Speaker',date:'Date',type:'Type',name:'Name',displayName:'Display name',studentName:'Student',studentEmail:'Student email',email:'Email',phone:'Phone',passportNo:'Passport',companyName:'Company',partnerName:'Partner',universityName:'University',courseName:'Course',country:'Country',city:'City',role:'Role',portalType:'Portal',status:'Status',commissionStatus:'Commission status',universityPaymentStatus:'University payment',amount:'Amount',commissionAmount:'Commission amount',payableAmount:'Payable amount',currency:'Currency',fee:'Fee',intake:'Intake',level:'Level',description:'Description',notes:'Notes',dateAdded:'Date added',createdAt:'Created',partnerCode:'Partner code',camsId:'Application ID',accessLevel:'Access level',taxId:'Tax ID'};
+export default function ListRecordView({ record, title = 'Record details', onBack, children, actions }) {
+  return <section className="space-y-5 min-w-0">
+    <header className="workspace-panel flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200 border-t-4 border-t-amber-500 bg-white p-6">
+      <div><button type="button" onClick={onBack} className="mb-3 rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50">Back to list</button><h1 className="text-xl font-bold text-slate-900">{title}</h1></div>{actions}
+    </header>
+    <div className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6">
+      <dl className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">{Object.entries(fieldLabels).filter(([key]) => record?.[key] !== undefined && record?.[key] !== null && typeof record[key] !== 'object').map(([key,label]) => <div key={key} className="min-w-0"><dt className="mb-1 text-xs font-semibold text-slate-500">{label}</dt><dd className="whitespace-pre-wrap break-words text-sm font-medium text-slate-800">{String(record[key]) || '�'}</dd></div>)}</dl>
+      {Array.isArray(record?.permissions) && <div className="mt-6 border-t border-slate-100 pt-5"><h2 className="mb-3 text-sm font-bold">Permissions ({record.permissions.length})</h2><div className="flex flex-wrap gap-2">{record.permissions.map(permission => <span key={permission} className="rounded border border-slate-200 bg-slate-50 px-2 py-1 text-xs">{permission === '*' ? 'Full access' : permission}</span>)}</div></div>}
+    </div>{children}
+  </section>;
+}

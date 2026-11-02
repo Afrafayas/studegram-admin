@@ -1,14 +1,20 @@
+import ListFilterTabs from '../components/ListFilterTabs';
+import useServerList, { restoreListRows } from '../hooks/useServerList';
+import ListToolbar, { ListPager } from '../components/ListToolbar';
+import ActionMenu from '../components/ActionMenu';
 import SearchableSelect from '../components/SearchableSelect';
 import ValidatedInput from '../components/ValidatedInput';
 import { getDisplayId } from '../utils/displayId';
 import { ActionButton, ActionForm } from '../components/ActionControls';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import API from '../api/axios';
 import { useToast } from '../context/ToastContext';
 
 export default function Partners({ clients, setClients }) {
   const toast = useToast();
+  const [listPage, setListPage] = useState(1);
+  const [listLimit, setListLimit] = useState(15);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
   const [locationFilter, setLocationFilter] = useState('All');
@@ -103,27 +109,14 @@ if (!token) throw new Error('Please sign in to save changes.');
 
   // Extract partners (type === 'Agent')
   const partners = clients.filter(c => c.type === 'Agent');
+  const activeCount = partners.filter(p => p.status === 'Active').length;
+  const pendingCount = partners.filter(p => p.status === 'Pending').length;
+  const inactiveCount = partners.filter(p => p.status === 'Inactive' || p.status === 'Rejected').length;
 
   // Filter partners
-  const filteredPartners = partners.filter(p => {
-    const code = p.partnerCode || '';
-    const name = p.name || '';
-    const email = p.email || '';
-    const phone = p.phone || '';
-    
-    const searchMatch = name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                        code.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                        email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                        phone.includes(searchTerm);
-                        
-    const statusMatch = statusFilter === 'All' || 
-                        (statusFilter === 'Pending' && p.status === 'Pending') ||
-                        (statusFilter === 'Approved' && p.status === 'Active');
-
-    const locationMatch = locationFilter === 'All' || p.country === locationFilter;
-    
-    return searchMatch && statusMatch && locationMatch;
-  });
+  const serverList = useServerList('/partners', { search: searchTerm, filters: { status: statusFilter === 'Approved' ? 'Active' : statusFilter, country: locationFilter }, page: listPage, limit: listLimit, onPageChange: setListPage, reloadKey: JSON.stringify(partners) });
+  const filteredPartners = restoreListRows(serverList.data, partners);
+  useEffect(() => { setListPage(1); }, [searchTerm, statusFilter, locationFilter]);
 
   const toggleExpand = (id) => {
     setExpandedId(expandedId === id ? null : id);
@@ -164,9 +157,9 @@ if (!token) throw new Error('Please sign in to save changes.');
   };
 
   return (
-    <div className="flex-1 min-w-0 p-4 sm:p-6 space-y-6 bg-[#F0F2F5]">
+    <div className="workspace-page flex-1 min-w-0 p-4 sm:p-6 space-y-6 bg-[#F0F2F5]">
       {/* Header */}
-      <div className="flex flex-wrap gap-3 justify-between items-center bg-white border border-[#E2E8F0] border-t-4 border-t-[#D99A1C] p-6 rounded-2xl shadow-xs">
+      <div className="workspace-panel flex flex-wrap gap-3 justify-between items-center bg-white border border-[#E2E8F0] border-t-4 border-t-[#D99A1C] p-6 rounded-2xl shadow-xs">
         <div className="space-y-1">
           <h1 className="text-xl font-black text-slate-900 tracking-tight">Referral Partners Directory</h1>
           <p className="text-xs text-slate-500 font-medium">Manage B2B Referral Agents, view their details and referred student applications.</p>
@@ -182,64 +175,15 @@ if (!token) throw new Error('Please sign in to save changes.');
         </ActionButton>
       </div>
 
-      {/* Directory Filters & Search */}
-      <div className="bg-white border border-[#E2E8F0] border-t-4 border-t-[#2563EB] rounded-2xl p-5 shadow-xs flex flex-col sm:flex-row gap-4 items-center justify-between">
-        <div className="bg-slate-100 p-1 rounded-xl flex w-full sm:w-auto">
-          {['All', 'Pending', 'Approved'].map((status) => (
-            <ActionButton
-              key={status}
-              onClick={() => setStatusFilter(status)}
-              className={`flex-1 sm:flex-none px-4 py-1.5 text-xs font-bold rounded-lg transition-all ${
-                statusFilter === status 
-                  ? 'bg-white text-[#D99A1C] shadow-sm font-black' 
-                  : 'text-slate-500 hover:text-slate-900'
-              }`}
-            >
-              {status}
-            </ActionButton>
-          ))}
-        </div>
-
-        <div className="flex w-full sm:w-auto items-center gap-3">
-          {/* Location Filter Dropdown */}
-          <SearchableSelect
-            value={locationFilter}
-            onChange={(e) => setLocationFilter(e.target.value)}
-            className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs text-slate-900 focus:outline-none focus:border-[#D99A1C] focus:ring-1 focus:ring-[#D99A1C] font-semibold cursor-pointer"
-          >
-            <option value="All">All Locations</option>
-            <option value="United Kingdom">United Kingdom</option>
-            <option value="Canada">Canada</option>
-            <option value="United States">United States</option>
-            <option value="Australia">Australia</option>
-            <option value="India">India</option>
-          </SearchableSelect>
-
-          <div className="relative w-full sm:max-w-xs">
-            <span className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-slate-400">
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-              </svg>
-            </span>
-            <input
-              type="text"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-4 py-2.5 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:bg-white focus:border-[#D99A1C] focus:ring-1 focus:ring-[#D99A1C] transition-all font-medium"
-              placeholder="Search by name, code, email, phone..."
-            />
-          </div>
-        </div>
-      </div>
-
       {/* Table Directory */}
-      <div className="bg-white border border-[#E2E8F0] border-t-4 border-t-[#D99A1C] rounded-2xl shadow-xs overflow-hidden">
-        <div className="px-6 py-4 border-b border-[#E2E8F0]">
-          <h2 className="text-xs font-black text-slate-900 uppercase tracking-wider">Registered Agent & Partner channels</h2>
-        </div>
+      <div className="workspace-panel workspace-list-frame bg-white border border-[#E2E8F0] border-t-4 border-t-[#D99A1C] rounded-2xl shadow-xs overflow-hidden">
+        {/* Scoping Tabs */}
+        <ListFilterTabs value={statusFilter} onChange={value => { setStatusFilter(value); setListPage(1); }} options={[{value:'All',label:'All partners',filters:{status:'All'}},{value:'Active',label:'Active',filters:{status:'Active'}},{value:'Pending',label:'Pending',filters:{status:'Pending'}},{value:'Inactive',label:'Inactive',filters:{status:'Inactive'}}]} query={{endpoint:'/partners',search:searchTerm,filters:{country:locationFilter},reloadKey:JSON.stringify(partners)}} />
+        <ListToolbar search={searchTerm} onSearchChange={setSearchTerm} filters={[{key:'status',label:'statuses',value:statusFilter,onChange:setStatusFilter,options:serverList.facets.status || []},{key:'country',label:'countries',value:locationFilter,onChange:setLocationFilter,options:serverList.facets.country || []}]} onReset={() => { setSearchTerm(''); setStatusFilter('All'); setLocationFilter('All'); }} loading={serverList.loading} error={serverList.error} onRetry={serverList.reload} />
+        
         <div className="overflow-x-auto">
           {filteredPartners.length > 0 ? (
-            <table className="w-full text-left border-collapse">
+            <table className="workspace-table w-full text-left border-collapse">
               <thead>
                 <tr className="bg-slate-50 border-b border-[#E2E8F0]">
                   <th className="px-6 py-3 text-slate-400 text-[10px] font-extrabold uppercase tracking-wider w-[50px]"></th>
@@ -259,7 +203,7 @@ if (!token) throw new Error('Please sign in to save changes.');
                   
                   return (
                     <React.Fragment key={partner.id}>
-                      <tr className="hover:bg-slate-50/50 transition-colors cursor-pointer" onClick={() => toggleExpand(partner.id)}>
+                      <tr tabIndex={0} onKeyDown={event => { if (event.target === event.currentTarget && event.key === "Enter") { event.preventDefault(); event.currentTarget.click(); } }} className="hover:bg-slate-50/50 transition-colors cursor-pointer" onClick={() => toggleExpand(partner.id)}>
                         <td className="pl-6 py-4 w-[40px]">
                           <svg className={`w-4 h-4 text-slate-400 transition-transform ${isExpanded ? 'rotate-90 text-indigo-500' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M9 5l7 7-7 7" />
@@ -295,41 +239,41 @@ if (!token) throw new Error('Please sign in to save changes.');
                           }`}>
                             {partner.status}
                           </span>
-                          {partner.status === 'Pending' && (
-                            <>
-                              <ActionButton
-                                onClick={() => handleUpdateStatus(partner.id || partner._id, 'Active')}
-                                className="bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-[9px] px-2 py-1 rounded-md transition-all shadow-3xs cursor-pointer uppercase tracking-wider"
-                              >
-                                Approve
-                              </ActionButton>
-                              <ActionButton
-                                onClick={() => {
-                                  setRejectPartnerModal(partner);
-                                  setRejectionReason('');
-                                }}
-                                className="bg-rose-600 hover:bg-rose-700 text-white font-extrabold text-[9px] px-2 py-1 rounded-md transition-all shadow-3xs cursor-pointer uppercase tracking-wider"
-                              >
-                                Reject
-                              </ActionButton>
-                            </>
-                          )}
-                          {partner.status === 'Active' && (
-                            <ActionButton
-                              onClick={() => handleUpdateStatus(partner.id || partner._id, 'Inactive')}
-                              className="bg-rose-500 hover:bg-rose-600 text-white font-extrabold text-[9px] px-2 py-1 rounded-md transition-all shadow-3xs cursor-pointer uppercase tracking-wider"
-                            >
-                              Deactivate
-                            </ActionButton>
-                          )}
-                          {partner.status === 'Inactive' && (
-                            <ActionButton
-                              onClick={() => handleUpdateStatus(partner.id || partner._id, 'Active')}
-                              className="bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-[9px] px-2 py-1 rounded-md transition-all shadow-3xs cursor-pointer uppercase tracking-wider"
-                            >
-                              Activate
-                            </ActionButton>
-                          )}
+                          <ActionMenu
+                            items={[
+                              {
+                                label: isExpanded ? 'Hide Details' : 'View Partner Details',
+                                onClick: () => toggleExpand(partner.id)
+                              },
+                              ...(partner.status === 'Pending' ? [
+                                {
+                                  label: 'Approve Partner',
+                                  onClick: () => handleUpdateStatus(partner.id || partner._id, 'Active')
+                                },
+                                {
+                                  label: 'Reject Partner',
+                                  variant: 'danger',
+                                  onClick: () => {
+                                    setRejectPartnerModal(partner);
+                                    setRejectionReason('');
+                                  }
+                                }
+                              ] : []),
+                              ...(partner.status === 'Active' ? [
+                                {
+                                  label: 'Deactivate Partner',
+                                  variant: 'danger',
+                                  onClick: () => handleUpdateStatus(partner.id || partner._id, 'Inactive')
+                                }
+                              ] : []),
+                              ...(partner.status === 'Inactive' ? [
+                                {
+                                  label: 'Activate Partner',
+                                  onClick: () => handleUpdateStatus(partner.id || partner._id, 'Active')
+                                }
+                              ] : [])
+                            ]}
+                          />
                         </td>
                       </tr>
                       
@@ -535,6 +479,7 @@ if (!token) throw new Error('Please sign in to save changes.');
             </div>
           )}
         </div>
+<ListPager list={serverList} page={listPage} onPageChange={setListPage} limit={listLimit} onLimitChange={setListLimit} />
       </div>
 
       {isModalOpen && createPortal(
@@ -680,7 +625,7 @@ if (!token) throw new Error('Please sign in to save changes.');
       {/* Document Preview Modal */}
       {previewDocModal && createPortal(
         <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/70 backdrop-blur-xs select-none p-4 overflow-y-auto">
-          <div className="bg-white border border-slate-200 rounded-2xl w-full max-w-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+          <div className="workspace-list-frame bg-white border border-slate-200 rounded-2xl w-full max-w-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
             <div className="flex justify-between items-center p-4 bg-slate-900 text-white">
               <h3 className="text-xs font-bold uppercase tracking-wider">{previewDocModal.title || 'Legal Document Preview'}</h3>
               <ActionButton onClick={() => setPreviewDocModal(null)} className="text-slate-400 hover:text-white font-bold text-sm">
