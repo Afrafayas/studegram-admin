@@ -167,7 +167,7 @@ export default function Notice({ selectedNoticeId, setSelectedNoticeId }) {
   // Submit Notice Form
   const handleUploadSubmit = async (e) => {
     e.preventDefault();
-    if (!formTitle.trim() || !formMessage.trim()) {
+    if (!formTitle.trim()) {
       toast.error('Please fill out all required fields.');
       return;
     }
@@ -493,14 +493,13 @@ export default function Notice({ selectedNoticeId, setSelectedNoticeId }) {
                   <label className="text-xs font-bold">Priority
                     <select value={formPriority} onChange={e => setFormPriority(e.target.value)} className="block w-full border rounded-xl p-2 mt-1">{['Low', 'Medium', 'High', 'Urgent'].map(p => <option key={p}>{p}</option>)}</select>
                   </label>
-                  <label className="text-xs font-bold">Audience<select value={formAudience} onChange={e => setFormAudience(e.target.value)} className="block w-full border rounded-xl p-2 mt-1">{['All', 'Agents', 'Students', 'Staff', 'Admins'].map(a => <option key={a}>{a}</option>)}</select><span className="text-xs font-normal">All / Agents sends reminders to agents.</span></label>
+                  <label className="text-xs font-bold">Audience<select value={formAudience} onChange={e => setFormAudience(e.target.value)} className="block w-full border rounded-xl p-2 mt-1">{['All', 'Agents', 'Students', 'Staff', 'Admins'].map(a => <option key={a}>{a}</option>)}</select>{/* <span className="text-xs font-normal">All / Agents sends reminders to agents.</span> */}</label>
                 </div>
                 {/* Announcement Message */}
                 <div className="space-y-1">
-                  <label className="text-[10px] font-extrabold text-[#475569] uppercase tracking-wider">Message Description *</label>
+                  <label className="text-[10px] font-extrabold text-[#475569] uppercase tracking-wider">Message Description (Optional)</label>
                   <textarea
                     rows="4"
-                    required
                     placeholder="Write details about the updates, policy guidelines, schedules, or steps..."
                     value={formMessage}
                     onChange={(e) => setFormMessage(e.target.value)}
