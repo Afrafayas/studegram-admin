@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import DocumentPreview from './DocumentPreview';
+import { useState } from 'react';
 import DocumentNameSelect from './DocumentNameSelect';
 import { appendDocumentFiles } from '../utils/documentQueue.mjs';
 export default function DocumentUploadQueue({ role = 'Student', entries, onChange, disabled = false }) {
@@ -22,7 +23,12 @@ export default function DocumentUploadQueue({ role = 'Student', entries, onChang
       <p className="text-xs font-semibold text-slate-700 break-words">Queued documents ({entries.length}): {entries.map(entry => entry.name || entry.file.name).join(', ')}</p>
       {entries.map((entry, index) => <div key={entry.id} className="rounded-xl border border-slate-200 bg-white p-3 space-y-2">
         <div className="flex items-start justify-between gap-3 text-xs"><span className="break-all">{index + 1}. {entry.file.name}</span><button type="button" disabled={disabled} className="shrink-0 font-bold text-red-700 disabled:opacity-50" aria-label={'Remove queued file ' + entry.file.name} onClick={() => onChange(entries.filter(item => item.id !== entry.id))}>Remove</button></div>
+        <div className="grid min-w-0 grid-cols-1 items-start gap-3 sm:grid-cols-[minmax(0,1fr)_auto]">
+          <div className="min-w-0">
         <DocumentNameSelect role={role} multiple={false} value={entry.name || ''} disabled={disabled} onChange={name => onChange(entries.map(item => item.id === entry.id ? { ...item, name } : item))} />
+          </div>
+          <DocumentPreview file={entry.file} />
+        </div>
       </div>)}
     </div>}
   </div>;

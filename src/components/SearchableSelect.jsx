@@ -10,7 +10,7 @@ function collectOptions(children, disabled = false) {
     if (!isValidElement(child)) return;
     if (child.type === 'option') {
       const label = textContent(child.props.children);
-      result.push({ value: String(child.props.value ?? label), label, disabled: disabled || child.props.disabled });
+      result.push({ value: String(child.props.value ?? label), label, action: child.props['data-action'], disabled: disabled || child.props.disabled });
     } else result.push(...collectOptions(child.props.children, disabled || child.props.disabled));
   });
   return result;
@@ -30,7 +30,7 @@ export default function SearchableSelect({ children, className, searchLabel = 'S
   const options = collectOptions(children);
   const currentValue = props.value !== undefined ? props.value : localValue;
   const selected = options.find(option => option.value === String(currentValue ?? '')) || options.find(option => !option.disabled) || options[0];
-  const matches = options.filter(option => !option.disabled && (!hideEmptyOption || option.value !== '') && option.label.toLocaleLowerCase().includes(query.trim().toLocaleLowerCase()));
+  const matches = options.filter(option => !option.disabled && (!hideEmptyOption || option.value !== '') && (option.action || option.label.toLocaleLowerCase().includes(query.trim().toLocaleLowerCase())));
   const expanded = open && !props.disabled;
 
   useEffect(() => {

@@ -1,3 +1,4 @@
+import DocumentPreview from '../components/DocumentPreview';
 import useServerList from '../hooks/useServerList';
 import ListToolbar, { ListPager } from '../components/ListToolbar';
 import ActionMenu from '../components/ActionMenu';
@@ -69,7 +70,7 @@ export default function Notice({ selectedNoticeId, setSelectedNoticeId }) {
     if (selected?.id && !selected.isRead) markRead(selected.id);
   }, [selected?.id, selected?.isRead]);
   const editNotice = notice => {
-    setFileName('');
+    setFileName(''); setPosterFile(null);
     setEditingId(notice.id); setFormTitle(notice.title); setFormMessage(notice.content || notice.message || '');
     setFormType(notice.category); setFormBadge(notice.badge || ''); setFormPosterUrl(notice.image || '');
     setFormExpiresOn(notice.expiresOn || ''); setFormStatus(notice.status); setFormPriority(notice.priority);
@@ -98,6 +99,7 @@ export default function Notice({ selectedNoticeId, setSelectedNoticeId }) {
   const [formPosterUrl, setFormPosterUrl] = useState('');
   const [dragOver, setDragOver] = useState(false);
   const [fileName, setFileName] = useState('');
+  const [posterFile, setPosterFile] = useState(null);
   const [isUploadingPoster, setIsUploadingPoster] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -121,6 +123,7 @@ export default function Notice({ selectedNoticeId, setSelectedNoticeId }) {
   const processFile = async (file) => {
     if (file && file.type.startsWith('image/')) {
       setIsUploadingPoster(true);
+      setPosterFile(file);
       setFileName(file.name);
       setFormPosterUrl('');
       try {
@@ -133,7 +136,7 @@ export default function Notice({ selectedNoticeId, setSelectedNoticeId }) {
         if (!response.data?.success || !url) throw new Error('Poster was not stored in S3.');
         setFormPosterUrl(url);
       } catch (error) {
-        setFileName('');
+        setFileName(''); setPosterFile(null);
         toast.error(error.response?.data?.message || 'Poster upload failed. Please retry.');
       } finally {
         setIsUploadingPoster(false);
@@ -197,7 +200,7 @@ export default function Notice({ selectedNoticeId, setSelectedNoticeId }) {
     setFormBadge('');
     setFormMessage('');
     setFormPosterUrl('');
-    setFileName('');
+    setFileName(''); setPosterFile(null);
     setIsSubmitting(false);
     setShowUploadModal(false);
   };
@@ -302,7 +305,7 @@ export default function Notice({ selectedNoticeId, setSelectedNoticeId }) {
 
         {/* Action Button */}
         <ActionButton
-          onClick={() => { setEditingId(null); setFormTitle(''); setFormMessage(''); setFormBadge(''); setFormPosterUrl(''); setFileName(''); setFormType(CATEGORIES_LIST[0]); setFormExpiresOn(''); setFormStatus('Active'); setFormPriority('Medium'); setFormAudience('Agents'); setShowUploadModal(true); }}
+          onClick={() => { setEditingId(null); setFormTitle(''); setFormMessage(''); setFormBadge(''); setFormPosterUrl(''); setFileName(''); setPosterFile(null); setFormType(CATEGORIES_LIST[0]); setFormExpiresOn(''); setFormStatus('Active'); setFormPriority('Medium'); setFormAudience('Agents'); setShowUploadModal(true); }}
           className="self-start md:self-auto bg-[#D99A1C] hover:bg-[#C28410] text-white text-xs font-bold px-4 py-2.5 rounded-xl transition-all duration-150 hover:scale-[1.02] active:scale-95 shadow-md flex items-center gap-2"
         >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -526,6 +529,7 @@ export default function Notice({ selectedNoticeId, setSelectedNoticeId }) {
                       onChange={handleFileChange}
                       className="hidden"
                     />
+                  <DocumentPreview file={posterFile} />
                     <label htmlFor="notice-file-upload" className="flex flex-col items-center cursor-pointer space-y-2 w-full text-center">
                       <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center shadow-inner text-slate-500 mx-auto">
                         {isUploadingPoster ? (
