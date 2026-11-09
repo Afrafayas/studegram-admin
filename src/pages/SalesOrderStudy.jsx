@@ -1,3 +1,4 @@
+import DocumentPreview from '../components/DocumentPreview';
 import BatchDocumentUpload from '../components/BatchDocumentUpload';
 import StudentDobInput from '../components/StudentDobInput';
 import { getStudentDobError } from '../utils/studentAge.mjs';
@@ -601,6 +602,7 @@ export default function SalesOrderStudy({
                 {uploadedFiles.map((file, idx) => (
                   <div key={idx} className="flex items-center gap-1.5 bg-[#D99A1C]/10 border border-[#D99A1C]/25 text-[#D99A1C] text-xs px-2.5 py-1 rounded-lg font-bold">
                     <span>📄</span>
+                    <DocumentPreview url={file.url || file.previewUrl} name={file.fileName || file.name} type={file.type} />
                     <span className="truncate max-w-[150px]">{file.name}</span>
                     <ActionButton
                       type="button"

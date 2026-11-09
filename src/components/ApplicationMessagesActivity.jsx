@@ -1,3 +1,4 @@
+import DocumentPreview from './DocumentPreview';
 import React, { useState, useEffect, useRef } from 'react';
 import API, { API_BASE_URL } from '../api/axios';
 import { ActionButton, ActionForm } from './ActionControls';
@@ -273,6 +274,7 @@ export default function ApplicationMessagesActivity({
                 key={idx}
                 className="bg-amber-50 border border-amber-200 text-amber-800 font-bold text-[9px] px-2.5 py-1 rounded-lg flex items-center gap-1.5 shadow-2xs"
               >
+                <DocumentPreview file={file} />
                 <span className="truncate max-w-[140px]">{file.name}</span>
                 <ActionButton
                   type="button"

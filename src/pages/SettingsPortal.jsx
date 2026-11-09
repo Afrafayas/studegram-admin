@@ -1,3 +1,4 @@
+import DocumentPreview from '../components/DocumentPreview';
 import RowActions, { rowViewProps } from '../components/RowActions';
 import ListRecordView from '../components/ListRecordView';
 import useServerList, { restoreListRows } from '../hooks/useServerList';
@@ -66,6 +67,7 @@ useEffect(()=>setListRecord(null),[activeSubTab]);
   const [univCity, setUnivCity] = useState('');
   const [univRanking, setUnivRanking] = useState('');
   const [univLogoUrl, setUnivLogoUrl] = useState('');
+  const [logoPreviewFile, setLogoPreviewFile] = useState(null);
   const [univDescription, setUnivDescription] = useState('');
   const [univRequirements, setUnivRequirements] = useState('');
   const [univStatus, setUnivStatus] = useState('Active');
@@ -182,6 +184,7 @@ useEffect(()=>setListRecord(null),[activeSubTab]);
     setUnivCity('');
     setUnivRanking('');
     setUnivLogoUrl('');
+    setLogoPreviewFile(null);
     setUnivDescription('');
     setUnivRequirements('');
     setUnivStatus('Active');
@@ -193,6 +196,7 @@ useEffect(()=>setListRecord(null),[activeSubTab]);
     const file = e.target.files[0];
     if (!file) return;
 
+    setLogoPreviewFile(file);
     setIsUploadingLogo(true);
     const formData = new FormData();
     formData.append('file', file);
@@ -212,6 +216,7 @@ useEffect(()=>setListRecord(null),[activeSubTab]);
       console.error('Logo upload error:', err);
       toast.error('Failed to upload image to S3');
     } finally {
+      setLogoPreviewFile(null);
       setIsUploadingLogo(false);
     }
   };
@@ -225,6 +230,7 @@ useEffect(()=>setListRecord(null),[activeSubTab]);
   const openEditUnivModal = (univ) => {
     if (!isWritable) return;
     setEditingUniv(univ);
+    setLogoPreviewFile(null);
     setUnivName(univ.name || '');
     setUnivCountry(univ.country || '');
     setUnivCity(univ.city || '');
@@ -1847,7 +1853,7 @@ if (!token) throw new Error('Please sign in to save changes.');
                 <div className="space-y-1.5 bg-slate-50 border border-dashed border-slate-300 p-3 rounded-xl overflow-hidden">
                   <label className="block text-[10px] font-extrabold text-slate-600 uppercase tracking-wider">University Logo Image (S3 Upload)</label>
                   <div className="flex items-center gap-3">
-                    {univLogoUrl ? (
+                    {logoPreviewFile ? <DocumentPreview file={logoPreviewFile} /> : univLogoUrl ? (
                       <img src={univLogoUrl} alt="Logo Preview" className="w-12 h-12 object-contain border rounded-lg bg-white p-1 shrink-0" />
                     ) : (
                       <div className="w-12 h-12 border border-slate-200 rounded-lg bg-slate-100 flex items-center justify-center text-slate-400 text-base shrink-0">🏛️</div>
@@ -2536,6 +2542,7 @@ if (!token) throw new Error('Please sign in to save changes.');
                   className="hidden"
                 />
 
+                <DocumentPreview file={selectedCourseFile} />
                 {!selectedCourseFile ? (
                   <div
                     onClick={() => courseFileInputRef.current?.click()}
