@@ -66,7 +66,7 @@ export default function AdminHeader({
 
         setCommentsList(updatedList);
         window.dispatchEvent(new CustomEvent('application_comments_updated'));
-        const actualUnreplied = updatedList.filter(c => c.isUnreplied).length;
+        const actualUnreplied = updatedList.filter(c => c.isUnreplied && !c.isRead).length;
         setUnreadCommentsCount(actualUnreplied);
       }
     } catch (err) {
@@ -96,7 +96,7 @@ export default function AdminHeader({
             ? { ...c, isRead: true } 
             : c;
         });
-        const actualUnreplied = updated.filter(c => c.isUnreplied).length;
+        const actualUnreplied = updated.filter(c => c.isUnreplied && !c.isRead).length;
         setUnreadCommentsCount(actualUnreplied);
         return updated;
       });
@@ -118,11 +118,11 @@ export default function AdminHeader({
       fetchComments();
     }, 15000);
     return () => clearInterval(interval);
-  }, []);
+  }, [currentUser?._id, currentUser?.id]);
 
   const handleMarkAllRead = async () => {
     try {
-      await API.put('/notifications/read-all').catch(() => {});
+      await API.put('/notifications/read-all');
       setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
       setUnreadCount(0);
     } catch (err) {
@@ -366,15 +366,14 @@ export default function AdminHeader({
               }}
               className="p-2 text-slate-400 hover:text-white hover:bg-slate-900 rounded-xl transition-all relative focus:outline-none cursor-pointer"
               title="Application Comments & Messages"
+              aria-label={`Comments: ${commentsList.length} total, ${unreadCommentsCount} unread`}
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
               </svg>
-              {unreadCommentsCount > 0 && (
-                <span className="absolute top-1 right-1 w-4 h-4 bg-blue-500 text-white rounded-full text-[9px] font-black flex items-center justify-center animate-bounce shadow">
+              <span className="absolute top-1 right-1 min-w-4 h-4 px-1 bg-blue-500 text-white rounded-full text-[9px] font-black flex items-center justify-center animate-bounce shadow">
                   {unreadCommentsCount}
                 </span>
-              )}
             </ActionButton>
 
             {/* Application Comments Dropdown */}
@@ -389,13 +388,11 @@ export default function AdminHeader({
                     <div>
                       <h4 className="text-xs font-black text-white uppercase tracking-wider flex items-center gap-2">
                         <span>Application Comments</span>
-                        {unreadCommentsCount > 0 && (
-                          <span className="px-2 py-0.5 rounded-full text-[9px] font-black bg-blue-600 text-white shadow">
-                            {unreadCommentsCount} Unreplied
+                        <span className="px-2 py-0.5 rounded-full text-[9px] font-black bg-blue-600 text-white shadow">
+                            {unreadCommentsCount} Unread
                           </span>
-                        )}
                       </h4>
-                      <p className="text-[10px] text-slate-400">Agent messages & application discussions</p>
+                      <p className="text-[10px] text-slate-400">{commentsList.length} total comments &middot; {unreadCommentsCount} unread</p>
                     </div>
                   </div>
 
@@ -403,17 +400,17 @@ export default function AdminHeader({
                     {commentsList.length > 0 ? (
                       commentsList.map((comm, idx) => (
                         <div 
-                          key={comm.applicationId || idx} 
+                          key={comm.commentId || `${comm.applicationId}_${comm.createdAt}_${idx}`}
                           onClick={() => handleCommentClick(comm)}
                           className={`p-3 rounded-xl transition-all cursor-pointer group ${
-                            comm.isUnreplied
+                            (comm.isUnreplied && !comm.isRead)
                               ? 'bg-blue-950/80 border-l-4 border-l-blue-500 text-blue-100 font-bold shadow-md hover:bg-blue-900'
                               : 'bg-slate-900/50 border-l-4 border-l-emerald-600 text-slate-300 hover:bg-slate-800/80'
                           }`}
                         >
                           <div className="flex justify-between items-start gap-2">
                             <h5 className="text-xs font-extrabold text-white group-hover:text-[#F5B025] transition-colors flex items-center gap-1.5">
-                              {comm.isUnreplied && <span className="w-2 h-2 rounded-full bg-blue-400 animate-pulse"></span>}
+                              {(comm.isUnreplied && !comm.isRead) && <span className="w-2 h-2 rounded-full bg-blue-400 animate-pulse"></span>}
                               <span>{comm.camsId && !/[0-9a-fA-F]{24}/.test(comm.camsId) ? `${comm.camsId} · ` : ''}{comm.studentName}</span>
                             </h5>
                             <span className="text-[9px] text-slate-400 font-semibold shrink-0">
@@ -426,8 +423,8 @@ export default function AdminHeader({
                             <p className="min-w-0 text-[11px] font-semibold leading-snug break-words">"{comm.text}"</p>
                           </div>
                           <div className="mt-2 flex items-center justify-between text-[9px]">
-                            <span className={`px-2 py-0.5 rounded font-extrabold uppercase ${comm.isUnreplied ? 'bg-blue-600 text-white' : 'bg-slate-800 text-slate-400'}`}>
-                              {comm.isUnreplied ? '💬 Unreplied Message' : '✓ Replied / Read'}
+                            <span className={`px-2 py-0.5 rounded font-extrabold uppercase ${(comm.isUnreplied && !comm.isRead) ? 'bg-blue-600 text-white' : 'bg-slate-800 text-slate-400'}`}>
+                              {(comm.isUnreplied && !comm.isRead) ? '💬 Unread Message' : '✓ Read / Sent'}
                             </span>
                             <span className="text-[#D99A1C] font-extrabold group-hover:underline">Open Application →</span>
                           </div>
@@ -453,15 +450,14 @@ export default function AdminHeader({
               }}
               className="p-2 text-slate-400 hover:text-white hover:bg-slate-900 rounded-xl transition-all relative focus:outline-none cursor-pointer"
               title="Notifications"
+              aria-label={`Notifications: ${notifications.length} total, ${unreadCount} unread`}
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
               </svg>
-              {unreadCount > 0 && (
-                <span className="absolute top-1 right-1 w-4 h-4 bg-rose-500 text-white rounded-full text-[9px] font-black flex items-center justify-center animate-bounce shadow">
+              <span className="absolute top-1 right-1 min-w-4 h-4 px-1 bg-rose-500 text-white rounded-full text-[9px] font-black flex items-center justify-center animate-bounce shadow">
                   {unreadCount}
                 </span>
-              )}
             </ActionButton>
 
             {/* Notifications Dropdown Drawer */}
@@ -475,7 +471,7 @@ export default function AdminHeader({
                   <div className="px-4 pb-2.5 border-b border-slate-900 flex justify-between items-center">
                     <div>
                       <h4 className="text-xs font-black text-white uppercase tracking-wider">System Notifications</h4>
-                      <p className="text-[10px] text-slate-400">Live operational & application logs</p>
+                      <p className="text-[10px] text-slate-400">{notifications.length} total notifications &middot; {unreadCount} unread</p>
                     </div>
                     {unreadCount > 0 && (
                       <ActionButton
