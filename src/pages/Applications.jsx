@@ -109,14 +109,14 @@ export default function Applications({ applications, referralAgents = [], intake
             String(a.camsId || '').toLowerCase() === targetStr
           );
           if (found) {
-            return { ...(parsedApp || {}), ...found };
+            return { ...(parsedApp || {}), ...found, secondaryStatus: found.status || found.secondaryStatus };
           }
         }
       }
 
       // Fallback to parsed cached application object
       if (parsedApp && (parsedApp.id || parsedApp._id)) {
-        return parsedApp;
+        return { ...parsedApp, secondaryStatus: parsedApp.status || parsedApp.secondaryStatus };
       }
     } catch (e) {}
     return null;

@@ -16,7 +16,7 @@ export function restoreListRows(rows, originals = [], resource = '') {
       partnerName,
       partnerCompanyName: row.partner?.companyName || (partnerWasLoaded && !row.partner ? 'Direct' : row.partnerCompanyName || original.partnerCompanyName),
       country: row.country ?? row.university?.country ?? original.country ?? '',
-      secondaryStatus: row.paymentStatus === 'Paid' || row.status === 'Paid Students' ? 'Paid Students' : row.status ?? original.secondaryStatus,
+      secondaryStatus: row.status ?? original.status ?? original.secondaryStatus,
       assignedBdm: partnerName || original.assignedBdm || 'Direct',
       dateAdded: row.createdAt ? new Date(row.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : original.dateAdded || ''
     };
