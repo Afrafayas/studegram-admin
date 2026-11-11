@@ -1089,7 +1089,7 @@ support@unigather.app`;
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <label className="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">Date of Birth</label>
+                  <label className="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">Date of Birth <span className="text-rose-500">*</span></label>
                   <StudentDobInput
                     value={newStudentDob}
                     onChange={(e) => setNewStudentDob(e.target.value)}
