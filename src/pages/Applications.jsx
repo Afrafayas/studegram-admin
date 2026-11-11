@@ -216,7 +216,17 @@ export default function Applications({ applications, referralAgents = [], intake
     const cName = typeof selectedC === 'object' ? selectedC.title : (editModalApp.courseName || 'Assigned');
 
     try {
-      await API.put(`/applications/${appId}`, {
+      const studentId = editModalApp.studentId || editModalApp.student?._id || editModalApp.student;
+      if (studentId) {
+        const studentRes = await API.put(`/students/${studentId}`, {
+          name: editStudentName,
+          email: editStudentEmail,
+          phone: editStudentPhone
+        });
+        if (!studentRes.data?.success) throw new Error(studentRes.data?.message || 'Failed to save student details.');
+      }
+
+      const applicationRes = await API.put(`/applications/${appId}`, {
         university: editUniversity,
         course: editCourse,
         level: editLevel,
@@ -224,15 +234,7 @@ export default function Applications({ applications, referralAgents = [], intake
         notes: editNotes,
         country: editCountry
       });
-
-      const studentId = editModalApp.studentId || editModalApp.student?._id || editModalApp.student;
-      if (studentId) {
-        await API.put(`/students/${studentId}`, {
-          name: editStudentName,
-          email: editStudentEmail,
-          phone: editStudentPhone
-        }).catch(() => {});
-      }
+      if (!applicationRes.data?.success) throw new Error(applicationRes.data?.message || 'Failed to update application.');
 
       editModalApp.universityId = editUniversity;
       editModalApp.universityName = uName;
@@ -626,25 +628,14 @@ export default function Applications({ applications, referralAgents = [], intake
       eOrText.preventDefault();
       textToSave = newCommentInput.trim();
     }
-    if (!textToSave || !singleViewApp) return;
-    const newCommentObj = {
-      id: `local-${Date.now()}`,
-      author: currentUser?.name || 'Super Admin',
-      role: currentUser?.role || 'Admin',
-      text: textToSave,
-      type: 'comment',
-      createdAt: new Date().toISOString()
-    };
-
-    setCommentsList(prev => [newCommentObj, ...prev]);
-    setNewCommentInput('');
-
+    if (!textToSave || !singleViewApp) return false;
     setIsPostingComment(true);
     try {
       const appId = singleViewApp.id || singleViewApp._id;
       const res = await API.post(`/applications/${appId}/comments`, {
         text: textToSave
       });
+      if (!res.data?.success) throw new Error(res.data?.message || 'Failed to post comment.');
 
       if (res.data?.success && Array.isArray(res.data.data)) {
         const updatedApp = {
@@ -654,10 +645,13 @@ export default function Applications({ applications, referralAgents = [], intake
         setSingleViewApp(updatedApp);
         setCommentsList(buildCommentsList(updatedApp));
       }
+      setNewCommentInput('');
       toast.success('Comment posted successfully!');
       if (onRefresh) onRefresh();
+      return true;
     } catch (err) {
-      toast.success('Comment posted locally.');
+      toast.error(err.response?.data?.message || err.message || 'Failed to post comment.');
+      return false;
     } finally {
       setIsPostingComment(false);
     }
@@ -670,7 +664,6 @@ export default function Applications({ applications, referralAgents = [], intake
       const appId = singleViewApp.id || singleViewApp._id;
       const res = await API.put(`/applications/${appId}`, {
         notes: appEditNotes,
-        status: singleViewApp.secondaryStatus || singleViewApp.status,
         remarks: 'Application notes updated from Single View Dossier'
       });
 
@@ -679,12 +672,10 @@ export default function Applications({ applications, referralAgents = [], intake
         setSingleViewApp(prev => ({ ...prev, notes: appEditNotes }));
         if (onRefresh) onRefresh();
       } else {
-        setSingleViewApp(prev => ({ ...prev, notes: appEditNotes }));
-        toast.success('Application details saved!');
+        throw new Error(res.data?.message || 'Failed to save application notes.');
       }
     } catch (err) {
-      setSingleViewApp(prev => ({ ...prev, notes: appEditNotes }));
-      toast.success('Application details updated!');
+      toast.error(err.response?.data?.message || err.message || 'Failed to save application notes.');
     } finally {
       setIsSavingApp(false);
     }
@@ -773,24 +764,12 @@ export default function Applications({ applications, referralAgents = [], intake
         payload.paymentStatus = 'Paid';
       }
 
-      let res;
-      try {
-        res = await API.put(`/applications/${appId}`, payload);
-      } catch (firstErr) {
-        // Fallback for live production backend servers where status enum hasn't re-deployed yet
-        if (selectedStatus === 'Paid Students' && firstErr.response?.data?.message?.includes('Paid Students')) {
-          payload.status = statusModalApp.status && statusModalApp.status !== 'Paid Students' 
-            ? statusModalApp.status 
-            : 'Under Review';
-          res = await API.put(`/applications/${appId}`, payload);
-        } else {
-          throw firstErr;
-        }
-      }
+      const res = await API.put(`/applications/${appId}`, payload);
 
       if (res.data?.success) {
-        applySavedStatus(appId, selectedStatus, res.data.data);
-        toast.success(`Application status updated to "${selectedStatus}" successfully!`);
+        const savedStatus = res.data.data?.status || selectedStatus;
+        applySavedStatus(appId, savedStatus, res.data.data);
+        toast.success(`Application status updated to "${savedStatus}" successfully!`);
         setStatusModalApp(null);
       } else {
         toast.error(res.data?.message || 'Failed to update application status.');
@@ -859,8 +838,13 @@ export default function Applications({ applications, referralAgents = [], intake
     };
 
     try {
-      await API.put(`/applications/${appId}/pick`).catch(() => {});
-    } catch (e) {}
+      const res = await API.put(`/applications/${appId}/pick`);
+      if (!res.data?.success) throw new Error(res.data?.message || 'Failed to pick application.');
+      Object.assign(pickerObj, res.data.data?.pickedBy || {});
+    } catch (err) {
+      toast.error(err.response?.data?.message || err.message || 'Failed to pick application.');
+      return;
+    }
 
     // Update singleViewApp if active
     if (singleViewApp && (singleViewApp.id === appId || singleViewApp._id === appId)) {
@@ -892,8 +876,15 @@ export default function Applications({ applications, referralAgents = [], intake
 
     try {
       const appId = assignModalApp.id || assignModalApp._id;
-      await API.put(`/applications/${appId}/assign`, { staffId: selectedStaffId, pickedBy: selectedStaffId }).catch(() => {});
-    } catch (err) {}
+      const res = await API.put(`/applications/${appId}/assign`, { staffId: selectedStaffId, pickedBy: selectedStaffId });
+      if (!res.data?.success) throw new Error(res.data?.message || 'Failed to assign application.');
+      Object.assign(pickerObj, res.data.data?.pickedBy || {});
+    } catch (err) {
+      toast.error(err.response?.data?.message || err.message || 'Failed to assign application.');
+      return;
+    } finally {
+      setIsAssigning(false);
+    }
 
     if (singleViewApp && (singleViewApp.id === assignModalApp.id || singleViewApp._id === assignModalApp._id)) {
       setSingleViewApp(prev => ({ ...prev, pickedBy: pickerObj }));

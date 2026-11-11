@@ -114,13 +114,14 @@ export default function ApplicationMessagesActivity({
     if (!newNote.trim()) return;
 
     if (onAddComment) {
-      await onAddComment(newNote.trim());
-      setNewNote('');
+      const saved = await onAddComment(newNote.trim());
+      if (saved !== false) setNewNote('');
     } else {
       try {
-        await API.post(`/applications/${appId}/comments`, {
+        const res = await API.post(`/applications/${appId}/comments`, {
           text: newNote.trim()
         });
+        if (!res.data?.success) throw new Error(res.data?.message || 'Failed to post internal note');
         setNewNote('');
         if (onRefresh) onRefresh();
         toast.success('Internal note posted successfully!');

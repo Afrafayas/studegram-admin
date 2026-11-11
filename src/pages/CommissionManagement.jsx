@@ -204,13 +204,7 @@ export default function CommissionManagement({ clients = [], referralAgents = []
       }
     } catch (err) {
       console.error('Failed to toggle university payment:', err);
-      // Optimistic local update as fallback
-      setCommissions(prev => prev.map(c => 
-        (c.id === id || c._id === id) 
-          ? { ...c, universityPaid: nextState, universityPaymentStatus: nextStatusText } 
-          : c
-      ));
-      toast.success(`Updated university status to: ${nextStatusText}`);
+      toast.error(err.response?.data?.message || err.message || 'Failed to update university payment.');
     } finally {
       setIsUpdatingId(null);
     }
@@ -327,12 +321,7 @@ export default function CommissionManagement({ clients = [], referralAgents = []
       }
     } catch (err) {
       console.error('Error approving payout:', err);
-      setCommissions(prev => prev.map(c => 
-        (c.id === id || c._id === id) 
-          ? { ...c, status: 'Paid', payoutDate: new Date().toISOString().split('T')[0] } 
-          : c
-      ));
-      toast.success(`Commission payout updated to Paid.`);
+      toast.error(err.response?.data?.message || err.message || 'Failed to approve commission payout.');
     } finally {
       setIsUpdatingId(null);
     }
