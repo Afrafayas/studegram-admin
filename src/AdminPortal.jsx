@@ -163,7 +163,7 @@ export default function AdminPortal({ onLogout }) {
           level: app.level || 'Undergraduate (UG)',
           intake: app.intake || '',
           status: app.status || 'Submitted',
-          secondaryStatus: (app.status === 'Paid Students' || app.paymentStatus === 'Paid') ? 'Paid Students' : (app.status || 'Pending'),
+          secondaryStatus: app.status || 'Submitted',
           paymentStatus: app.paymentStatus || 'Pending',
           dateAdded: new Date(app.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
           country: app.university?.country || '',

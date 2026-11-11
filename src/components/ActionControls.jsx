@@ -1,6 +1,14 @@
-import { createContext, useContext, useRef, useState } from 'react';
+import { Children, isValidElement, createContext, useContext, useRef, useState } from 'react';
 
 const SubmissionContext = createContext(false);
+
+// Existing button content may already supply a spinner, including inside a fragment.
+function hasLoadingIndicator(children) {
+  return Children.toArray(children).some(child => isValidElement(child) && (
+    /(?:^|\s)(?:animate-spin|action-spinner)(?:\s|$)/.test(child.props.className || '') ||
+    hasLoadingIndicator(child.props.children)
+  ));
+}
 
 // A ref closes the gap before React renders the disabled state.
 function usePendingAction() {
@@ -40,7 +48,7 @@ export function ActionButton({ onClick, disabled, loading = false, children, typ
     <button {...props} type={type} disabled={disabled || busy}
       aria-busy={busy || undefined}
       onClick={(event) => run(onClick, event)}>
-      {busy && <span className="action-spinner" aria-hidden="true" />}
+      {busy && !hasLoadingIndicator(children) && <span className="action-spinner" aria-hidden="true" />}
       {children}
       {busy && <span className="sr-only">Loading, please wait</span>}
     </button>

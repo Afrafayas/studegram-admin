@@ -5,7 +5,7 @@ test('server business fields replace stale parent data while stable UI identity 
   const [row] = restoreListRows([{ _id: 'app1', status: 'Processed', paymentStatus: 'Paid', pickedBy: { name: 'New Staff' }, university: { name: 'New University', country: 'Canada' }, student: { name: 'New Student', passportNo: 'NEW123' }, course: { title: 'New Course' }, partner: null }], [{ id: 'ui-app1', _id: 'app1', status: 'Pending', universityName: 'Old University', studentName: 'Old Student', partnerName: 'Old Agent', activeApps: 4 }]);
   assert.equal(row.id, 'ui-app1');
   assert.equal(row.status, 'Processed');
-  assert.equal(row.secondaryStatus, 'Paid Students');
+  assert.equal(row.secondaryStatus, 'Processed');
   assert.equal(row.universityName, 'New University');
   assert.equal(row.studentName, 'New Student');
   assert.equal(row.passportNo, 'NEW123');
