@@ -6,9 +6,10 @@ import ListToolbar, { ListPager } from '../components/ListToolbar';
 import { getDisplayId } from '../utils/displayId';
 import { ActionButton } from '../components/ActionControls';
 import React, { useState, useMemo, useEffect } from 'react';
+import { STATUS_STEPS } from './Applications';
 
-export default function AdminReport({ 
-  applications = [], 
+export default function AdminReport({
+  applications = [],
   activeSubTab = null,
   referralAgents = [],
   universities = [],
@@ -65,9 +66,9 @@ export default function AdminReport({
         if (app.university && typeof app.university === 'object' && app.university.country) {
           countryName = app.university.country;
         } else {
-          const matchedUniv = (universities || []).find(u => 
-            (u.name && u.name.toLowerCase() === univName.toLowerCase()) || 
-            u._id === app.university || 
+          const matchedUniv = (universities || []).find(u =>
+            (u.name && u.name.toLowerCase() === univName.toLowerCase()) ||
+            u._id === app.university ||
             u.id === app.university
           );
           if (matchedUniv?.country) {
@@ -178,7 +179,7 @@ export default function AdminReport({
   };
 
   const openReportApplication = app => onOpenApplication ? onOpenApplication(app.id) : setSelectedReport(app);
-  if (selectedReport) return <div className="workspace-page p-4 sm:p-6"><ListRecordView record={{...selectedReport,studentName:selectedReport.name,universityName:selectedReport.university,courseName:selectedReport.course,partnerName:selectedReport.agent}} title="Application report" onBack={()=>setSelectedReport(null)} /></div>;
+  if (selectedReport) return <div className="workspace-page p-4 sm:p-6"><ListRecordView record={{ ...selectedReport, studentName: selectedReport.name, universityName: selectedReport.university, courseName: selectedReport.course, partnerName: selectedReport.agent }} title="Application report" onBack={() => setSelectedReport(null)} /></div>;
   return (
     <div className="workspace-page flex-1 min-w-0 p-4 sm:p-6 space-y-6 bg-[#F0F2F5]">
       {/* Header */}
@@ -217,8 +218,8 @@ export default function AdminReport({
 
       {/* Query Results Table */}
       <div className="workspace-panel workspace-list-frame bg-white border border-[#E2E8F0] border-t-4 border-t-[#D99A1C] rounded-2xl shadow-xs overflow-hidden">
-<ListToolbar search={listSearch} onSearchChange={setListSearch} filters={[{key:'agent',label:'agents',value:selectedAgent,onChange:setSelectedAgent,options:['Direct',...availableAgents]},{key:'university',label:'universities',value:selectedUniversity,onChange:setSelectedUniversity,options:availableUniversities},{key:'country',label:'countries',value:selectedCountry,onChange:setSelectedCountry,options:availableCountries},{key:'status',label:'statuses',value:listStatus,onChange:setListStatus,options:serverList.facets.status || []}]} onReset={() => { setListSearch(''); setSelectedAgent('All'); setSelectedUniversity('All'); setSelectedCountry('All'); setListStatus('All'); }} loading={serverList.loading} error={serverList.error} onRetry={serverList.reload} />
-        
+        <ListToolbar search={listSearch} onSearchChange={setListSearch} filters={[{ key: 'agent', label: 'agents', value: selectedAgent, onChange: setSelectedAgent, options: ['Direct', ...availableAgents] }, { key: 'university', label: 'universities', value: selectedUniversity, onChange: setSelectedUniversity, options: availableUniversities }, { key: 'country', label: 'countries', value: selectedCountry, onChange: setSelectedCountry, options: availableCountries }, { key: 'status', label: 'statuses', value: listStatus, onChange: setListStatus, options: STATUS_STEPS }]} onReset={() => { setListSearch(''); setSelectedAgent('All'); setSelectedUniversity('All'); setSelectedCountry('All'); setListStatus('All'); }} loading={serverList.loading} error={serverList.error} onRetry={serverList.reload} />
+
         <div className="overflow-x-auto">
           {filteredApps.length > 0 ? (
             <table className="workspace-table w-full text-left border-collapse">
@@ -235,7 +236,7 @@ export default function AdminReport({
               </thead>
               <tbody className="divide-y divide-slate-100 text-xs font-semibold text-slate-700">
                 {filteredApps.map((app) => (
-                  <tr key={app.id || app.camsId} {...rowViewProps(()=>openReportApplication(app))} className="cursor-pointer hover:bg-[#F8FAFC] transition-colors duration-100">
+                  <tr key={app.id || app.camsId} {...rowViewProps(() => openReportApplication(app))} className="cursor-pointer hover:bg-[#F8FAFC] transition-colors duration-100">
                     <td className="px-6 py-4 font-bold text-[#2563EB]">{app.camsId}</td>
                     <td className="px-6 py-4 text-slate-950 font-black">{app.name}</td>
                     <td className="px-6 py-4">{app.agent}</td>
@@ -243,17 +244,16 @@ export default function AdminReport({
                     <td className="px-6 py-4 truncate max-w-[180px]">{app.course}</td>
                     <td className="px-6 py-4 whitespace-nowrap">{app.intake}</td>
                     <td className="px-6 py-4 text-right">
-                      <span className={`px-2 py-0.5 rounded-full text-[9px] font-extrabold border ${
-                        app.status === 'Offer Issued' || app.status === 'Processed'
-                          ? 'bg-emerald-50 text-emerald-700 border-emerald-100'
-                          : app.status === 'Pending' || app.status === 'Visa Pending'
+                      <span className={`px-2 py-0.5 rounded-full text-[9px] font-extrabold border ${app.status === 'Offer Issued' || app.status === 'Processed'
+                        ? 'bg-emerald-50 text-emerald-700 border-emerald-100'
+                        : app.status === 'Pending' || app.status === 'Visa Pending'
                           ? 'bg-amber-50 text-amber-700 border-amber-100'
                           : 'bg-indigo-50 text-indigo-700 border-indigo-100'
-                      }`}>
+                        }`}>
                         {app.status}
                       </span>
                     </td>
-                    <td className="text-right"><RowActions><ActionButton className="rounded-lg px-3 py-2 text-left text-xs font-semibold hover:bg-slate-50" onClick={()=>openReportApplication(app)}>View application</ActionButton></RowActions></td>
+                    <td className="text-right"><RowActions><ActionButton className="rounded-lg px-3 py-2 text-left text-xs font-semibold hover:bg-slate-50" onClick={() => openReportApplication(app)}>View application</ActionButton></RowActions></td>
                   </tr>
                 ))}
               </tbody>
@@ -268,7 +268,7 @@ export default function AdminReport({
             </div>
           )}
         </div>
-<ListPager list={serverList} page={listPage} onPageChange={setListPage} limit={listLimit} onLimitChange={setListLimit} />
+        <ListPager list={serverList} page={listPage} onPageChange={setListPage} limit={listLimit} onLimitChange={setListLimit} />
       </div>
     </div>
   );

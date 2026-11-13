@@ -4,8 +4,16 @@ import React, { useEffect, useState } from 'react';
 import API from '../api/axios';
 import { ActionButton, ActionForm } from './ActionControls';
 
-export default function PartnerDocumentRequests({ partnerId, onUpdate }) {
-  const [isOpen, setIsOpen] = useState(false);
+export default function PartnerDocumentRequests({
+  partnerId,
+  onUpdate,
+  isOpen: controlledIsOpen,
+  onToggleOpen,
+  hideButton = false
+}) {
+  const [internalIsOpen, setInternalIsOpen] = useState(false);
+  const isOpen = controlledIsOpen !== undefined ? controlledIsOpen : internalIsOpen;
+  const toggleOpen = onToggleOpen || (() => setInternalIsOpen(open => !open));
   const [partner, setPartner] = useState(null);
   const [names, setNames] = useState('');
   const [message, setMessage] = useState('');
@@ -27,7 +35,7 @@ export default function PartnerDocumentRequests({ partnerId, onUpdate }) {
     } catch (error) { setNotice(error.response?.data?.message || 'Unable to save. Please retry.'); }
     finally { setBusy(false); }
   }
-  const canRequest = partner && ['Pending', 'Waiting for Missing Document'].includes(partner.status);
+  const canRequest = partner && ['Pending', 'Waiting for Missing Document', 'Active'].includes(partner.status);
   async function download(doc) {
     try {
       const res = await API.get('/upload/download', { params: { url: doc.url, filename: doc.fileName }, responseType: 'blob' });
@@ -37,27 +45,35 @@ export default function PartnerDocumentRequests({ partnerId, onUpdate }) {
       setTimeout(() => URL.revokeObjectURL(url), 1000);
     } catch { setNotice('Unable to download this document. Please retry.'); }
   }
-  return <div className="space-y-4">
-    <ActionButton
-      type="button"
-      aria-expanded={isOpen}
-      aria-controls={`partner-document-requests-${partnerId}`}
-      onClick={() => setIsOpen(open => !open)}
-      className="inline-flex items-center gap-2 px-5 py-3 bg-amber-400 hover:bg-amber-500 text-slate-950 border border-amber-500 rounded-xl font-extrabold text-sm shadow-md shadow-amber-500/25 ring-2 ring-amber-200 ring-offset-2 transition-all focus-visible:outline-none focus-visible:ring-amber-600"
-    >
-      <svg aria-hidden="true" className="h-5 w-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-        <path d="M14 2v6h6M12 12v3M12 18h.01" />
-      </svg>
-      {isOpen ? 'Hide document requests' : 'Missing document request'}
-    </ActionButton>
-    {isOpen && <section id={`partner-document-requests-${partnerId}`} className="bg-white border border-slate-200 rounded-2xl p-5 space-y-4">
-    <h3 className="font-bold text-slate-900">Missing registration documents</h3>
+  return <div className={isOpen ? 'space-y-4' : ''}>
+    {!hideButton && (
+      <ActionButton
+        type="button"
+        aria-expanded={isOpen}
+        aria-controls={`partner-document-requests-${partnerId}`}
+        onClick={toggleOpen}
+        className="inline-flex items-center gap-2 px-5 py-3 bg-amber-400 hover:bg-amber-500 text-slate-950 border border-amber-500 rounded-xl font-extrabold text-sm shadow-md shadow-amber-500/25 ring-2 ring-amber-200 ring-offset-2 transition-all focus-visible:outline-none focus-visible:ring-amber-600"
+      >
+        <svg aria-hidden="true" className="h-5 w-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+          <path d="M14 2v6h6M12 12v3M12 18h.01" />
+        </svg>
+        {isOpen ? 'Hide document requests' : 'Missing document request'}
+      </ActionButton>
+    )}
+    {isOpen && <section id={`partner-document-requests-${partnerId}`} className="bg-white border border-slate-200 rounded-2xl p-5 space-y-4 shadow-sm animate-fade-in">
+    <h3 className="font-bold text-slate-900">Partner Missing Document Requests</h3>
     <p className="text-sm text-slate-600">Ask the agent to reply with attachments. Replies are addressed to the handling staff member and super admins. Download the reply attachments from your mailbox, then upload them below for review.</p>
     {notice && <p role="status" className="text-sm text-amber-800">{notice}</p>}
+    {!partner && <p className="text-xs text-slate-500">Loading document requests...</p>}
+    {partner && !canRequest && (
+      <p className="text-xs text-amber-700 font-semibold bg-amber-50 p-3 rounded-xl border border-amber-200">
+        Document requests are disabled for partners with status: {partner.status}
+      </p>
+    )}
     {canRequest && <ActionForm className="space-y-3" onSubmit={e => { e.preventDefault(); return run(() => API.post(`/partners/${partnerId}/document-requests`, { documents: names.split('\n').map(s => s.trim()).filter(Boolean), message })); }}>
-      <label className="block text-sm font-semibold">Missing documents (one per line)<textarea required maxLength={4000} value={names} onChange={e => setNames(e.target.value)} className="block w-full border rounded-lg p-2 mt-1" /></label>
-      <label className="block text-sm font-semibold">Instructions to agent<textarea maxLength={4000} value={message} onChange={e => setMessage(e.target.value)} className="block w-full border rounded-lg p-2 mt-1" /></label>
+      <label className="block text-sm font-semibold">Missing documents (one per line)<textarea required maxLength={4000} value={names} onChange={e => setNames(e.target.value)} className="block w-full border rounded-lg p-2 mt-1" placeholder="e.g. Updated Trade License&#10;GST Certificate" /></label>
+      <label className="block text-sm font-semibold">Instructions to agent<textarea maxLength={4000} value={message} onChange={e => setMessage(e.target.value)} className="block w-full border rounded-lg p-2 mt-1" placeholder="Please provide valid documents..." /></label>
       <ActionButton type="submit" disabled={busy} className="bg-amber-500 text-white font-bold rounded-lg px-4 py-2 disabled:opacity-50">Send document request</ActionButton>
     </ActionForm>}
     {partner?.documentRequests?.map(request => <article key={request._id} className="border rounded-xl p-4 space-y-2">

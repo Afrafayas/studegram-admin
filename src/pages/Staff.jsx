@@ -6,6 +6,7 @@ import SearchableSelect from '../components/SearchableSelect';
 import ValidatedInput from '../components/ValidatedInput';
 import AdminStaffDetails from '../components/AdminStaffDetails';
 import { ActionButton, ActionForm } from '../components/ActionControls';
+import Pagination from '../components/Pagination';
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useAuth } from '../context/AuthContext';
@@ -507,59 +508,15 @@ export default function Staff({ staffList, setStaffList, applications }) {
         </div>
 
         {/* Pagination Controls */}
-        {totalItems > 0 && (
-          <div className="px-6 py-4 bg-slate-50 border-t border-[#E2E8F0] flex flex-col sm:flex-row items-center justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <span className="text-xs font-semibold text-slate-500">Rows per page:</span>
-              <SearchableSelect
-                value={itemsPerPage}
-                onChange={(e) => {
-                  setItemsPerPage(Number(e.target.value));
-                  setCurrentPage(1);
-                }}
-                className="bg-white border border-slate-200 rounded-lg px-2.5 py-1 text-xs font-bold text-slate-700 focus:outline-none focus:border-[#D99A1C] cursor-pointer"
-              >
-                <option value={5}>5</option>
-                <option value={10}>10</option>
-                <option value={20}>20</option>
-                <option value={50}>50</option>
-                <option value={100}>100</option>
-              </SearchableSelect>
-            </div>
-
-            <div className="flex items-center gap-1.5">
-              <ActionButton
-                disabled={currentPage === 1}
-                onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-                className="px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-bold bg-white text-slate-600 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer"
-              >
-                ◀ Prev
-              </ActionButton>
-
-              {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
-                <ActionButton
-                  key={page}
-                  onClick={() => setCurrentPage(page)}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-extrabold transition-all cursor-pointer ${
-                    currentPage === page
-                      ? 'bg-[#D99A1C] text-white shadow-xs'
-                      : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-100'
-                  }`}
-                >
-                  {page}
-                </ActionButton>
-              ))}
-
-              <ActionButton
-                disabled={currentPage === totalPages}
-                onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-                className="px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-bold bg-white text-slate-600 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer"
-              >
-                Next ▶
-              </ActionButton>
-            </div>
-          </div>
-        )}
+        <Pagination
+          totalItems={totalItems}
+          currentPage={currentPage}
+          setCurrentPage={setCurrentPage}
+          itemsPerPage={itemsPerPage}
+          setItemsPerPage={setItemsPerPage}
+          totalPages={totalPages}
+          itemName="staff members"
+        />
       </div>
 
       </>}

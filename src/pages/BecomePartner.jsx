@@ -9,6 +9,7 @@ import ValidatedInput from '../components/ValidatedInput';
 import { getDisplayId } from '../utils/displayId';
 import PartnerDocumentRequests from '../components/PartnerDocumentRequests';
 import { ActionButton, ActionForm } from '../components/ActionControls';
+import Pagination from '../components/Pagination';
 import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import API from '../api/axios';
@@ -63,6 +64,7 @@ export default function BecomePartner({ clients = [], setClients, applications =
   const [onboardingDocuments, setOnboardingDocuments] = useState([]);
   const [hasQueuedOnboardingDocuments, setHasQueuedOnboardingDocuments] = useState(false);
   const [hasQueuedEditDocuments, setHasQueuedEditDocuments] = useState(false);
+  const [isDocRequestsOpen, setIsDocRequestsOpen] = useState(false);
   const toast = useToast();
   const { addAuditLog } = useAuth();
   const dismissedTargetRef = useRef(false);
@@ -72,6 +74,7 @@ export default function BecomePartner({ clients = [], setClients, applications =
     dismissedTargetRef.current = true;
     dismissedPartnerTargetRef.current = initialSelectedPartnerId;
     setSingleViewPartner(null);
+    setIsDocRequestsOpen(false);
     setSubView('directory');
     localStorage.removeItem('studegram_admin_single_view_partner_id');
     localStorage.removeItem('studegram_admin_single_view_partner');
@@ -780,59 +783,15 @@ export default function BecomePartner({ clients = [], setClients, applications =
             </div>
 
             {/* Pagination Footer */}
-            {totalItems > 0 && (
-              <div className="px-6 py-4 bg-slate-50 border-t border-[#E2E8F0] flex flex-col sm:flex-row items-center justify-between gap-4">
-                <div className="flex items-center gap-3">
-                  <span className="text-xs font-semibold text-slate-500">Rows per page:</span>
-                  <SearchableSelect
-                    value={itemsPerPage}
-                    onChange={(e) => {
-                      setItemsPerPage(Number(e.target.value));
-                      setCurrentPage(1);
-                    }}
-                    className="bg-white border border-slate-200 rounded-lg px-2.5 py-1 text-xs font-bold text-slate-700 focus:outline-none focus:border-[#D99A1C] cursor-pointer"
-                  >
-                    <option value={5}>5</option>
-                    <option value={10}>10</option>
-                    <option value={20}>20</option>
-                    <option value={50}>50</option>
-                    <option value={100}>100</option>
-                  </SearchableSelect>
-                </div>
-
-                <div className="flex items-center gap-1.5">
-                  <ActionButton
-                    disabled={currentPage === 1}
-                    onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-                    className="px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-bold bg-white text-slate-600 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer"
-                  >
-                    ◀ Prev
-                  </ActionButton>
-
-                  {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
-                    <ActionButton
-                      key={page}
-                      onClick={() => setCurrentPage(page)}
-                      className={`px-3 py-1.5 rounded-lg text-xs font-extrabold transition-all cursor-pointer ${
-                        currentPage === page
-                          ? 'bg-[#D99A1C] text-white shadow-xs'
-                          : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-100'
-                      }`}
-                    >
-                      {page}
-                    </ActionButton>
-                  ))}
-
-                  <ActionButton
-                    disabled={currentPage === totalPages}
-                    onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-                    className="px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-bold bg-white text-slate-600 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer"
-                  >
-                    Next ▶
-                  </ActionButton>
-                </div>
-              </div>
-            )}
+            <Pagination
+              totalItems={totalItems}
+              currentPage={currentPage}
+              setCurrentPage={setCurrentPage}
+              itemsPerPage={itemsPerPage}
+              setItemsPerPage={setItemsPerPage}
+              totalPages={totalPages}
+              itemName="partners"
+            />
           </div>
         </div>
       )}
@@ -849,7 +808,24 @@ export default function BecomePartner({ clients = [], setClients, applications =
               >
                 <span>← Back to Directory</span>
               </ActionButton>
-              
+
+              <div className="space-y-0.5">
+                <div className="flex items-center gap-2">
+                  <h1 className="text-lg font-black text-slate-900 tracking-tight">
+                    {singleViewPartner.name || singleViewPartner.companyName || 'Partner Dossier'}
+                  </h1>
+                  {singleViewPartner.partnerType && (
+                    <span className="px-2 py-0.5 rounded-md text-[10px] font-extrabold uppercase tracking-wider bg-slate-100 text-slate-700 border border-slate-200">
+                      {singleViewPartner.partnerType}
+                    </span>
+                  )}
+                </div>
+                {singleViewPartner.companyName && singleViewPartner.companyName !== singleViewPartner.name && (
+                  <p className="text-xs font-bold text-[#D99A1C]">
+                    🏢 {singleViewPartner.companyName}
+                  </p>
+                )}
+              </div>
             </div>
 
             {/* Check & Approve Button Bar */}
@@ -863,6 +839,23 @@ export default function BecomePartner({ clients = [], setClients, applications =
               }`}>
                 {singleViewPartner.status === 'Active' ? '✓ Approved & Active' : singleViewPartner.status}
               </span>
+
+              {/* Missing Document Request Button */}
+              <ActionButton
+                type="button"
+                onClick={() => setIsDocRequestsOpen(prev => !prev)}
+                className={`px-4 py-2 border rounded-xl font-extrabold text-xs transition-all cursor-pointer flex items-center gap-1.5 shadow-2xs ${
+                  isDocRequestsOpen
+                    ? 'bg-amber-400 hover:bg-amber-500 text-slate-950 border-amber-500 ring-2 ring-amber-200'
+                    : 'bg-amber-50 hover:bg-amber-100 text-amber-900 border-amber-300'
+                }`}
+              >
+                <svg aria-hidden="true" className="h-4 w-4 shrink-0 text-amber-700" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                  <path d="M14 2v6h6M12 12v3M12 18h.01" />
+                </svg>
+                <span>{isDocRequestsOpen ? 'Hide document requests' : 'Missing document request'}</span>
+              </ActionButton>
 
               {singleViewPartner.status === 'Pending' && (
                 <ActionButton
@@ -921,10 +914,17 @@ export default function BecomePartner({ clients = [], setClients, applications =
             </div>
           </div>
 
-          <PartnerDocumentRequests key={singleViewPartner.id || singleViewPartner._id} partnerId={singleViewPartner.id || singleViewPartner._id} onUpdate={updated => {
-            setSingleViewPartner(previous => ({ ...previous, ...updated }));
-            if (setClients) setClients(previous => previous.map(client => String(client.id || client._id) === String(updated._id) ? { ...client, ...updated } : client));
-          }} />
+          <PartnerDocumentRequests
+            key={singleViewPartner.id || singleViewPartner._id}
+            partnerId={singleViewPartner.id || singleViewPartner._id}
+            isOpen={isDocRequestsOpen}
+            onToggleOpen={() => setIsDocRequestsOpen(prev => !prev)}
+            hideButton={true}
+            onUpdate={updated => {
+              setSingleViewPartner(previous => ({ ...previous, ...updated }));
+              if (setClients) setClients(previous => previous.map(client => String(client.id || client._id) === String(updated._id) ? { ...client, ...updated } : client));
+            }}
+          />
 
           {/* Verification Status Banner if Pending */}
           {singleViewPartner.status === 'Pending' && (
@@ -961,9 +961,29 @@ export default function BecomePartner({ clients = [], setClients, applications =
             {/* Left Column: Full Credentials */}
             <div className="space-y-6 lg:col-span-1">
               <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm space-y-5">
-                
+                <div className="border-b border-slate-100 pb-3">
+                  <span className="text-[10px] font-black uppercase tracking-widest text-[#D99A1C] block">Partner Profile</span>
+                  <h3 className="text-base font-black text-slate-900 mt-1">
+                    {singleViewPartner.name || singleViewPartner.companyName}
+                  </h3>
+                  {singleViewPartner.companyName && singleViewPartner.companyName !== singleViewPartner.name && (
+                    <p className="text-xs font-semibold text-slate-500 mt-0.5">
+                      {singleViewPartner.companyName}
+                    </p>
+                  )}
+                </div>
 
                 <div className="space-y-3.5 text-xs">
+                  <div className="flex justify-between py-1 border-b border-slate-100">
+                    <span className="text-slate-400 font-bold">Partner Name:</span>
+                    <span className="font-bold text-slate-800">{singleViewPartner.name || 'N/A'}</span>
+                  </div>
+                  {singleViewPartner.companyName && (
+                    <div className="flex justify-between py-1 border-b border-slate-100">
+                      <span className="text-slate-400 font-bold">Company / Agency:</span>
+                      <span className="font-bold text-slate-800">{singleViewPartner.companyName}</span>
+                    </div>
+                  )}
                   <div className="flex justify-between py-1 border-b border-slate-100">
                     <span className="text-slate-400 font-bold">Partner Code:</span>
                     <span className="font-mono font-black text-blue-600 bg-blue-50 px-2 py-0.5 rounded border border-blue-100">{singleViewPartner.partnerCode}</span>
@@ -1024,7 +1044,7 @@ export default function BecomePartner({ clients = [], setClients, applications =
                       const docTitle = typeof doc === 'string' ? doc : (doc.name || doc.title || doc.fileName || `Document ${dIdx + 1}`);
                       const docFileName = typeof doc === 'string' ? doc : (doc.fileName || doc.title || 'Attached Proof');
                       const rawUrl = typeof doc === 'object' ? doc.previewUrl : null;
-                      const isImg = (typeof rawUrl === 'string' && (rawUrl.startsWith('data:image/') || docFileName.match(/\.(png|jpg|jpeg|gif|svg|webp)$/i)));
+                      const isImg = (typeof rawUrl === 'string' && (rawUrl.startsWith('data:image/') || docFileName.match(/\.(png|jpg|jpeg|gif|svg|webp|avif|bmp|jfif)(?:[?#]|$)/i) || rawUrl.match(/\.(png|jpe?g|gif|svg|webp|avif|bmp|jfif)(?:[?#]|$)/i)));
                       const docBlobUrl = resolveDocumentUrl(rawUrl);
                       if (!docBlobUrl) return null;
 
@@ -1545,7 +1565,9 @@ export default function BecomePartner({ clients = [], setClients, applications =
 
             <div className="flex-1 overflow-auto bg-slate-50 rounded-2xl border border-slate-200 p-2 sm:p-3 flex items-center justify-center my-3 min-h-[300px]">
               {previewModalDoc.previewUrl ? (
-                (previewModalDoc.type === 'image' || (typeof previewModalDoc.fileName === 'string' && previewModalDoc.fileName.match(/\.(png|jpg|jpeg|gif|svg|webp)$/i))) ? (
+                (previewModalDoc.type === 'image' || 
+                 (typeof previewModalDoc.fileName === 'string' && previewModalDoc.fileName.match(/\.(png|jpg|jpeg|gif|svg|webp|avif|bmp|jfif)(?:[?#]|$)/i)) ||
+                 (typeof previewModalDoc.previewUrl === 'string' && previewModalDoc.previewUrl.match(/\.(png|jpe?g|gif|svg|webp|avif|bmp|jfif)(?:[?#]|$)/i))) ? (
                   <img
                     src={previewModalDoc.previewUrl}
                     alt={previewModalDoc.title}
