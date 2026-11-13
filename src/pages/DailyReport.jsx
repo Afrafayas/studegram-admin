@@ -2,47 +2,109 @@ import { ActionButton } from '../components/ActionControls';
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 
-export default function DailyReport({ applications, onNavigateToBecomePartner, onNavigateToCreateApplication, onNavigateToApplications }) {
+export default function DailyReport({ applications,
+  onNavigateToBecomePartner,
+  onNavigateToCreateApplication,
+  onNavigateToApplications,
+  onOpenApplicationDetail }) {
   const { currentUser } = useAuth();
   const [hoveredBarIndex, setHoveredBarIndex] = useState(null);
   const [hoveredPoint, setHoveredPoint] = useState(null);
 
   // Compute stats dynamically based on scoped applications to demonstrate RBAC scoping
   // Compute stats dynamically based on actual applications
-  const totalAppsToday = (applications || []).filter(app => new Date(app.createdAt || app.dateAdded).toDateString() === new Date().toDateString()).length;
-  const activeLeads = (applications || []).filter(app => !/closed|enrolled|rejected|withdrawn/i.test(app.status || app.secondaryStatus || '')).length;
-  const successfulApplications = (applications || []).filter(app =>
-    ['visa approved', 'enrolled / closed'].includes(String(app.status || app.secondaryStatus || '').trim().toLowerCase())
-  ).length;
+  // Filtered lists for each card
+  const todayApps = (applications || []).filter(app => new Date(app.createdAt || app.dateAdded).toDateString() === new Date().toDateString());
+  const activeLeadsApps = (applications || []).filter(app => !/closed|enrolled|rejected|withdrawn/i.test(app.status || app.secondaryStatus || ''));
+  const successfulApps = (applications || []).filter(app => {
+    const s = String(app.status || app.secondaryStatus || '').trim().toLowerCase();
+    return s.includes('enrolled') || s.includes('visa received') || s.includes('visa approved');
+  });
+  const pendingApps = (applications || []).filter(a => a.secondaryStatus === 'Pending' || a.secondaryStatus === 'Document Verification' || a.status === 'Submitted');
+
+  // Counts
+  const totalAppsToday = todayApps.length;
+  const activeLeads = activeLeadsApps.length;
+  const successfulApplications = successfulApps.length;
   const successRateValue = applications?.length ? Math.round((successfulApplications / applications.length) * 100) : 0;
   const successRate = `${successRateValue}%`;
-  const pendingVerification = applications ? applications.filter(a => a.secondaryStatus === 'Pending' || a.secondaryStatus === 'Document Verification').length : 0;
+  const pendingVerification = pendingApps.length;
+
+  // Generic click handler for cards
+  const handleCardClick = (filteredList, filterType) => {
+    if (filteredList && filteredList.length === 1) {
+      // Exactly 1 -> redirect to application detail page
+      const singleApp = filteredList[0];
+      const appId = singleApp.id || singleApp._id;
+      if (onOpenApplicationDetail && appId) {
+        onOpenApplicationDetail(appId);
+        return;
+      }
+    }
+    // 0 or > 1 -> redirect to applications list page with filter
+    if (onNavigateToApplications) {
+      onNavigateToApplications(filterType);
+    }
+  };
 
   const timelineData = Array.from({ length: 7 }, (_, index) => {
     const date = new Date();
     date.setDate(date.getDate() - (6 - index));
-    const count = (applications || []).filter(app => {
+    const dateString = date.toDateString();
+    const formattedDate = date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+    const dayApps = (applications || []).filter(app => {
       const created = new Date(app.createdAt || app.dateAdded);
-      return !Number.isNaN(created.getTime()) && created.toDateString() === date.toDateString();
-    }).length;
-    return { day: date.toLocaleDateString('en-GB', { weekday: 'short' }), count };
+      return !Number.isNaN(created.getTime()) && created.toDateString() === dateString;
+    });
+    return {
+      day: date.toLocaleDateString('en-GB', { weekday: 'short' }),
+      dateString,
+      formattedDate,
+      count: dayApps.length,
+      apps: dayApps,
+    };
   });
 
+  const handleTimelinePointClick = (point) => {
+    if (onNavigateToApplications) {
+      onNavigateToApplications({
+        type: 'date',
+        dateString: point.dateString,
+        label: `${point.day}, ${point.formattedDate}`,
+      });
+    }
+  };
+
   // Dynamic university breakdown
-  const univCounts = {};
+  const univMap = {};
   if (applications) {
     applications.forEach(a => {
-      const uName = a.universityName || 'Other';
-      univCounts[uName] = (univCounts[uName] || 0) + 1;
+      const uName = a.universityName || a.university?.name || (typeof a.university === 'string' && a.university ? a.university : 'N/A');
+      if (!univMap[uName]) {
+        univMap[uName] = { name: uName, apps: [], count: 0 };
+      }
+      univMap[uName].apps.push(a);
+      univMap[uName].count += 1;
     });
   }
 
-  const universityData = Object.keys(univCounts).map((name, idx) => ({
-    name,
-    count: univCounts[name],
-    pct: applications?.length > 0 ? Math.round((univCounts[name] / applications.length) * 100) : 0,
-    color: idx % 2 === 0 ? 'from-indigo-500 to-cyan-400' : 'from-blue-500 to-indigo-500'
-  }));
+  const universityData = Object.values(univMap)
+    .sort((a, b) => b.count - a.count)
+    .map((item, idx) => ({
+      ...item,
+      pct: applications?.length > 0 ? Math.round((item.count / applications.length) * 100) : 0,
+      color: idx % 2 === 0 ? 'from-indigo-500 to-cyan-400' : 'from-blue-500 to-indigo-500',
+    }));
+
+  const handleUniversityClick = (univ) => {
+    if (onNavigateToApplications) {
+      onNavigateToApplications({
+        type: 'university',
+        universityName: univ.name,
+        label: univ.name === 'N/A' ? 'No University Assigned (N/A)' : univ.name,
+      });
+    }
+  };
 
   const width = 500;
   const height = 150;
@@ -170,14 +232,14 @@ export default function DailyReport({ applications, onNavigateToBecomePartner, o
       {/* Metric Cards Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Card 1 */}
-        <div 
-          onClick={() => onNavigateToApplications && onNavigateToApplications()}
+        <div
+          onClick={() => handleCardClick(todayApps, 'today')}
           className="bg-white border border-[#E2E8F0] border-t-4 border-t-[#D99A1C] rounded-2xl p-5 shadow-xs flex flex-col justify-between group transition-all duration-150 cursor-pointer hover:shadow-md"
           title="Click to view Applications Registry"
         >
           <div className="flex justify-between items-start">
             <span className="text-[10px] font-extrabold uppercase tracking-widest text-slate-400 group-hover:text-[#D99A1C] transition-colors">Applications Filed</span>
-            <span className="text-[#D99A1C] bg-[#D99A1C]/10 text-[10px] font-bold px-2 py-0.5 rounded-full border border-[#D99A1C]/25">+12.4%</span>
+            {/* <span className="text-[#D99A1C] bg-[#D99A1C]/10 text-[10px] font-bold px-2 py-0.5 rounded-full border border-[#D99A1C]/25">+12.4%</span> */}
           </div>
           <div className="mt-4 flex items-baseline gap-2">
             <span className="text-3xl font-black text-slate-900 tracking-tight">{totalAppsToday}</span>
@@ -189,10 +251,10 @@ export default function DailyReport({ applications, onNavigateToBecomePartner, o
         </div>
 
         {/* Card 2 */}
-        <div className="bg-white border border-[#E2E8F0] border-t-4 border-t-[#2563EB] rounded-2xl p-5 shadow-xs flex flex-col justify-between group transition-all duration-150">
-          <div className="flex justify-between items-start">
+        <div onClick={() => handleCardClick(activeLeadsApps, 'active')} className="bg-white border border-[#E2E8F0] border-t-4 border-t-[#2563EB] rounded-2xl p-5 shadow-xs flex flex-col justify-between group transition-all duration-150 cursor-pointer hover:shadow-md">
+          <div className="flex justify-between items-start  ">
             <span className="text-[10px] font-extrabold uppercase tracking-widest text-slate-400">Active Leads</span>
-            <span className="text-blue-600 bg-blue-50 text-[10px] font-bold px-2 py-0.5 rounded-full border border-blue-100">+8.1%</span>
+            {/* <span className="text-blue-600 bg-blue-50 text-[10px] font-bold px-2 py-0.5 rounded-full border border-blue-100">+8.1%</span> */}
           </div>
           <div className="mt-4 flex items-baseline gap-2">
             <span className="text-3xl font-black text-slate-900 tracking-tight">{activeLeads}</span>
@@ -204,7 +266,7 @@ export default function DailyReport({ applications, onNavigateToBecomePartner, o
         </div>
 
         {/* Card 3 */}
-        <div className="bg-white border border-[#E2E8F0] border-t-4 border-t-[#D99A1C] rounded-2xl p-5 shadow-xs flex flex-col justify-between transition-all duration-150">
+        <div onClick={() => handleCardClick(successfulApps, 'success')} className="bg-white border border-[#E2E8F0] border-t-4 border-t-[#D99A1C] rounded-2xl p-5 shadow-xs flex flex-col justify-between transition-all duration-150 cursor-pointer hover:shadow-md">
           <div className="flex justify-between items-start">
             <span className="text-[10px] font-extrabold uppercase tracking-widest text-slate-400">Success Rate</span>
             <span className="text-amber-600 bg-amber-50 text-[10px] font-bold px-2 py-0.5 rounded-full border border-amber-100">Visa / Enrolled</span>
@@ -219,7 +281,7 @@ export default function DailyReport({ applications, onNavigateToBecomePartner, o
         </div>
 
         {/* Card 4 */}
-        <div className="bg-white border border-[#EF4444]/20 border-t-4 border-t-[#EF4444] rounded-2xl p-5 shadow-xs flex flex-col justify-between transition-all duration-150 bg-red-50/5">
+        <div onClick={() => handleCardClick(pendingApps, 'pending')} className="bg-white border border-[#EF4444]/20 border-t-4 border-t-[#EF4444] rounded-2xl p-5 shadow-xs flex flex-col justify-between transition-all duration-150 bg-red-50/5 cursor-pointer hover:shadow-md">
           <div className="flex justify-between items-start">
             <span className="text-[10px] font-extrabold uppercase tracking-widest text-slate-500">Pending Review</span>
             <span className="text-amber-600 bg-amber-50 text-[10px] font-bold px-2 py-0.5 rounded-full border border-amber-100">Immediate Action</span>
@@ -259,15 +321,15 @@ export default function DailyReport({ applications, onNavigateToBecomePartner, o
                 {[0, 25, 50, 75, 100].map((yVal) => {
                   const y = padding + (yVal / 100) * (height - padding * 2);
                   return (
-                    <line 
+                    <line
                       key={yVal}
-                      x1={padding} 
-                      y1={y} 
-                      x2={width - padding} 
-                      y2={y} 
-                      stroke="#E2E8F0" 
-                      strokeWidth="1" 
-                      strokeDasharray="4 4" 
+                      x1={padding}
+                      y1={y}
+                      x2={width - padding}
+                      y2={y}
+                      stroke="#E2E8F0"
+                      strokeWidth="1"
+                      strokeDasharray="4 4"
                     />
                   );
                 })}
@@ -276,37 +338,76 @@ export default function DailyReport({ applications, onNavigateToBecomePartner, o
                 <path d={linePath} fill="none" stroke="#6366F1" strokeWidth="2.5" strokeLinecap="round" />
 
                 {points.map((p) => (
-                  <circle
-                    key={p.day}
-                    cx={p.x}
-                    cy={p.y}
-                    r={hoveredPoint === p.index ? 5.5 : 4}
-                    fill={hoveredPoint === p.index ? '#06B6D4' : '#6366F1'}
-                    stroke="white"
-                    strokeWidth="2"
-                    className="cursor-pointer transition-all duration-150"
+                  <g
+                    key={p.dateString || p.day}
+                    className="cursor-pointer"
+                    onClick={() => handleTimelinePointClick(p)}
                     onMouseEnter={() => setHoveredPoint(p.index)}
                     onMouseLeave={() => setHoveredPoint(null)}
-                  />
+                  >
+                    {/* Invisible larger hit area for easy clicking */}
+                    <circle
+                      cx={p.x}
+                      cy={p.y}
+                      r={14}
+                      fill="transparent"
+                    />
+                    {/* Hover halo */}
+                    {hoveredPoint === p.index && (
+                      <circle
+                        cx={p.x}
+                        cy={p.y}
+                        r={9}
+                        fill="#06B6D4"
+                        fillOpacity="0.3"
+                      />
+                    )}
+                    {/* Visible point */}
+                    <circle
+                      cx={p.x}
+                      cy={p.y}
+                      r={hoveredPoint === p.index ? 6 : 4}
+                      fill={hoveredPoint === p.index ? '#06B6D4' : '#6366F1'}
+                      stroke="white"
+                      strokeWidth="2"
+                      className="transition-all duration-150"
+                    />
+                  </g>
                 ))}
               </svg>
 
               {hoveredPoint !== null && (
-                <div 
-                  className="absolute bg-slate-900 text-white rounded-lg px-2.5 py-1 text-[10px] font-bold shadow-lg pointer-events-none transform -translate-x-1/2 -translate-y-full mb-2"
+                <div
+                  className="absolute bg-slate-900 text-white rounded-xl px-3 py-2 text-xs font-bold shadow-xl pointer-events-none transform -translate-x-1/2 -translate-y-full mb-3 z-30 select-none border border-slate-700 whitespace-nowrap"
                   style={{
                     left: `${(points[hoveredPoint].x / width) * 100}%`,
-                    top: `${(points[hoveredPoint].y / height) * 100 - 15}%`,
+                    top: `${(points[hoveredPoint].y / height) * 100 - 10}%`,
                   }}
                 >
-                  {points[hoveredPoint].count} Apps
+                  <div className="text-[10px] text-slate-400 font-semibold">{points[hoveredPoint].day}, {points[hoveredPoint].formattedDate}</div>
+                  <div className="text-white font-extrabold text-xs">
+                    {points[hoveredPoint].count} Application{points[hoveredPoint].count === 1 ? '' : 's'} Filed
+                  </div>
+                  <div className="text-[9px] text-indigo-300 font-medium mt-0.5">Click to view filed list →</div>
                 </div>
               )}
             </div>
 
             <div className="flex justify-between px-6 pt-2 text-[10px] font-extrabold text-slate-400">
-              {timelineData.map(d => (
-                <span key={d.day}>{d.day}</span>
+              {timelineData.map((d, idx) => (
+                <button
+                  key={d.dateString || d.day}
+                  type="button"
+                  onClick={() => handleTimelinePointClick(d)}
+                  onMouseEnter={() => setHoveredPoint(idx)}
+                  onMouseLeave={() => setHoveredPoint(null)}
+                  className={`hover:text-indigo-600 transition-colors cursor-pointer px-1.5 py-0.5 rounded ${
+                    hoveredPoint === idx ? 'text-indigo-600 font-black bg-indigo-50' : ''
+                  }`}
+                  title={`View applications filed on ${d.day}, ${d.formattedDate}`}
+                >
+                  {d.day}
+                </button>
               ))}
             </div>
           </div>
@@ -324,19 +425,23 @@ export default function DailyReport({ applications, onNavigateToBecomePartner, o
 
             <div className="space-y-4">
               {universityData.map((univ, index) => (
-                <div 
-                  key={univ.name} 
-                  className="space-y-1 cursor-pointer"
+                <div
+                  key={univ.name}
+                  onClick={() => handleUniversityClick(univ)}
+                  className="space-y-1.5 cursor-pointer p-2 -mx-2 rounded-xl hover:bg-slate-50 transition-all group select-none"
+                  title={`Click to view ${univ.count} application(s) for ${univ.name}`}
                   onMouseEnter={() => setHoveredBarIndex(index)}
                   onMouseLeave={() => setHoveredBarIndex(null)}
                 >
                   <div className="flex justify-between text-xs font-bold text-slate-800">
-                    <span className="truncate">{univ.name}</span>
-                    <span className="text-indigo-600">{univ.count} files ({univ.pct}%)</span>
+                    <span className="truncate group-hover:text-indigo-600 transition-colors">{univ.name}</span>
+                    <span className="text-indigo-600 font-extrabold shrink-0 ml-2 group-hover:translate-x-0.5 transition-transform inline-flex items-center gap-1">
+                      {univ.count} file{univ.count === 1 ? '' : 's'} ({univ.pct}%) →
+                    </span>
                   </div>
-                  
+
                   <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
-                    <div 
+                    <div
                       className={`h-full bg-gradient-to-r ${univ.color} rounded-full transition-all duration-500`}
                       style={{ width: `${univ.pct}%`, opacity: hoveredBarIndex === index ? 1 : 0.85 }}
                     />

@@ -8,6 +8,7 @@ import SearchableSelect from '../components/SearchableSelect';
 import ValidatedInput from '../components/ValidatedInput';
 import { getDisplayId } from '../utils/displayId';
 import { ActionButton, ActionForm } from '../components/ActionControls';
+import Pagination from '../components/Pagination';
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useAuth } from '../context/AuthContext';
@@ -15,6 +16,35 @@ import ApplicationChatDrawer from '../components/ApplicationChatDrawer';
 import { useToast } from '../context/ToastContext';
 import API from '../api/axios';
 import { resolveDocumentUrl, documentFileName, downloadApplicationDocument } from '../utils/applicationDocuments';
+
+// Smart Document Viewer: Images are beautifully centered with object-contain (no scrollbars), while PDFs use iframe
+function SmartDocViewer({ url, title, isModal = false, isImage = false }) {
+  const isExplicitPdf = /\.pdf(?:[?#]|$)/i.test(url) || (url && url.toLowerCase().includes('application/pdf'));
+  const [useIframe, setUseIframe] = useState(isExplicitPdf && !isImage);
+
+  useEffect(() => {
+    setUseIframe(isExplicitPdf && !isImage);
+  }, [url, isImage, isExplicitPdf]);
+
+  if (useIframe) {
+    return (
+      <iframe
+        src={url}
+        title={title}
+        className="w-full h-full rounded-xl border-0 bg-white"
+      />
+    );
+  }
+
+  return (
+    <img
+      src={url}
+      alt={title}
+      className={`${isModal ? 'max-h-[65vh]' : 'max-h-full'} max-w-full object-contain mx-auto my-auto rounded-lg shadow-2xs block`}
+      onError={() => setUseIframe(true)}
+    />
+  );
+}
 
 export default function Students({ clients = [], setClients, applications = [], intakes = [], initialSelectedStudentId = null, onNavigateToApplication }) {
   const toast = useToast();
@@ -92,6 +122,23 @@ export default function Students({ clients = [], setClients, applications = [], 
       }
       return false;
     });
+  };
+
+  // Get dynamic display status for student (e.g. Paid Students vs Lead vs Active)
+  const getStudentDisplayStatus = (student) => {
+    if (!student) return 'Lead';
+    if (student.listFields?.paidStatus === 'Paid Students' || student.paidStatus === 'Paid Students') {
+      return 'Paid Students';
+    }
+    const sApps = getStudentApplications(student);
+    const hasPaidApp = sApps.some(app => 
+      app.status === 'Paid Students' || 
+      app.paymentStatus === 'Paid' || 
+      app.status === 'Fees Paid' || 
+      app.secondaryStatus === 'Fees Paid'
+    );
+    if (hasPaidApp) return 'Paid Students';
+    return student.status || 'Lead';
   };
 
   // Email Student Modal State
@@ -602,13 +649,24 @@ support@unigather.app`;
                             })()}
                           </td>
                           <td className="px-6 py-4 text-center">
-                            <span className={`px-2 py-0.5 border rounded-full text-[9px] font-extrabold ${
-                              student.status === 'Active' 
-                                ? 'bg-emerald-50 text-emerald-700 border-emerald-100' 
-                                : 'bg-rose-50 text-rose-700 border-rose-100'
-                            }`}>
-                              {student.status}
-                            </span>
+                            {(() => {
+                              const displayStatus = getStudentDisplayStatus(student);
+                              const isPaid = displayStatus === 'Paid Students';
+                              const isActive = displayStatus === 'Active';
+                              const isLead = displayStatus === 'Lead';
+
+                              return (
+                                <span className={`px-2.5 py-0.5 border rounded-full text-[9px] font-black uppercase tracking-wider ${
+                                  isPaid || isActive
+                                    ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                                    : isLead
+                                      ? 'bg-amber-50 text-amber-700 border-amber-200'
+                                      : 'bg-rose-50 text-rose-700 border-rose-200'
+                                }`}>
+                                  {displayStatus}
+                                </span>
+                              );
+                            })()}
                           </td>
                           <td className="px-6 py-4 text-right pr-6" onClick={(e) => e.stopPropagation()}>
                             <ActionMenu
@@ -655,59 +713,15 @@ support@unigather.app`;
             </div>
 
             {/* Pagination Footer */}
-            {totalItems > 0 && (
-              <div className="px-6 py-4 bg-slate-50 border-t border-[#E2E8F0] flex flex-col sm:flex-row items-center justify-between gap-4">
-                <div className="flex items-center gap-3">
-                  <span className="text-xs font-semibold text-slate-500">Rows per page:</span>
-                  <SearchableSelect
-                    value={itemsPerPage}
-                    onChange={(e) => {
-                      setItemsPerPage(Number(e.target.value));
-                      setCurrentPage(1);
-                    }}
-                    className="bg-white border border-slate-200 rounded-lg px-2.5 py-1 text-xs font-bold text-slate-700 focus:outline-none focus:border-[#D99A1C] cursor-pointer"
-                  >
-                    <option value={5}>5</option>
-                    <option value={10}>10</option>
-                    <option value={20}>20</option>
-                    <option value={50}>50</option>
-                    <option value={100}>100</option>
-                  </SearchableSelect>
-                </div>
-
-                <div className="flex items-center gap-1.5">
-                  <ActionButton
-                    disabled={currentPage === 1}
-                    onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-                    className="px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-bold bg-white text-slate-600 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer"
-                  >
-                    ◀ Prev
-                  </ActionButton>
-
-                  {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
-                    <ActionButton
-                      key={page}
-                      onClick={() => setCurrentPage(page)}
-                      className={`px-3 py-1.5 rounded-lg text-xs font-extrabold transition-all cursor-pointer ${
-                        currentPage === page
-                          ? 'bg-[#D99A1C] text-white shadow-xs'
-                          : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-100'
-                      }`}
-                    >
-                      {page}
-                    </ActionButton>
-                  ))}
-
-                  <ActionButton
-                    disabled={currentPage === totalPages}
-                    onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-                    className="px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-bold bg-white text-slate-600 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer"
-                  >
-                    Next ▶
-                  </ActionButton>
-                </div>
-              </div>
-            )}
+            <Pagination
+              totalItems={totalItems}
+              currentPage={currentPage}
+              setCurrentPage={setCurrentPage}
+              itemsPerPage={itemsPerPage}
+              setItemsPerPage={setItemsPerPage}
+              totalPages={totalPages}
+              itemName="students"
+            />
           </div>
         </>
       ) : (
@@ -746,13 +760,21 @@ support@unigather.app`;
                           <span className="text-xs font-mono font-bold bg-blue-50 text-blue-700 px-2.5 py-0.5 rounded-md border border-blue-200">
                             {studentCode}
                           </span>
-                          <span className={`px-2.5 py-0.5 border rounded-full text-[10px] font-black ${
-                            singleViewStudent.status === 'Active' 
-                              ? 'bg-emerald-50 text-emerald-700 border-emerald-200' 
-                              : 'bg-rose-50 text-rose-700 border-rose-200'
-                          }`}>
-                            {singleViewStudent.status === 'Active' ? '✓ Active Student' : singleViewStudent.status}
-                          </span>
+                          {(() => {
+                            const dossierStatus = getStudentDisplayStatus(singleViewStudent);
+                            const isPaid = dossierStatus === 'Paid Students';
+                            const isActive = dossierStatus === 'Active';
+
+                            return (
+                              <span className={`px-2.5 py-0.5 border rounded-full text-[10px] font-black uppercase tracking-wider ${
+                                isPaid || isActive
+                                  ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                                  : 'bg-amber-50 text-amber-700 border-amber-200'
+                              }`}>
+                                {isPaid ? '✓ Paid Student' : isActive ? '✓ Active Student' : dossierStatus}
+                              </span>
+                            );
+                          })()}
                           <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-extrabold border ${
                             singleViewStudent.referredBy === 'Direct'
                               ? 'bg-purple-50 text-purple-700 border-purple-200'
@@ -984,7 +1006,9 @@ support@unigather.app`;
                               const docBlobUrl = resolveDocumentUrl(rawUrl);
                               const docFileName = documentFileName(typeof doc === 'object' ? { ...doc, fileName: doc.fileName || doc.originalName || doc.name } : doc, docBlobUrl);
                               const docTitle = doc.fileName || doc.originalName || doc.name || doc.title || docFileName;
-                              const isImg = /^data:image\//i.test(docBlobUrl) || /\.(png|jpg|jpeg|gif|svg|webp)$/i.test(docFileName);
+                              const isImg = /^data:image\//i.test(docBlobUrl) || 
+                                /\.(png|jpe?g|gif|svg|webp|avif|bmp|jfif)(?:[?#]|$)/i.test(docFileName) || 
+                                /\.(png|jpe?g|gif|svg|webp|avif|bmp|jfif)(?:[?#]|$)/i.test(rawUrl || '');
 
                               return (
                                 <div key={dIdx} className="bg-slate-50 border border-slate-200 rounded-2xl p-4 space-y-3 flex flex-col justify-between shadow-2xs hover:border-[#D99A1C] transition-all">
@@ -999,12 +1023,8 @@ support@unigather.app`;
                                   </div>
 
                                   {/* Inline Document Preview Box */}
-                                  <div className="workspace-list-frame h-44 bg-white border border-slate-200 rounded-xl overflow-hidden flex items-center justify-center p-2 shadow-inner">
-                                    {isImg ? (
-                                      <img src={docBlobUrl} alt={docTitle} className="max-h-full max-w-full object-contain rounded" />
-                                    ) : (
-                                      <iframe src={docBlobUrl} title={docTitle} className="w-full h-full rounded border-0 bg-white" />
-                                    )}
+                                  <div className="h-44 bg-slate-100/70 border border-slate-200 rounded-xl overflow-hidden flex items-center justify-center p-2 shadow-inner">
+                                    <SmartDocViewer url={docBlobUrl} title={docTitle} isModal={false} isImage={isImg} />
                                   </div>
 
                                   {/* Action Controls: Expand & Download */}
@@ -1188,21 +1208,14 @@ support@unigather.app`;
             </div>
 
             {/* Document Body */}
-            <div className="flex-1 bg-slate-50 border border-slate-200 rounded-2xl overflow-hidden flex items-center justify-center min-h-[400px] max-h-[65vh] p-2">
+            <div className="flex-1 bg-slate-100/70 border border-slate-200 rounded-2xl overflow-hidden flex items-center justify-center min-h-[400px] max-h-[65vh] p-3">
               {previewModalDoc.previewUrl ? (
-                previewModalDoc.type === 'image' ? (
-                  <img 
-                    src={previewModalDoc.previewUrl} 
-                    alt={previewModalDoc.title} 
-                    className="max-h-full max-w-full object-contain rounded"
-                  />
-                ) : (
-                  <iframe 
-                    src={previewModalDoc.previewUrl} 
-                    title={previewModalDoc.title}
-                    className="w-full h-full rounded border-0 bg-white"
-                  />
-                )
+                <SmartDocViewer
+                  url={previewModalDoc.previewUrl}
+                  title={previewModalDoc.title}
+                  isModal={true}
+                  isImage={previewModalDoc.type === 'image' || /\.(png|jpe?g|gif|svg|webp|avif|bmp|jfif)(?:[?#]|$)/i.test(previewModalDoc.fileName || '') || /\.(png|jpe?g|gif|svg|webp|avif|bmp|jfif)(?:[?#]|$)/i.test(previewModalDoc.rawUrl || previewModalDoc.previewUrl || '')}
+                />
               ) : (
                 <div className="text-center space-y-3 p-6 bg-white border border-slate-200 rounded-2xl max-w-md w-full shadow-xs">
                   <div className="w-14 h-14 bg-amber-100 text-[#D99A1C] rounded-2xl flex items-center justify-center mx-auto text-2xl font-bold border border-amber-200 shadow-xs">

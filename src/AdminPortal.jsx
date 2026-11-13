@@ -41,6 +41,7 @@ export default function AdminPortal({ onLogout }) {
   const [selectedPartnerForSingleView, setSelectedPartnerForSingleView] = useState(null);
   const [selectedStudentForSingleView, setSelectedStudentForSingleView] = useState(null);
   const [showLogoutConfirmModal, setShowLogoutConfirmModal] = useState(false);
+  const [dashboardFilter, setDashboardFilter] = useState(null);
 
   const fetchInitialData = async () => {
     if (!adminToken) return;
@@ -201,7 +202,7 @@ export default function AdminPortal({ onLogout }) {
   useEffect(() => {
     fetchInitialData();
   }, [adminToken]);
-  
+
   const [activeTab, setActiveTab] = useState(() => {
     return localStorage.getItem('studegram_admin_active_tab') || 'daily-report';
   });
@@ -351,7 +352,7 @@ export default function AdminPortal({ onLogout }) {
   };
 
   // Scoped lists depending on the current user's role scoping rules
-  const scopedApplications = applications.filter(app => 
+  const scopedApplications = applications.filter(app =>
     checkScope(app.country, app.assignedBdm, getAssignedExecutiveName(app))
   );
 
@@ -373,8 +374,8 @@ export default function AdminPortal({ onLogout }) {
     if (activeTab === 'notices') return <Notice selectedNoticeId={selectedNoticeId} setSelectedNoticeId={setSelectedNoticeId} />;
     if (activeTab === 'daily-report') {
       return (
-        <DailyReport 
-          applications={scopedApplications} 
+        <DailyReport
+          applications={scopedApplications}
           onNavigateToBecomePartner={() => {
             setSelectedPartnerForSingleView(null);
             localStorage.removeItem('studegram_admin_single_view_partner_id');
@@ -386,13 +387,20 @@ export default function AdminPortal({ onLogout }) {
             setActiveTab('sales-order');
             setActiveSubTab('study');
           }}
-          onNavigateToApplications={() => {
+          onNavigateToApplications={(filterType) => {
             setSelectedAppIdForSingleView(null);
+            setDashboardFilter(filterType || null);
             localStorage.removeItem('studegram_admin_single_view_app_id');
             localStorage.removeItem('studegram_admin_single_view_app');
             window.dispatchEvent(new CustomEvent('clear_single_view_app'));
             setActiveTab('applications');
           }}
+          onOpenApplicationDetail={(appId) => {
+            setSelectedAppIdForSingleView(appId);
+            localStorage.setItem('studegram_admin_single_view_app_id', String(appId));
+            setActiveTab('applications');
+          }}
+
         />
       );
     }
@@ -403,8 +411,10 @@ export default function AdminPortal({ onLogout }) {
 
     if (activeTab === 'applications') {
       return (
-        <Applications 
-          applications={scopedApplications} 
+        <Applications
+          dashboardFilter={dashboardFilter}
+          onClearDashboardFilter={() => setDashboardFilter(null)}
+          applications={scopedApplications}
           referralAgents={referralAgents}
           intakes={intakes}
           staffList={staffList}
@@ -422,30 +432,30 @@ export default function AdminPortal({ onLogout }) {
         />
       );
     }
-    
+
     if (activeTab === 'admin-report') {
       return (
         <AdminReport
           onOpenApplication={appId => { setSelectedAppIdForSingleView(appId); setActiveTab('applications'); }}
-          applications={scopedApplications} 
+          applications={scopedApplications}
           activeSubTab={activeSubTab}
           referralAgents={referralAgents}
           universities={universities}
         />
       );
     }
-    
+
     if (activeTab === 'partners') {
       return <Partners clients={scopedClients} setClients={setClients} applications={scopedApplications} />;
     }
-    
+
     if (activeTab === 'students') {
       return (
-        <Students 
-          clients={scopedClients} 
-          setClients={setClients} 
-          applications={scopedApplications} 
-          intakes={intakes} 
+        <Students
+          clients={scopedClients}
+          setClients={setClients}
+          applications={scopedApplications}
+          intakes={intakes}
           initialSelectedStudentId={selectedStudentForSingleView}
           onNavigateToApplication={(appId) => {
             setSelectedAppIdForSingleView(appId);
@@ -455,7 +465,7 @@ export default function AdminPortal({ onLogout }) {
         />
       );
     }
-    
+
     if (activeTab === 'staff') {
       return <Staff staffList={staffList} setStaffList={setStaffList} applications={applications} />;
     }
@@ -472,14 +482,14 @@ export default function AdminPortal({ onLogout }) {
     if (activeTab === 'roles' || activeTab === 'role-hierarchy' || activeTab === 'roles-permissions') {
       return <RoleHierarchy />;
     }
-    
+
     if (activeTab === 'sales-order' || activeTab === 'new-application') {
       if (activeSubTab === 'tourist-package') {
         return <SalesOrderTourist />;
       }
       if (activeSubTab === 'study' || !activeSubTab) {
         return (
-          <SalesOrderStudy 
+          <SalesOrderStudy
             universities={universities}
             courses={courses}
             intakes={intakes}
@@ -495,10 +505,10 @@ export default function AdminPortal({ onLogout }) {
         );
       }
     }
-    
+
     if (activeTab === 'settings') {
       return (
-        <SettingsPortal 
+        <SettingsPortal
           activeSubTab={activeSubTab}
           setActiveSubTab={setActiveSubTab}
           universities={universities} setUniversities={setUniversities}
@@ -514,7 +524,7 @@ export default function AdminPortal({ onLogout }) {
         />
       );
     }
-    
+
     if (activeTab === 'todo-list') {
       return <TodoList todoList={todoList} setTodoList={setTodoList} />;
     }
@@ -563,6 +573,7 @@ export default function AdminPortal({ onLogout }) {
     if (tabId === 'notices') setSelectedNoticeId(null);
     if (tabId === 'applications') {
       setSelectedAppIdForSingleView(null);
+      setDashboardFilter(null);
       localStorage.removeItem('studegram_admin_single_view_app_id');
       localStorage.removeItem('studegram_admin_single_view_app');
       // Clear the URL before Applications mounts and restores a saved detail view.
@@ -583,7 +594,7 @@ export default function AdminPortal({ onLogout }) {
         url.searchParams.delete('agentId');
         url.searchParams.delete('partnerId');
         window.history.replaceState({}, '', url.pathname + (url.search ? url.search : ''));
-      } catch (e) {}
+      } catch (e) { }
       window.dispatchEvent(new CustomEvent('clear_single_view_partner'));
     }
     if (tabId === 'staff-activity-logs' || tabId === 'activity-logs') {
@@ -614,7 +625,7 @@ export default function AdminPortal({ onLogout }) {
 
   return (
     <div className="workspace-shell fixed inset-0 h-dvh w-full bg-[#F0F2F5] flex font-sans text-slate-900 select-text overflow-hidden">
-      <AdminSidebar 
+      <AdminSidebar
         activeTab={activeTab}
         setActiveTab={handleSelectTab}
         activeSubTab={activeSubTab}
@@ -625,7 +636,7 @@ export default function AdminPortal({ onLogout }) {
       />
 
       <div className="flex-1 flex flex-col h-full min-h-0 min-w-0 overflow-hidden">
-        <AdminHeader 
+        <AdminHeader
           activeTab={activeTab}
           activeSubTab={activeSubTab}
           onToggleSidebar={() => setSidebarOpen(!sidebarOpen)}
