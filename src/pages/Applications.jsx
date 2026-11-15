@@ -9,6 +9,7 @@ import { applicationFee } from '../utils/courseFee';
 import { getAssignedExecutiveName } from '../utils/applicationAssignment';
 import { ActionButton, ActionForm } from '../components/ActionControls';
 import Pagination from '../components/Pagination';
+import { resolveUniversityCourses } from '../utils/courseMatching';
 import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useAuth } from '../context/AuthContext';
@@ -69,7 +70,16 @@ const isPicked = (app) => {
   return false;
 };
 
-export default function Applications({ applications, referralAgents = [], intakes = [], staffList = [], universities = [], courses = [], initialSelectedAppId = null, onAddClick, onRefresh, onApplicationUpdated, dashboardFilter = null,
+const formatAppDob = (rawDob) => {
+  if (!rawDob) return null;
+  const d = new Date(rawDob);
+  if (!isNaN(d.getTime())) {
+    return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+  }
+  return String(rawDob).trim();
+};
+
+export default function Applications({ applications, referralAgents = [], intakes = [], staffList = [], universities = [], courses = [], clients = [], initialSelectedAppId = null, onAddClick, onRefresh, onApplicationUpdated, dashboardFilter = null,
   onClearDashboardFilter, }) {
   const toast = useToast();
   const handleDownloadAppDocument = async (url, fileName) => {
@@ -126,6 +136,19 @@ export default function Applications({ applications, referralAgents = [], intake
     return null;
   });
   const [previewModalDoc, setPreviewModalDoc] = useState(null);
+  const [docZoom, setDocZoom] = useState(1);
+  const [docRotation, setDocRotation] = useState(0);
+  const [docFitMode, setDocFitMode] = useState('fit'); // 'fit' | 'actual'
+  const [docFullscreen, setDocFullscreen] = useState(false);
+
+  useEffect(() => {
+    if (previewModalDoc) {
+      setDocZoom(1);
+      setDocRotation(0);
+      setDocFitMode('fit');
+      setDocFullscreen(false);
+    }
+  }, [previewModalDoc?.previewUrl, previewModalDoc?.fileName]);
   const [commentsList, setCommentsList] = useState([]);
   const [commentsExpanded, setCommentsExpanded] = useState(false);
   useEffect(() => {
@@ -163,18 +186,19 @@ export default function Applications({ applications, referralAgents = [], intake
 
   const editFilteredUniversities = (universities || []).filter(u => {
     if (!editCountry) return false;
-    const uCountry = (typeof u === 'object' ? u.country : '').trim().toLowerCase();
+    const uCountry = (typeof u === 'object' ? (u.country || '') : '').trim().toLowerCase();
     const sel = editCountry.trim().toLowerCase();
-    return uCountry === sel ||
-      (sel === 'united kingdom' && (uCountry === 'uk' || uCountry === 'england')) ||
-      (sel === 'united states' && (uCountry === 'usa' || uCountry === 'us'));
+    if (uCountry === sel) return true;
+    const ukVariants = ['uk', 'united kingdom', 'england', 'great britain', 'scotland', 'wales', 'northern ireland'];
+    if (ukVariants.includes(sel) && ukVariants.includes(uCountry)) return true;
+    const usVariants = ['usa', 'united states', 'us', 'united states of america'];
+    if (usVariants.includes(sel) && usVariants.includes(uCountry)) return true;
+    const uaeVariants = ['uae', 'united arab emirates', 'dubai'];
+    if (uaeVariants.includes(sel) && uaeVariants.includes(uCountry)) return true;
+    return false;
   });
 
-  const editFilteredCourses = (courses || []).filter(c => {
-    if (!editUniversity) return false;
-    const cUniv = typeof c === 'object' ? (c.university?._id || c.university) : '';
-    return cUniv === editUniversity;
-  });
+  const editFilteredCourses = resolveUniversityCourses(editUniversity, universities, courses);
 
   const openEditModal = (app) => {
     setEditModalApp(app);
@@ -349,12 +373,23 @@ export default function Applications({ applications, referralAgents = [], intake
       API.get(`/applications/${targetId}`).then(res => {
         if (!cancelled && res.data?.success && res.data.data) {
           const freshApp = res.data.data;
+          const freshStudent = (freshApp.student && typeof freshApp.student === 'object')
+            ? freshApp.student
+            : (Array.isArray(clients) ? clients.find(c => String(c.id || c._id) === String(freshApp.student || freshApp.studentId)) : null);
+          const studentPhone = freshStudent?.phone || freshApp.phone || null;
+          const studentDob = formatAppDob(freshStudent?.dob || freshApp.dob);
+          const studentEmail = freshStudent?.email || freshApp.studentEmail || null;
+          const studentName = freshStudent?.name || freshApp.studentName || 'N/A';
+          const passportNo = freshStudent?.passportNo || freshApp.passportNo || 'N/A';
+
           const mappedApp = {
             id: freshApp._id,
             _id: freshApp._id,
             camsId: getDisplayId(freshApp),
-            studentName: freshApp.student?.name || 'N/A',
-            passportNo: freshApp.student?.passportNo || 'N/A',
+            studentName,
+            student: freshStudent || freshApp.student || null,
+            studentId: freshStudent?._id || freshStudent?.id || (typeof freshApp.student === 'string' ? freshApp.student : null) || freshApp.studentId || null,
+            passportNo,
             universityName: freshApp.university?.name || 'N/A',
             courseName: freshApp.course?.title || 'N/A',
             level: freshApp.level || 'Undergraduate (UG)',
@@ -370,9 +405,9 @@ export default function Applications({ applications, referralAgents = [], intake
             assignedBdm: freshApp.partner?.companyName || freshApp.partner?.name || 'Direct',
             assignedExecutive: getAssignedExecutiveName(freshApp),
             statusHistory: freshApp.statusHistory || [],
-            dob: freshApp.student?.dob ? new Date(freshApp.student.dob).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : null,
-            studentEmail: freshApp.student?.email || null,
-            phone: freshApp.student?.phone || null,
+            dob: studentDob,
+            studentEmail,
+            phone: studentPhone,
             documents: freshApp.documents || [],
             notes: freshApp.notes || '',
             applicationComments: freshApp.applicationComments || [],
@@ -386,7 +421,7 @@ export default function Applications({ applications, referralAgents = [], intake
       }).catch(err => console.warn('Could not fetch target application:', err.message));
     }
     return () => { cancelled = true; };
-  }, [initialSelectedAppId, applications]);
+  }, [initialSelectedAppId, applications, clients]);
 
   // Keep singleViewApp in sync with latest applications list updates
   useEffect(() => {
@@ -630,16 +665,37 @@ export default function Applications({ applications, referralAgents = [], intake
           API.get(`/applications/${appId}`).then(res => {
             if (!cancelled && version === requestVersion && res.data?.success && res.data.data) {
               const freshApp = res.data.data;
+              const freshStudent = (freshApp.student && typeof freshApp.student === 'object')
+                ? freshApp.student
+                : (Array.isArray(clients) ? clients.find(c => String(c.id || c._id) === String(freshApp.student || freshApp.studentId)) : null);
+              const studentPhone = freshStudent?.phone || freshApp.phone || singleViewApp.phone || null;
+              const studentDob = formatAppDob(freshStudent?.dob || freshApp.dob) || singleViewApp.dob || null;
+              const studentEmail = freshStudent?.email || freshApp.studentEmail || singleViewApp.studentEmail || null;
+              const studentName = freshStudent?.name || freshApp.studentName || singleViewApp.studentName || 'N/A';
+              const passportNo = freshStudent?.passportNo || freshApp.passportNo || singleViewApp.passportNo || 'N/A';
+
               const updatedApp = {
                 ...singleViewApp,
                 ...freshApp,
                 id: freshApp._id || singleViewApp.id,
+                student: freshStudent || singleViewApp.student || freshApp.student,
+                studentName,
+                studentEmail,
+                phone: studentPhone,
+                dob: studentDob,
+                passportNo,
                 applicationComments: freshApp.applicationComments || [],
                 statusHistory: freshApp.statusHistory || singleViewApp.statusHistory || [],
                 notes: freshApp.notes !== undefined ? freshApp.notes : singleViewApp.notes
               };
               setSingleViewApp(prev => String(prev?.id || prev?._id) !== String(appId) ? prev : ({
                 ...prev,
+                student: freshStudent || prev?.student || freshApp.student,
+                studentName: (studentName && studentName !== 'N/A') ? studentName : prev?.studentName,
+                studentEmail: studentEmail || prev?.studentEmail,
+                phone: studentPhone || prev?.phone,
+                dob: studentDob || prev?.dob,
+                passportNo: (passportNo && passportNo !== 'N/A') ? passportNo : prev?.passportNo,
                 applicationComments: freshApp.applicationComments || [],
                 statusHistory: freshApp.statusHistory || prev?.statusHistory || [],
                 notes: freshApp.notes !== undefined ? freshApp.notes : prev?.notes
@@ -1020,7 +1076,7 @@ export default function Applications({ applications, referralAgents = [], intake
   const startIndex = (currentPage - 1) * itemsPerPage;
   const paginatedApps = dashboardFilter ? filteredApps.slice(startIndex, startIndex + itemsPerPage) : filteredApps;
   return (
-    <div className="workspace-page flex-1 min-w-0 p-4 sm:p-6 space-y-6 bg-[#F0F2F5]">
+    <div className="workspace-page flex-1 min-w-0 p-4 sm:p-6 space-y-6 bg-[#F8FAFC]">
       <div className={editModalApp ? 'hidden' : 'contents'}>
         {!singleViewApp ? (
           <>
@@ -1251,7 +1307,7 @@ export default function Applications({ applications, referralAgents = [], intake
                     </span>
                   </div>
                   <h2 className="text-xl font-black text-slate-900 flex items-center gap-2 flex-wrap mt-0.5">
-                    <span>{singleViewApp.studentName}</span>
+                    <span>{singleViewApp.studentName && singleViewApp.studentName !== 'N/A' ? singleViewApp.studentName : (singleViewApp.student?.name || 'N/A')}</span>
                     <span className="text-xs font-mono font-bold bg-blue-50 text-blue-700 px-2.5 py-0.5 rounded-md border border-blue-200">
                       {getDisplayId(singleViewApp)}
                     </span>
@@ -1265,6 +1321,35 @@ export default function Applications({ applications, referralAgents = [], intake
                       }`}>
                       {singleViewApp.secondaryStatus || singleViewApp.status || 'Submitted'}
                     </span>
+                    {(() => {
+                      const sStr = (singleViewApp.secondaryStatus || singleViewApp.status || '').toLowerCase();
+                      const isEligible = sStr.includes('visa approved') || sStr.includes('visa received') || sStr.includes('enrolled');
+                      const isPaid = singleViewApp.commissionStatus === 'Paid';
+                      const isClaimed = Boolean(singleViewApp.commissionClaimed || singleViewApp.commissionStatus === 'Claimed' || isPaid);
+
+                      if (isPaid) {
+                        return (
+                          <span className="px-2.5 py-0.5 border rounded-full text-[10px] font-black uppercase bg-emerald-100 text-emerald-800 border-emerald-300">
+                            Paid ✓
+                          </span>
+                        );
+                      }
+                      if (isClaimed) {
+                        return (
+                          <span className="px-2.5 py-0.5 border rounded-full text-[10px] font-black uppercase bg-amber-100 text-amber-800 border-amber-300">
+                            Commission Claimed
+                          </span>
+                        );
+                      }
+                      if (isEligible) {
+                        return (
+                          <span className="px-2.5 py-0.5 border rounded-full text-[10px] font-black uppercase bg-blue-100 text-blue-800 border-blue-300">
+                            Ready to Claim
+                          </span>
+                        );
+                      }
+                      return null;
+                    })()}
                   </h2>
                 </div>
               </div>
@@ -1413,25 +1498,36 @@ export default function Applications({ applications, referralAgents = [], intake
                     <div className="min-w-0 border-b border-slate-200 p-4 sm:p-6 space-y-4 lg:col-span-2">
                       <h2 className="text-xs font-bold uppercase tracking-wide text-slate-700">Student details</h2>
 
+                      {(() => {
+                        const activeStudentObj = (singleViewApp?.student && typeof singleViewApp.student === 'object')
+                          ? singleViewApp.student
+                          : (Array.isArray(clients) ? clients.find(c => String(c.id || c._id) === String(singleViewApp?.studentId || singleViewApp?.student || '')) : null);
 
-                      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-x-6 gap-y-3 text-xs">
-                        <div className="min-w-0 flex flex-wrap items-start gap-x-2 gap-y-1 py-1 border-b border-slate-100">
-                          <span className="text-slate-400 font-bold">Phone Line:</span>
-                          <span className="min-w-0 max-w-full break-words font-bold text-slate-800">{singleViewApp.phone || 'N/A'}</span>
-                        </div>
-                        <div className="min-w-0 flex flex-wrap items-start gap-x-2 gap-y-1 py-1 border-b border-slate-100">
-                          <span className="text-slate-400 font-bold">Date of Birth:</span>
-                          <span className="min-w-0 max-w-full break-words font-bold text-slate-800">{singleViewApp.dob || 'N/A'}</span>
-                        </div>
-                        <div className="min-w-0 flex flex-wrap items-start gap-x-2 gap-y-1 py-1 border-b border-slate-100">
-                          <span className="text-slate-400 font-bold">Country:</span>
-                          <span className="min-w-0 max-w-full break-words font-bold text-slate-800">📍 {singleViewApp.country || ''}</span>
-                        </div>
-                        <div className="min-w-0 flex flex-wrap items-start gap-x-2 gap-y-1 py-1">
-                          <span className="text-slate-400 font-bold">Referred By:</span>
-                          <span className="min-w-0 max-w-full break-words font-bold text-indigo-600">{singleViewApp.assignedBdm || 'Direct Application'}</span>
-                        </div>
-                      </div>
+                        const activeStudentPhone = singleViewApp?.phone || activeStudentObj?.phone || singleViewApp?.student?.phone || 'N/A';
+                        const activeRawDob = singleViewApp?.dob || activeStudentObj?.dob || singleViewApp?.student?.dob || null;
+                        const activeStudentDob = activeRawDob ? formatAppDob(activeRawDob) : 'N/A';
+
+                        return (
+                          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-x-6 gap-y-3 text-xs">
+                            <div className="min-w-0 flex flex-wrap items-start gap-x-2 gap-y-1 py-1 border-b border-slate-100">
+                              <span className="text-slate-400 font-bold">Phone Line:</span>
+                              <span className="min-w-0 max-w-full break-words font-bold text-slate-800">{activeStudentPhone}</span>
+                            </div>
+                            <div className="min-w-0 flex flex-wrap items-start gap-x-2 gap-y-1 py-1 border-b border-slate-100">
+                              <span className="text-slate-400 font-bold">Date of Birth:</span>
+                              <span className="min-w-0 max-w-full break-words font-bold text-slate-800">{activeStudentDob}</span>
+                            </div>
+                            <div className="min-w-0 flex flex-wrap items-start gap-x-2 gap-y-1 py-1 border-b border-slate-100">
+                              <span className="text-slate-400 font-bold">Country:</span>
+                              <span className="min-w-0 max-w-full break-words font-bold text-slate-800">📍 {singleViewApp.country || activeStudentObj?.country || ''}</span>
+                            </div>
+                            <div className="min-w-0 flex flex-wrap items-start gap-x-2 gap-y-1 py-1">
+                              <span className="text-slate-400 font-bold">Referred By:</span>
+                              <span className="min-w-0 max-w-full break-words font-bold text-indigo-600">{singleViewApp.assignedBdm || 'Direct Application'}</span>
+                            </div>
+                          </div>
+                        );
+                      })()}
                     </div>
 
                     {/* Academic Program Info */}
@@ -1503,7 +1599,7 @@ export default function Applications({ applications, referralAgents = [], intake
                       type="button"
                       onClick={handleSaveApplicationData}
                       disabled={isSavingApp}
-                      className="px-2.5 py-1 bg-[#0A0A0F] hover:bg-slate-800 text-white font-extrabold text-[10px] rounded-lg shadow-xs transition-all cursor-pointer inline-flex items-center justify-center gap-1 uppercase tracking-wider disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap shrink-0"
+                      className="px-2.5 py-1 bg-[#07163B] hover:bg-[#0D2357] text-white font-extrabold text-[10px] rounded-lg shadow-xs transition-all cursor-pointer inline-flex items-center justify-center gap-1 uppercase tracking-wider disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap shrink-0"
                     >
                       {isSavingApp && (
                         <svg className="animate-spin h-3.5 w-3.5 text-current shrink-0" fill="none" viewBox="0 0 24 24">
@@ -2100,63 +2196,157 @@ export default function Applications({ applications, referralAgents = [], intake
 
       {/* DOCUMENT PREVIEW MODAL PORTAL */}
       {previewModalDoc && createPortal(
-        <div className="fixed inset-0 z-[9999] bg-black/75 backdrop-blur-xs p-3 sm:p-6 flex justify-center items-center select-none animate-fade-in overflow-y-auto">
-          <div className="relative bg-white border border-slate-200 border-t-4 border-t-[#D99A1C] rounded-3xl p-4 sm:p-6 w-full max-w-3xl shadow-2xl flex flex-col my-auto max-h-[85vh]">
-            <div className="flex justify-between items-center pb-3 border-b border-slate-100 shrink-0">
-              <div className="space-y-0.5">
+        <div 
+          className="fixed inset-0 z-[9999] bg-slate-900/60 backdrop-blur-xs p-2 sm:p-4 flex justify-center items-center select-none animate-fade-in"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setPreviewModalDoc(null);
+          }}
+        >
+          <div 
+            onClick={(e) => e.stopPropagation()}
+            className={docFullscreen
+              ? "relative bg-white border border-slate-200 border-t-4 border-t-[#D99A1C] rounded-2xl w-[98vw] h-[96vh] max-w-none shadow-2xl flex flex-col my-auto overflow-hidden animate-in fade-in zoom-in-95"
+              : "relative bg-white border border-slate-200 border-t-4 border-t-[#D99A1C] rounded-3xl w-full max-w-4xl shadow-2xl flex flex-col my-auto max-h-[92vh] sm:max-h-[88vh] overflow-hidden animate-in fade-in zoom-in-95"
+            }
+          >
+            {/* Modal Header */}
+            <div className="flex flex-wrap items-center justify-between gap-3 px-5 sm:px-6 py-3 sm:py-3.5 border-b border-slate-100 shrink-0 bg-white">
+              <div className="space-y-0.5 min-w-0 flex-1">
                 <span className="text-[10px] font-extrabold text-[#D99A1C] uppercase tracking-wider block">Application Document Preview</span>
-                <h3 className="text-xs sm:text-sm font-black text-slate-900">{previewModalDoc.title}</h3>
-                <p className="text-[10px] sm:text-[11px] text-slate-400 font-semibold">{previewModalDoc.fileName}</p>
+                <h3 className="text-xs sm:text-sm font-black text-slate-900 truncate">{previewModalDoc.title}</h3>
+                <p className="text-[10px] sm:text-[11px] text-slate-400 font-semibold truncate">{previewModalDoc.fileName}</p>
               </div>
-              <ActionButton
-                type="button"
-                onClick={() => setPreviewModalDoc(null)}
-                className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold flex items-center justify-center transition-all cursor-pointer shrink-0"
-              >
-                ✕
-              </ActionButton>
+
+              {/* Document Viewing Controls Toolbar */}
+              <div className="flex items-center gap-1.5 shrink-0 bg-slate-100/90 p-1 rounded-xl border border-slate-200/60">
+                {/* Zoom Out */}
+                <ActionButton
+                  type="button"
+                  onClick={() => setDocZoom(prev => Math.max(Number((prev - 0.25).toFixed(2)), 0.5))}
+                  disabled={docZoom <= 0.5}
+                  className="w-7 h-7 rounded-lg bg-white hover:bg-slate-50 text-slate-700 font-bold text-xs flex items-center justify-center border border-slate-200 shadow-2xs disabled:opacity-40 cursor-pointer"
+                  title="Zoom Out"
+                >
+                  −
+                </ActionButton>
+
+                {/* Zoom / Mode Indicator & Reset */}
+                <ActionButton
+                  type="button"
+                  onClick={() => {
+                    setDocZoom(1);
+                    setDocFitMode(prev => prev === 'fit' ? 'actual' : 'fit');
+                  }}
+                  className="px-2 h-7 rounded-lg bg-white hover:bg-slate-50 text-slate-800 font-mono font-bold text-[10px] flex items-center justify-center border border-slate-200 shadow-2xs cursor-pointer"
+                  title="Click to reset zoom / toggle Fit mode"
+                >
+                  {Math.round(docZoom * 100)}% {docFitMode === 'fit' ? '(Fit)' : '(1:1)'}
+                </ActionButton>
+
+                {/* Zoom In */}
+                <ActionButton
+                  type="button"
+                  onClick={() => {
+                    setDocZoom(prev => Math.min(Number((prev + 0.25).toFixed(2)), 3));
+                    setDocFitMode('actual');
+                  }}
+                  disabled={docZoom >= 3}
+                  className="w-7 h-7 rounded-lg bg-white hover:bg-slate-50 text-slate-700 font-bold text-xs flex items-center justify-center border border-slate-200 shadow-2xs disabled:opacity-40 cursor-pointer"
+                  title="Zoom In"
+                >
+                  +
+                </ActionButton>
+
+                <div className="h-4 w-px bg-slate-300 mx-0.5" />
+
+                {/* Rotate 90deg */}
+                <ActionButton
+                  type="button"
+                  onClick={() => setDocRotation(prev => (prev + 90) % 360)}
+                  className="w-7 h-7 rounded-lg bg-white hover:bg-slate-50 text-slate-700 text-xs flex items-center justify-center border border-slate-200 shadow-2xs cursor-pointer"
+                  title="Rotate 90°"
+                >
+                  🔄
+                </ActionButton>
+
+                {/* Fullscreen Toggle */}
+                <ActionButton
+                  type="button"
+                  onClick={() => setDocFullscreen(prev => !prev)}
+                  className="w-7 h-7 rounded-lg bg-white hover:bg-slate-50 text-slate-700 text-xs flex items-center justify-center border border-slate-200 shadow-2xs cursor-pointer"
+                  title={docFullscreen ? "Exit Fullscreen" : "Fullscreen Preview"}
+                >
+                  {docFullscreen ? "⤓" : "⛶"}
+                </ActionButton>
+
+                <div className="h-4 w-px bg-slate-300 mx-0.5" />
+
+                {/* Close Button */}
+                <ActionButton
+                  type="button"
+                  onClick={() => setPreviewModalDoc(null)}
+                  className="w-7 h-7 rounded-lg bg-white hover:bg-rose-50 text-slate-400 hover:text-rose-600 text-xs flex items-center justify-center border border-slate-200 shadow-2xs cursor-pointer transition-colors"
+                  title="Close Preview"
+                >
+                  ✕
+                </ActionButton>
+              </div>
             </div>
 
-            <div className="flex-1 overflow-auto bg-slate-50 rounded-2xl border border-slate-200 p-2 sm:p-3 flex items-center justify-center my-3 min-h-[300px]">
-              {previewModalDoc.previewUrl ? (
-                (previewModalDoc.type === 'image' || 
-                 (typeof previewModalDoc.fileName === 'string' && previewModalDoc.fileName.match(/\.(png|jpg|jpeg|gif|svg|webp|avif|bmp|jfif)(?:[?#]|$)/i)) ||
-                 (typeof previewModalDoc.previewUrl === 'string' && previewModalDoc.previewUrl.match(/\.(png|jpe?g|gif|svg|webp|avif|bmp|jfif)(?:[?#]|$)/i))) ? (
-                  <img
-                    src={previewModalDoc.previewUrl}
-                    alt={previewModalDoc.title}
-                    className="max-h-[350px] sm:max-h-[460px] w-auto max-w-full object-contain rounded-xl shadow-md"
-                  />
+            {/* Document Body with Scroll Support */}
+            <div className="flex-1 min-h-0 p-3 sm:p-5 bg-slate-50/60 flex items-center justify-center overflow-hidden">
+              <div className="w-full h-full max-h-full bg-slate-100/70 border border-slate-200 rounded-2xl overflow-auto flex items-center justify-center p-3 sm:p-4">
+                {previewModalDoc.previewUrl ? (
+                  (previewModalDoc.type === 'image' || 
+                   (typeof previewModalDoc.fileName === 'string' && previewModalDoc.fileName.match(/\.(png|jpg|jpeg|gif|svg|webp|avif|bmp|jfif)(?:[?#]|$)/i)) ||
+                   (typeof previewModalDoc.previewUrl === 'string' && previewModalDoc.previewUrl.match(/\.(png|jpe?g|gif|svg|webp|avif|bmp|jfif)(?:[?#]|$)/i))) ? (
+                    <div className="w-full h-full min-h-0 flex items-center justify-center p-2">
+                      <img
+                        src={previewModalDoc.previewUrl}
+                        alt={previewModalDoc.title}
+                        style={{
+                          transform: `scale(${docZoom}) rotate(${docRotation}deg)`,
+                          transformOrigin: 'center center',
+                          maxHeight: docFitMode === 'fit' ? (docFullscreen ? 'calc(90vh - 190px)' : 'calc(75vh - 190px)') : 'none',
+                          maxWidth: docFitMode === 'fit' ? '100%' : 'none',
+                          objectFit: 'contain',
+                          transition: 'transform 0.2s cubic-bezier(0.2, 0, 0, 1)'
+                        }}
+                        className={`${docFitMode === 'fit' ? 'w-auto h-auto block mx-auto rounded-lg shadow-sm' : 'w-auto h-auto block mx-auto rounded-lg shadow-sm'} select-none`}
+                      />
+                    </div>
+                  ) : (
+                    <iframe
+                      src={previewModalDoc.previewUrl}
+                      title={previewModalDoc.title}
+                      className="w-full h-full min-h-[440px] rounded-xl border border-slate-200 shadow-inner bg-white"
+                    />
+                  )
                 ) : (
-                  <iframe
-                    src={previewModalDoc.previewUrl}
-                    title={previewModalDoc.title}
-                    className="w-full h-[350px] sm:h-[460px] rounded-xl border border-slate-200 shadow-inner bg-white"
-                  />
-                )
-              ) : (
-                <div className="text-center space-y-3 p-6 bg-white border border-slate-200 rounded-2xl max-w-md w-full shadow-xs">
-                  <div className="w-14 h-14 bg-amber-100 text-[#D99A1C] rounded-2xl flex items-center justify-center mx-auto text-2xl font-bold border border-amber-200 shadow-xs">
-                    📄
+                  <div className="text-center space-y-3 p-6 bg-white border border-slate-200 rounded-2xl max-w-md w-full shadow-xs">
+                    <div className="w-14 h-14 bg-amber-100 text-[#D99A1C] rounded-2xl flex items-center justify-center mx-auto text-2xl font-bold border border-amber-200 shadow-xs">
+                      📄
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-black text-slate-900">{previewModalDoc.title}</h4>
+                      <p className="text-xs font-bold text-slate-600 mt-0.5">{previewModalDoc.fileName}</p>
+                      <p className="text-[11px] text-emerald-700 font-extrabold bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200 inline-block mt-2">
+                        ✓ Application File Proof
+                      </p>
+                    </div>
                   </div>
-                  <div>
-                    <h4 className="text-sm font-black text-slate-900">{previewModalDoc.title}</h4>
-                    <p className="text-xs font-bold text-slate-600 mt-0.5">{previewModalDoc.fileName}</p>
-                    <p className="text-[11px] text-emerald-700 font-extrabold bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200 inline-block mt-2">
-                      ✓ Application File Proof
-                    </p>
-                  </div>
-                </div>
-              )}
+                )}
+              </div>
             </div>
 
-            <div className="flex justify-between items-center pt-3 border-t border-slate-100 shrink-0">
+            {/* Modal Footer Controls */}
+            <div className="flex flex-wrap items-center justify-between gap-3 px-5 sm:px-6 py-3.5 sm:py-4 border-t border-slate-100 shrink-0 bg-white">
               {previewModalDoc.previewUrl ? (
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2.5">
                   <ActionButton
                     type="button"
                     onClick={() => handleDownloadAppDocument(previewModalDoc.rawUrl || previewModalDoc.previewUrl, previewModalDoc.fileName)}
-                    className="px-3 py-1.5 sm:px-4 sm:py-2 bg-gradient-to-r from-[#D99A1C] to-[#F5B025] hover:from-[#c28815] hover:to-[#e09e1d] text-white font-black text-[11px] sm:text-xs rounded-xl transition-all flex items-center gap-1.5 cursor-pointer shadow-xs"
+                    className="inline-flex items-center justify-center gap-1.5 h-10 px-4 sm:px-5 bg-gradient-to-r from-[#D99A1C] to-[#F5B025] hover:from-[#c28815] hover:to-[#e09e1d] text-white font-extrabold text-xs rounded-xl transition-all cursor-pointer shadow-xs active:scale-95"
                   >
                     <span>📥 Download</span>
                   </ActionButton>
@@ -2167,19 +2357,29 @@ export default function Applications({ applications, referralAgents = [], intake
                         window.open(previewModalDoc.previewUrl, '_blank');
                       }
                     }}
-                    className="px-3 py-1.5 sm:px-4 sm:py-2 bg-amber-50 hover:bg-amber-100 text-[#D99A1C] border border-amber-200 font-extrabold text-[11px] sm:text-xs rounded-xl transition-all flex items-center gap-1.5 cursor-pointer shadow-xs"
+                    className="inline-flex items-center justify-center gap-1.5 h-10 px-4 sm:px-5 bg-amber-50 hover:bg-amber-100 text-[#D99A1C] border border-amber-200 font-extrabold text-xs rounded-xl transition-all cursor-pointer shadow-xs active:scale-95"
                   >
                     <span>↗ Open in New Tab</span>
                   </ActionButton>
                 </div>
               ) : <div />}
-              <ActionButton
-                type="button"
-                onClick={() => setPreviewModalDoc(null)}
-                className="px-4 py-1.5 sm:px-5 sm:py-2 bg-slate-800 hover:bg-slate-900 text-white font-extrabold text-[11px] sm:text-xs rounded-xl shadow-md transition-all cursor-pointer"
-              >
-                Close Preview
-              </ActionButton>
+              <div className="flex items-center gap-2">
+                <ActionButton
+                  type="button"
+                  onClick={() => setDocFitMode(prev => prev === 'fit' ? 'actual' : 'fit')}
+                  className="inline-flex items-center justify-center h-10 px-3.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl border border-slate-200 transition-all cursor-pointer"
+                  title="Toggle between fitting entire document vs 100% actual size"
+                >
+                  <span>{docFitMode === 'fit' ? '🔍 View 100% Size' : '↔ Fit Entire Document'}</span>
+                </ActionButton>
+                <ActionButton
+                  type="button"
+                  onClick={() => setPreviewModalDoc(null)}
+                  className="inline-flex items-center justify-center h-10 px-5 sm:px-6 bg-slate-900 hover:bg-slate-800 text-white font-extrabold text-xs rounded-xl shadow-xs transition-all cursor-pointer active:scale-95"
+                >
+                  Close Preview
+                </ActionButton>
+              </div>
             </div>
           </div>
         </div>,

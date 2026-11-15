@@ -150,15 +150,24 @@ export default function AdminPortal({ onLogout }) {
       }
 
       if (appRes.data?.success && Array.isArray(appRes.data.data)) {
+        const formatAppDob = (rawDob) => {
+          if (!rawDob) return null;
+          const d = new Date(rawDob);
+          if (!isNaN(d.getTime())) {
+            return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+          }
+          return String(rawDob).trim();
+        };
+
         const mapped = appRes.data.data.map((app) => ({
           ...app,
           id: app._id,
           _id: app._id,
           camsId: getDisplayId(app),
-          studentName: app.student?.name || 'N/A',
-          student: app.student || null,
-          studentId: app.student?._id || app.student?.id || (typeof app.student === 'string' ? app.student : null),
-          passportNo: app.student?.passportNo || 'N/A',
+          studentName: ((app.student && typeof app.student === 'object') ? app.student : (typeof mappedStudents !== 'undefined' ? mappedStudents.find(s => String(s.id || s._id) === String(app.student || app.studentId)) : null))?.name || app.studentName || 'N/A',
+          student: ((app.student && typeof app.student === 'object') ? app.student : (typeof mappedStudents !== 'undefined' ? mappedStudents.find(s => String(s.id || s._id) === String(app.student || app.studentId)) : null)) || app.student || null,
+          studentId: ((app.student && typeof app.student === 'object') ? app.student : (typeof mappedStudents !== 'undefined' ? mappedStudents.find(s => String(s.id || s._id) === String(app.student || app.studentId)) : null))?._id || ((app.student && typeof app.student === 'object') ? app.student : (typeof mappedStudents !== 'undefined' ? mappedStudents.find(s => String(s.id || s._id) === String(app.student || app.studentId)) : null))?.id || (typeof app.student === 'string' ? app.student : null) || app.studentId || null,
+          passportNo: ((app.student && typeof app.student === 'object') ? app.student : (typeof mappedStudents !== 'undefined' ? mappedStudents.find(s => String(s.id || s._id) === String(app.student || app.studentId)) : null))?.passportNo || app.passportNo || 'N/A',
           universityName: app.university?.name || 'N/A',
           courseName: app.course?.title || 'N/A',
           level: app.level || 'Undergraduate (UG)',
@@ -174,9 +183,9 @@ export default function AdminPortal({ onLogout }) {
           assignedBdm: app.partner?.companyName || app.partner?.name || 'Direct',
           assignedExecutive: getAssignedExecutiveName(app),
           statusHistory: app.statusHistory || [],
-          dob: app.student?.dob ? new Date(app.student.dob).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : null,
-          studentEmail: app.student?.email || null,
-          phone: app.student?.phone || null,
+          dob: typeof formatAppDob === 'function' ? formatAppDob(((app.student && typeof app.student === 'object') ? app.student : (typeof mappedStudents !== 'undefined' ? mappedStudents.find(s => String(s.id || s._id) === String(app.student || app.studentId)) : null))?.dob || app.dob || null) : (((app.student && typeof app.student === 'object') ? app.student : (typeof mappedStudents !== 'undefined' ? mappedStudents.find(s => String(s.id || s._id) === String(app.student || app.studentId)) : null))?.dob || app.dob || null),
+          studentEmail: ((app.student && typeof app.student === 'object') ? app.student : (typeof mappedStudents !== 'undefined' ? mappedStudents.find(s => String(s.id || s._id) === String(app.student || app.studentId)) : null))?.email || app.studentEmail || null,
+          phone: ((app.student && typeof app.student === 'object') ? app.student : (typeof mappedStudents !== 'undefined' ? mappedStudents.find(s => String(s.id || s._id) === String(app.student || app.studentId)) : null))?.phone || app.phone || null,
           documents: app.documents || [],
           notes: app.notes || '',
           applicationComments: app.applicationComments || [],
@@ -415,6 +424,7 @@ export default function AdminPortal({ onLogout }) {
           dashboardFilter={dashboardFilter}
           onClearDashboardFilter={() => setDashboardFilter(null)}
           applications={scopedApplications}
+          clients={scopedClients}
           referralAgents={referralAgents}
           intakes={intakes}
           staffList={staffList}
@@ -624,39 +634,39 @@ export default function AdminPortal({ onLogout }) {
   };
 
   return (
-    <div className="workspace-shell fixed inset-0 h-dvh w-full bg-[#F0F2F5] flex font-sans text-slate-900 select-text overflow-hidden">
-      <AdminSidebar
+    <div className="workspace-shell fixed inset-0 h-dvh w-full bg-[#F8FAFC] flex flex-col font-sans text-slate-900 select-text overflow-hidden">
+      <AdminHeader
         activeTab={activeTab}
-        setActiveTab={handleSelectTab}
         activeSubTab={activeSubTab}
-        setActiveSubTab={setActiveSubTab}
+        onToggleSidebar={() => setSidebarOpen(!sidebarOpen)}
         onLogout={() => setShowLogoutConfirmModal(true)}
-        isOpen={sidebarOpen}
-        onClose={() => setSidebarOpen(false)}
+        onBack={handleBack}
+        isSyncing={isDataSyncing}
+        onRefreshData={fetchInitialData}
+        onNavigate={(tab, subTab, targetId, notification) => {
+          setActiveTab(tab);
+          setActiveSubTab(subTab || null);
+          const payload = { targetId, notification, timestamp: Date.now() };
+          if (tab === 'become-partner' || tab === 'partners') {
+            fetchInitialData();
+            setSelectedPartnerForSingleView(payload);
+          } else if (tab === 'applications') {
+            setSelectedAppIdForSingleView(payload);
+          } else if (tab === 'students') {
+            setSelectedStudentForSingleView(payload);
+          }
+        }}
       />
 
-      <div className="flex-1 flex flex-col h-full min-h-0 min-w-0 overflow-hidden">
-        <AdminHeader
+      <div className="flex flex-1 min-h-0 min-w-0 overflow-hidden">
+        <AdminSidebar
           activeTab={activeTab}
+          setActiveTab={handleSelectTab}
           activeSubTab={activeSubTab}
-          onToggleSidebar={() => setSidebarOpen(!sidebarOpen)}
+          setActiveSubTab={setActiveSubTab}
           onLogout={() => setShowLogoutConfirmModal(true)}
-          onBack={handleBack}
-          isSyncing={isDataSyncing}
-          onRefreshData={fetchInitialData}
-          onNavigate={(tab, subTab, targetId, notification) => {
-            setActiveTab(tab);
-            setActiveSubTab(subTab || null);
-            const payload = { targetId, notification, timestamp: Date.now() };
-            if (tab === 'become-partner' || tab === 'partners') {
-              fetchInitialData();
-              setSelectedPartnerForSingleView(payload);
-            } else if (tab === 'applications') {
-              setSelectedAppIdForSingleView(payload);
-            } else if (tab === 'students') {
-              setSelectedStudentForSingleView(payload);
-            }
-          }}
+          isOpen={sidebarOpen}
+          onClose={() => setSidebarOpen(false)}
         />
 
         <main id="admin-main-content" key={`${activeTab}-${activeSubTab}`} className="workspace-main flex-1 min-h-0 min-w-0 overflow-y-auto overflow-x-hidden overscroll-y-contain pb-4 animate-fade-in scroll-smooth">

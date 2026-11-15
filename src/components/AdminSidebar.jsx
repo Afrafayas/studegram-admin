@@ -1,6 +1,7 @@
 import { ActionButton } from './ActionControls';
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
+import unigatherLogo from '../assets/unigather-logo.jpg';
 
 export default function AdminSidebar({ 
   activeTab, 
@@ -50,20 +51,33 @@ export default function AdminSidebar({
         ></div>
       )}
 
-      <aside className={`workspace-sidebar fixed inset-y-0 left-0 z-50 lg:z-30 lg:static w-[260px] min-w-[260px] bg-[#0A0A0F] border-r border-slate-900 text-slate-300 h-dvh lg:h-full min-h-0 overflow-hidden flex flex-col justify-between py-5 select-none shrink-0 transform ${
+      <aside className={`workspace-sidebar fixed inset-y-0 left-0 z-50 lg:z-30 lg:static w-[260px] min-w-[260px] bg-[#07163B] border-r border-[#0D2357] text-slate-300 h-dvh lg:h-full min-h-0 overflow-hidden flex flex-col justify-between py-5 select-none shrink-0 transform ${
         isOpen ? 'translate-x-0' : '-translate-x-full'
       } lg:translate-x-0 transition-transform duration-200 ease-in-out`}>
         
         <div className="flex-1 min-h-0 flex flex-col gap-6 overflow-y-auto overscroll-y-contain px-4 scrollbar-thin">
-          {/* Brand Header */}
-          <div className="px-2 pb-4 border-b border-slate-900 flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-[#EFB62C] text-[#191b1f] flex items-center justify-center font-extrabold text-white text-base shadow-lg shadow-[#D99A1C]/20">
-              U
+          {/* Brand Header - Drawer header on mobile with close button, hidden on desktop since top navbar has the full logo */}
+          <div className="px-2 pb-4 border-b border-[#0D2357] flex items-center justify-between lg:hidden">
+            <div className="flex items-center gap-3">
+              <img
+                src={unigatherLogo}
+                alt="Unigather"
+                className="w-10 h-10 rounded-xl object-cover shadow-sm shrink-0 border-0"
+              />
+              <div className="flex flex-col min-w-0">
+                <span className="font-extrabold text-sm tracking-widest text-white uppercase truncate">UNIGATHER</span>
+                <span className="text-[9px] text-[#D99A1C] font-extrabold tracking-wider uppercase -mt-0.5">Admin Portal</span>
+              </div>
             </div>
-            <div className="flex flex-col">
-              <span className="font-extrabold text-sm tracking-widest text-white uppercase">UNIGATHER</span>
-              <span className="text-[9px] text-[#D99A1C] font-extrabold tracking-wider uppercase -mt-0.5">Admin Portal</span>
-            </div>
+            <ActionButton
+              onClick={onClose}
+              className="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-[#0D2357]"
+              title="Close Navigation"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </ActionButton>
           </div>
 
           {/* Navigation Links */}
@@ -74,8 +88,8 @@ export default function AdminSidebar({
               onClick={() => handleTabClick('daily-report')}
               className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left text-xs font-semibold transition-all duration-150 ${
                 activeTab === 'daily-report' && !activeSubTab
-                  ? 'bg-[#161622] text-white border-l-2 border-[#D99A1C] pl-2.5'
-                  : 'hover:bg-[#161622]/50 hover:text-white'
+                  ? 'bg-[#0D2357] text-white border-l-2 border-[#D99A1C] pl-2.5'
+                  : 'hover:bg-[#0D2357]/50 hover:text-white'
               }`}
             >
               <svg className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -90,8 +104,8 @@ export default function AdminSidebar({
                 onClick={() => handleTabClick('applications')}
                 className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left text-xs font-semibold transition-all duration-150 ${
                   activeTab === 'applications' && !activeSubTab
-                    ? 'bg-[#161622] text-white border-l-2 border-[#D99A1C] pl-2.5'
-                    : 'hover:bg-[#161622]/50 hover:text-white'
+                    ? 'bg-[#0D2357] text-white border-l-2 border-[#D99A1C] pl-2.5'
+                    : 'hover:bg-[#0D2357]/50 hover:text-white'
                 }`}
               >
                 <svg className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -107,7 +121,7 @@ export default function AdminSidebar({
                 <ActionButton
                   onClick={() => setAdminReportsOpen(!adminReportsOpen)}
                   className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-left text-xs font-semibold transition-all duration-150 ${
-                    activeTab === 'admin-report' ? 'text-white font-bold bg-[#161622]/40' : 'hover:bg-[#161622]/50 hover:text-white'
+                    activeTab === 'admin-report' ? 'text-white font-bold bg-[#0D2357]/40' : 'hover:bg-[#0D2357]/50 hover:text-white'
                   }`}
                 >
                   <div className="flex items-center gap-3">
@@ -127,8 +141,8 @@ export default function AdminSidebar({
                       onClick={() => handleSubTabClick('admin-report', 'report-agent')}
                       className={`w-full text-left py-2 px-3 text-[11px] font-semibold rounded-md transition-colors ${
                         activeTab === 'admin-report' && activeSubTab === 'report-agent'
-                          ? 'text-[#F5B025] bg-[#161622]/60 font-bold'
-                          : 'text-slate-400 hover:text-white hover:bg-[#161622]/30'
+                          ? 'text-[#F5B025] bg-[#0D2357]/60 font-bold'
+                          : 'text-slate-400 hover:text-white hover:bg-[#0D2357]/30'
                       }`}
                     >
                       Report by Agent
@@ -137,8 +151,8 @@ export default function AdminSidebar({
                       onClick={() => handleSubTabClick('admin-report', 'report-university')}
                       className={`w-full text-left py-2 px-3 text-[11px] font-semibold rounded-md transition-colors ${
                         activeTab === 'admin-report' && activeSubTab === 'report-university'
-                          ? 'text-[#F5B025] bg-[#161622]/60 font-bold'
-                          : 'text-slate-400 hover:text-white hover:bg-[#161622]/30'
+                          ? 'text-[#F5B025] bg-[#0D2357]/60 font-bold'
+                          : 'text-slate-400 hover:text-white hover:bg-[#0D2357]/30'
                       }`}
                     >
                       Report by University
@@ -147,8 +161,8 @@ export default function AdminSidebar({
                       onClick={() => handleSubTabClick('admin-report', 'report-country')}
                       className={`w-full text-left py-2 px-3 text-[11px] font-semibold rounded-md transition-colors ${
                         activeTab === 'admin-report' && activeSubTab === 'report-country'
-                          ? 'text-[#F5B025] bg-[#161622]/60 font-bold'
-                          : 'text-slate-400 hover:text-white hover:bg-[#161622]/30'
+                          ? 'text-[#F5B025] bg-[#0D2357]/60 font-bold'
+                          : 'text-slate-400 hover:text-white hover:bg-[#0D2357]/30'
                       }`}
                     >
                       Report by Country
@@ -164,8 +178,8 @@ export default function AdminSidebar({
                 onClick={() => handleTabClick('become-partner')}
                 className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left text-xs font-semibold transition-all duration-150 ${
                   activeTab === 'become-partner' && !activeSubTab
-                    ? 'bg-[#161622] text-white border-l-2 border-[#D99A1C] pl-2.5'
-                    : 'hover:bg-[#161622]/50 hover:text-white'
+                    ? 'bg-[#0D2357] text-white border-l-2 border-[#D99A1C] pl-2.5'
+                    : 'hover:bg-[#0D2357]/50 hover:text-white'
                 }`}
               >
                 <svg className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -183,8 +197,8 @@ export default function AdminSidebar({
                 onClick={() => handleTabClick('students')}
                 className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left text-xs font-semibold transition-all duration-150 ${
                   activeTab === 'students' && !activeSubTab
-                    ? 'bg-[#161622] text-white border-l-2 border-[#D99A1C] pl-2.5'
-                    : 'hover:bg-[#161622]/50 hover:text-white'
+                    ? 'bg-[#0D2357] text-white border-l-2 border-[#D99A1C] pl-2.5'
+                    : 'hover:bg-[#0D2357]/50 hover:text-white'
                 }`}
               >
                 <svg className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -202,8 +216,8 @@ export default function AdminSidebar({
                 onClick={() => handleTabClick('commissions')}
                 className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left text-xs font-semibold transition-all duration-150 ${
                   activeTab === 'commissions' && !activeSubTab
-                    ? 'bg-[#161622] text-white border-l-2 border-[#D99A1C] pl-2.5'
-                    : 'hover:bg-[#161622]/50 hover:text-white'
+                    ? 'bg-[#0D2357] text-white border-l-2 border-[#D99A1C] pl-2.5'
+                    : 'hover:bg-[#0D2357]/50 hover:text-white'
                 }`}
               >
                 <svg className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -219,8 +233,8 @@ export default function AdminSidebar({
                 onClick={() => handleTabClick('staff')}
                 className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left text-xs font-semibold transition-all duration-150 ${
                   activeTab === 'staff' && !activeSubTab
-                    ? 'bg-[#161622] text-white border-l-2 border-[#D99A1C] pl-2.5'
-                    : 'hover:bg-[#161622]/50 hover:text-white'
+                    ? 'bg-[#0D2357] text-white border-l-2 border-[#D99A1C] pl-2.5'
+                    : 'hover:bg-[#0D2357]/50 hover:text-white'
                 }`}
               >
                 <svg className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -234,7 +248,7 @@ export default function AdminSidebar({
               type="button"
               onClick={() => handleTabClick('notices')}
               title="Create, view, edit and delete notices"
-              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left text-xs font-semibold transition-all duration-150 ${activeTab === 'notices' ? 'bg-[#161622] text-white border-l-2 border-[#D99A1C] pl-2.5' : 'hover:bg-[#161622]/50 hover:text-white'}`}
+              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left text-xs font-semibold transition-all duration-150 ${activeTab === 'notices' ? 'bg-[#0D2357] text-white border-l-2 border-[#D99A1C] pl-2.5' : 'hover:bg-[#0D2357]/50 hover:text-white'}`}
             >
               <svg className="w-4 h-4 shrink-0 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0a3 3 0 01-6 0m6 0H9" />
@@ -248,8 +262,8 @@ export default function AdminSidebar({
                 onClick={() => handleTabClick('staff-activity-logs')}
                 className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left text-xs font-semibold transition-all duration-150 ${
                   activeTab === 'staff-activity-logs' && !activeSubTab
-                    ? 'bg-[#161622] text-white border-l-2 border-[#D99A1C] pl-2.5'
-                    : 'hover:bg-[#161622]/50 hover:text-white'
+                    ? 'bg-[#0D2357] text-white border-l-2 border-[#D99A1C] pl-2.5'
+                    : 'hover:bg-[#0D2357]/50 hover:text-white'
                 }`}
               >
                 <svg className="w-4 h-4 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -267,8 +281,8 @@ export default function AdminSidebar({
                 onClick={() => handleTabClick('roles')}
                 className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left text-xs font-semibold transition-all duration-150 ${
                   (activeTab === 'roles' || activeTab === 'role-hierarchy') && !activeSubTab
-                    ? 'bg-[#161622] text-white border-l-2 border-[#D99A1C] pl-2.5'
-                    : 'hover:bg-[#161622]/50 hover:text-white'
+                    ? 'bg-[#0D2357] text-white border-l-2 border-[#D99A1C] pl-2.5'
+                    : 'hover:bg-[#0D2357]/50 hover:text-white'
                 }`}
               >
                 <svg className="w-4 h-4 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -286,7 +300,7 @@ export default function AdminSidebar({
                 <ActionButton
                   onClick={() => setSettingsOpen(!settingsOpen)}
                   className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-left text-xs font-semibold transition-all duration-150 ${
-                    activeTab === 'settings' ? 'text-white font-bold bg-[#161622]/40' : 'hover:bg-[#161622]/50 hover:text-white'
+                    activeTab === 'settings' ? 'text-white font-bold bg-[#0D2357]/40' : 'hover:bg-[#0D2357]/50 hover:text-white'
                   }`}
                 >
                   <div className="flex items-center gap-3">
@@ -320,8 +334,8 @@ export default function AdminSidebar({
                         onClick={() => handleSubTabClick('settings', subItem.id)}
                         className={`w-full text-left py-1.5 px-3 text-[11px] font-semibold rounded-md transition-colors ${
                           activeTab === 'settings' && activeSubTab === subItem.id
-                            ? 'text-[#F5B025] bg-[#161622]/60 font-bold'
-                            : 'text-slate-400 hover:text-white hover:bg-[#161622]/30'
+                            ? 'text-[#F5B025] bg-[#0D2357]/60 font-bold'
+                            : 'text-slate-400 hover:text-white hover:bg-[#0D2357]/30'
                         }`}
                       >
                         {subItem.label}
@@ -337,8 +351,8 @@ export default function AdminSidebar({
               onClick={() => handleTabClick('todo-list')}
               className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left text-xs font-semibold transition-all duration-150 ${
                 activeTab === 'todo-list' && !activeSubTab
-                  ? 'bg-[#161622] text-white border-l-2 border-[#D99A1C] pl-2.5'
-                  : 'hover:bg-[#161622]/50 hover:text-white'
+                  ? 'bg-[#0D2357] text-white border-l-2 border-[#D99A1C] pl-2.5'
+                  : 'hover:bg-[#0D2357]/50 hover:text-white'
               }`}
             >
               <svg className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -350,7 +364,7 @@ export default function AdminSidebar({
         </div>
 
         {/* Footer actions inside Sidebar */}
-        <div className="shrink-0 px-4 mt-auto pt-4 border-t border-slate-900 flex flex-col gap-2">
+        <div className="shrink-0 px-4 mt-auto pt-4 border-t border-[#0D2357] flex flex-col gap-2">
           {/* Logout */}
           <ActionButton
             onClick={onLogout}

@@ -328,7 +328,7 @@ export default function Notice({ selectedNoticeId, setSelectedNoticeId }) {
               type="button"
               onClick={() => { setActiveNoticeTab(section.key); setListPage(1); }}
               className={`px-4 py-2 text-xs font-black rounded-xl transition-all cursor-pointer ${
-                activeNoticeTab === section.key ? 'bg-[#0A0A0F] text-white shadow-sm' : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
+                activeNoticeTab === section.key ? 'bg-[#07163B] text-white shadow-sm' : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
               }`}
             >
               {section.title} ({section.notices.length})

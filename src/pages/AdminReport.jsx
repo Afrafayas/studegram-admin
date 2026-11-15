@@ -181,7 +181,7 @@ export default function AdminReport({
   const openReportApplication = app => onOpenApplication ? onOpenApplication(app.id) : setSelectedReport(app);
   if (selectedReport) return <div className="workspace-page p-4 sm:p-6"><ListRecordView record={{ ...selectedReport, studentName: selectedReport.name, universityName: selectedReport.university, courseName: selectedReport.course, partnerName: selectedReport.agent }} title="Application report" onBack={() => setSelectedReport(null)} /></div>;
   return (
-    <div className="workspace-page flex-1 min-w-0 p-4 sm:p-6 space-y-6 bg-[#F0F2F5]">
+    <div className="workspace-page flex-1 min-w-0 p-4 sm:p-6 space-y-6 bg-[#F8FAFC]">
       {/* Header */}
       <div className="workspace-panel flex flex-wrap gap-3 justify-between items-center bg-white border border-[#E2E8F0] border-t-4 border-t-[#D99A1C] p-6 rounded-2xl shadow-xs">
         <div className="space-y-1">

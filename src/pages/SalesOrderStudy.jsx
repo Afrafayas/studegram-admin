@@ -7,6 +7,7 @@ import ValidatedInput from '../components/ValidatedInput';
 import { ActionButton, ActionForm } from '../components/ActionControls';
 import React, { useState } from 'react';
 import { useToast } from '../context/ToastContext';
+import { resolveUniversityCourses } from '../utils/courseMatching';
 
 export default function SalesOrderStudy({ 
   universities = [], 
@@ -68,9 +69,14 @@ export default function SalesOrderStudy({
     if (!destinationCountry) return false;
     const uCountry = (typeof u === 'object' ? (u.country || '') : '').trim().toLowerCase();
     const sel = destinationCountry.trim().toLowerCase();
-    return uCountry === sel ||
-      (sel === 'united kingdom' && (uCountry === 'uk' || uCountry === 'england' || uCountry === 'great britain')) ||
-      (sel === 'united states' && (uCountry === 'usa' || uCountry === 'us'));
+    if (uCountry === sel) return true;
+    const ukVariants = ['uk', 'united kingdom', 'england', 'great britain', 'scotland', 'wales', 'northern ireland'];
+    if (ukVariants.includes(sel) && ukVariants.includes(uCountry)) return true;
+    const usVariants = ['usa', 'united states', 'us', 'united states of america'];
+    if (usVariants.includes(sel) && usVariants.includes(uCountry)) return true;
+    const uaeVariants = ['uae', 'united arab emirates', 'dubai'];
+    if (uaeVariants.includes(sel) && uaeVariants.includes(uCountry)) return true;
+    return false;
   });
 
   const selectedUnivObj = (universities || []).find(u => (typeof u === 'object' ? (u._id || u.id) : u) === university);
@@ -79,13 +85,7 @@ export default function SalesOrderStudy({
     String(student._id || student.id || '') === String(selectedStudent || '')
   );
 
-  const filteredCourses = (courses || []).filter(c => {
-    if (!university) return false;
-    const cUnivId = typeof c === 'object' ? (c.university?._id || c.university?.id || (typeof c.university === 'string' ? c.university : '')) : '';
-    const cUnivName = typeof c === 'object' ? (c.university?.name || (typeof c.university === 'string' ? c.university : '')) : '';
-    return (cUnivId && (cUnivId === university || String(cUnivId) === String(university))) ||
-      (selectedUnivName && cUnivName && cUnivName.toLowerCase() === selectedUnivName.toLowerCase());
-  });
+  const filteredCourses = resolveUniversityCourses(university, universities, courses);
   
   const [isFlagDropdownOpen, setIsFlagDropdownOpen] = useState(false);
   const [successMessage, setSuccessMessage] = useState(false);
@@ -221,7 +221,7 @@ export default function SalesOrderStudy({
   const selectedCountry = countries.find(c => c.code === phoneCode) || countries[0];
 
   return (
-    <div className="workspace-page flex-1 min-w-0 p-4 sm:p-6 space-y-6 bg-[#F0F2F5]">
+    <div className="workspace-page flex-1 min-w-0 p-4 sm:p-6 space-y-6 bg-[#F8FAFC]">
       {/* Header with Back Arrow */}
       <div className="workspace-panel flex items-start sm:items-center gap-4 bg-white border border-[#E2E8F0] border-t-4 border-t-[#D99A1C] p-6 rounded-2xl shadow-xs">
         <ActionButton

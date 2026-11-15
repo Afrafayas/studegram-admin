@@ -2,6 +2,7 @@ import { ActionButton } from './ActionControls';
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import API from '../api/axios';
+import unigatherLogo from '../assets/unigather-logo.jpg';
 
 export default function AdminHeader({ 
   activeTab, 
@@ -296,14 +297,14 @@ export default function AdminHeader({
   const breadcrumbs = getBreadcrumbs();
 
   return (
-    <header className="workspace-header flex flex-col select-none z-30 shrink-0 sticky top-0 bg-[#0A0A0F] text-white border-b border-slate-900 shadow-xs">
+    <header className="workspace-header flex flex-col select-none z-30 shrink-0 sticky top-0 bg-[#D99A1C] text-[#07163B] border-b border-[#C28410] shadow-sm">
       {/* Top Navigation Bar */}
       <div className="h-[64px] min-h-[64px] px-3 sm:px-6 flex items-center justify-between gap-2">
-        {/* Left Side: Hamburger & Breadcrumbs */}
-        <div className="flex min-w-0 items-center gap-2 sm:gap-4">
+        {/* Left Side: Hamburger, Logo, Brand Title & Breadcrumbs */}
+        <div className="flex min-w-0 items-center gap-2 sm:gap-3">
           <ActionButton
             onClick={onToggleSidebar}
-            className="lg:hidden p-1.5 text-slate-400 hover:text-white hover:bg-slate-900 rounded-lg focus:outline-none"
+            className="lg:hidden p-1.5 text-[#07163B] hover:bg-black/10 rounded-lg focus:outline-none"
             title="Toggle Navigation"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -314,7 +315,7 @@ export default function AdminHeader({
           {onBack && (
             <ActionButton
               onClick={onBack}
-              className="p-1.5 text-slate-400 hover:text-white hover:bg-slate-900 rounded-lg focus:outline-none transition-all flex items-center justify-center active:scale-95 duration-100"
+              className="p-1.5 text-[#07163B] hover:bg-black/10 rounded-lg focus:outline-none transition-all flex items-center justify-center active:scale-95 duration-100"
               title="Go Back"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -323,40 +324,46 @@ export default function AdminHeader({
             </ActionButton>
           )}
 
-          {/* Breadcrumbs */}
-          <div className="hidden sm:flex min-w-0 flex-wrap items-center gap-1.5 text-xs font-semibold text-slate-400">
-            {breadcrumbs.map((crumb, index) => (
-              <React.Fragment key={crumb}>
-                {index > 0 && (
-                  <svg className="w-3.5 h-3.5 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7-7" />
-                  </svg>
-                )}
-                <span className={index === breadcrumbs.length - 1 ? "text-[#D99A1C] font-extrabold" : ""}>
-                  {crumb}
-                </span>
-              </React.Fragment>
-            ))}
-          </div>
-          <div className="sm:hidden min-w-0 truncate text-xs font-bold text-white">
-            {breadcrumbs[breadcrumbs.length - 1]}
+          {/* Logo with slightly increased size & strictly NO border */}
+          <img
+            src={unigatherLogo}
+            alt="Unigather"
+            className="shrink-0 w-11 h-11 sm:w-12 sm:h-12 rounded-xl object-cover shadow-sm border-0 select-none pointer-events-none"
+          />
+
+          <div className="flex min-w-0 items-center gap-1.5 sm:gap-2">
+            <span className="shrink-0 font-extrabold text-sm sm:text-base md:text-xl tracking-tight text-[#07163B]">
+              Unigather
+            </span>
+
+            {/* Breadcrumbs */}
+            {breadcrumbs.length > 1 && (
+              <>
+                <span className="hidden sm:inline-block text-[#07163B]/40 font-medium text-sm select-none mx-0.5">/</span>
+                <div className="hidden sm:flex min-w-0 flex-wrap items-center gap-1.5 text-xs font-semibold text-[#07163B]/80">
+                  {breadcrumbs.slice(1).map((crumb, index, arr) => (
+                    <React.Fragment key={crumb}>
+                      {index > 0 && (
+                        <svg className="w-3.5 h-3.5 text-[#07163B]/50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M9 5l7 7-7 7" />
+                        </svg>
+                      )}
+                      <span className={index === arr.length - 1 ? "text-[#07163B] font-black" : "text-[#07163B]/80 hover:text-[#07163B]"}>
+                        {crumb}
+                      </span>
+                    </React.Fragment>
+                  ))}
+                </div>
+                <div className="sm:hidden min-w-0 truncate text-xs font-black text-[#07163B]">
+                  {breadcrumbs[breadcrumbs.length - 1]}
+                </div>
+              </>
+            )}
           </div>
         </div>
 
         {/* Right Side: Profile Dropdown, Notifications & Refresh Button */}
         <div className="flex shrink-0 items-center gap-1 sm:gap-3 relative">
-          {/* onRefreshData && (
-            <ActionButton
-              onClick={onRefreshData}
-              disabled={isSyncing}
-              title="Refresh Live Data"
-              className="px-2.5 py-1 bg-slate-900 border border-slate-800 hover:border-[#D99A1C] text-[10px] font-extrabold text-slate-300 hover:text-white rounded-lg transition-all cursor-pointer flex items-center gap-1.5 active:scale-95 disabled:opacity-50"
-            >
-              <span className={isSyncing ? "animate-spin text-[#D99A1C]" : "text-[#D99A1C]"}>🔄</span>
-              <span className="hidden md:inline">{isSyncing ? "Refreshing..." : "Refresh"}</span>
-            </ActionButton>
-          ) */}
-
           {/* Real-time Application Comments Icon & Drawer */}
           <div className="relative">
             <ActionButton
@@ -364,14 +371,14 @@ export default function AdminHeader({
                 setShowComments(!showComments);
                 if (showNotifications) setShowNotifications(false);
               }}
-              className="p-2 text-slate-400 hover:text-white hover:bg-slate-900 rounded-xl transition-all relative focus:outline-none cursor-pointer"
+              className="p-2 text-[#07163B] hover:bg-black/10 rounded-xl transition-all relative focus:outline-none cursor-pointer"
               title="Application Comments & Messages"
               aria-label={`Comments: ${commentsList.length} total, ${unreadCommentsCount} unread`}
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
               </svg>
-              <span className="absolute top-1 right-1 min-w-4 h-4 px-1 bg-blue-500 text-white rounded-full text-[9px] font-black flex items-center justify-center animate-bounce shadow">
+              <span className="absolute top-1 right-1 min-w-4 h-4 px-1 bg-[#07163B] text-white rounded-full text-[9px] font-black flex items-center justify-center shadow">
                   {unreadCommentsCount}
                 </span>
             </ActionButton>
@@ -383,8 +390,8 @@ export default function AdminHeader({
                   onClick={() => setShowComments(false)}
                   className="fixed inset-0 z-10"
                 />
-                <div className="fixed left-3 right-3 top-[68px] sm:absolute sm:left-auto sm:right-0 sm:top-11 sm:w-96 bg-[#0A0A0F] border border-slate-800 rounded-2xl shadow-2xl py-3 z-50 animate-in fade-in slide-in-from-top-2 duration-150">
-                  <div className="px-4 pb-2.5 border-b border-slate-900 flex justify-between items-center">
+                <div className="fixed left-3 right-3 top-[68px] sm:absolute sm:left-auto sm:right-0 sm:top-11 sm:w-96 bg-[#07163B] border border-[#0D2357] rounded-2xl shadow-2xl py-3 z-50 animate-in fade-in slide-in-from-top-2 duration-150">
+                  <div className="px-4 pb-2.5 border-b border-[#0D2357] flex justify-between items-center">
                     <div>
                       <h4 className="text-xs font-black text-white uppercase tracking-wider flex items-center gap-2">
                         <span>Application Comments</span>
@@ -448,14 +455,14 @@ export default function AdminHeader({
                 setShowNotifications(!showNotifications);
                 if (showComments) setShowComments(false);
               }}
-              className="p-2 text-slate-400 hover:text-white hover:bg-slate-900 rounded-xl transition-all relative focus:outline-none cursor-pointer"
+              className="p-2 text-[#07163B] hover:bg-black/10 rounded-xl transition-all relative focus:outline-none cursor-pointer"
               title="Notifications"
               aria-label={`Notifications: ${notifications.length} total, ${unreadCount} unread`}
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
               </svg>
-              <span className="absolute top-1 right-1 min-w-4 h-4 px-1 bg-rose-500 text-white rounded-full text-[9px] font-black flex items-center justify-center animate-bounce shadow">
+              <span className="absolute top-1 right-1 min-w-4 h-4 px-1 bg-rose-600 text-white rounded-full text-[9px] font-black flex items-center justify-center shadow">
                   {unreadCount}
                 </span>
             </ActionButton>
@@ -467,8 +474,8 @@ export default function AdminHeader({
                   onClick={() => setShowNotifications(false)}
                   className="fixed inset-0 z-10"
                 />
-                <div className="fixed left-3 right-3 top-[68px] sm:absolute sm:left-auto sm:right-0 sm:top-11 sm:w-96 bg-[#0A0A0F] border border-slate-800 rounded-2xl shadow-2xl py-3 z-50 animate-in fade-in slide-in-from-top-2 duration-150">
-                  <div className="px-4 pb-2.5 border-b border-slate-900 flex justify-between items-center">
+                <div className="fixed left-3 right-3 top-[68px] sm:absolute sm:left-auto sm:right-0 sm:top-11 sm:w-96 bg-[#07163B] border border-[#0D2357] rounded-2xl shadow-2xl py-3 z-50 animate-in fade-in slide-in-from-top-2 duration-150">
+                  <div className="px-4 pb-2.5 border-b border-[#0D2357] flex justify-between items-center">
                     <div>
                       <h4 className="text-xs font-black text-white uppercase tracking-wider">System Notifications</h4>
                       <p className="text-[10px] text-slate-400">{notifications.length} total notifications &middot; {unreadCount} unread</p>
@@ -525,18 +532,18 @@ export default function AdminHeader({
           </div>
 
           <div className="text-right hidden sm:block">
-            <p className="text-xs font-bold text-white">{currentUser?.name || 'User'}</p>
-            <p className="text-[10px] text-[#D99A1C] font-extrabold uppercase">{currentUser?.role || 'SuperAdmin'} ({currentUser?.country || 'Global'})</p>
+            <p className="text-xs font-black text-[#07163B]">{currentUser?.name || 'User'}</p>
+            <p className="text-[10px] text-[#07163B]/80 font-black uppercase">{currentUser?.role || 'SuperAdmin'} ({currentUser?.country || 'Global'})</p>
           </div>
 
           <ActionButton
             onClick={() => setProfileDropdownOpen(!profileDropdownOpen)}
             className="relative cursor-pointer group focus:outline-none"
           >
-            <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-[#D99A1C] to-[#F5B025] flex items-center justify-center font-bold text-white text-xs shadow-md border-2 border-white group-hover:border-[#D99A1C] transition-all">
+            <div className="w-9 h-9 rounded-full bg-[#07163B] text-white flex items-center justify-center font-bold text-xs shadow-md border-2 border-white/80 group-hover:border-white transition-all">
               {currentUser?.avatar || 'SA'}
             </div>
-            <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-emerald-500 rounded-full ring-2 ring-white"></span>
+            <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-emerald-500 rounded-full ring-2 ring-[#D99A1C]"></span>
           </ActionButton>
 
           {/* Profile Dropdown Menu */}
@@ -548,8 +555,8 @@ export default function AdminHeader({
                 className="fixed inset-0 z-10"
               ></div>
               
-              <div className="absolute right-0 top-11 w-52 bg-[#0A0A0F] border border-slate-800 rounded-xl shadow-2xl py-2 z-50 animate-in fade-in slide-in-from-top-2 duration-150">
-                <div className="px-4 py-2 border-b border-slate-900">
+              <div className="absolute right-0 top-11 w-52 bg-[#07163B] border border-[#0D2357] rounded-xl shadow-2xl py-2 z-50 animate-in fade-in slide-in-from-top-2 duration-150">
+                <div className="px-4 py-2 border-b border-[#0D2357]">
                   <p className="text-xs font-bold text-white">{currentUser?.name}</p>
                   <p className="text-[9px] text-[#D99A1C] font-black uppercase mt-0.5">{currentUser?.role}</p>
                   <p className="text-[10px] text-slate-400 truncate">{currentUser?.email}</p>
@@ -565,7 +572,7 @@ export default function AdminHeader({
                   </svg>
                   <span>Student Portal</span>
                 </a>
-                <hr className="border-slate-900 my-1" />
+                <hr className="border-[#0D2357] my-1" />
                 <ActionButton
                   onClick={() => {
                     setProfileDropdownOpen(false);

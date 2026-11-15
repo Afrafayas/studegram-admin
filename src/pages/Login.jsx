@@ -2,6 +2,8 @@ import { ActionButton, ActionForm } from '../components/ActionControls';
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import API from '../api/axios';
+import unigatherLogo from '../assets/unigather-logo.jpg';
+import unigatherMascot from '../assets/unigather-mascot.png';
 
 export default function Login({ onLoginSuccess }) {
   const { login } = useAuth();
@@ -106,76 +108,115 @@ export default function Login({ onLoginSuccess }) {
   };
 
   return (
-    <div className="min-h-screen bg-[#F0F2F5] flex items-stretch select-none">
-      {/* Left side (50%): Brand detail gradient panel */}
-      <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-tr from-[#050508] to-[#0A0A0F] text-white p-16 flex-col justify-between relative overflow-hidden">
-        <div className="absolute top-0 right-0 w-80 h-80 bg-white/5 rounded-full blur-2xl -translate-y-1/3 translate-x-1/3"></div>
-        <div className="absolute bottom-0 left-0 w-96 h-96 bg-white/5 rounded-full blur-3xl translate-y-1/3 -translate-x-1/3"></div>
+    <div className="min-h-screen bg-[#F8FAFC] flex items-stretch select-none">
+      {/* Left side (50%): Brand detail graphic panel in Mustard Yellow */}
+      <div className="hidden lg:flex lg:w-1/2 bg-[#D99A1C] text-white p-12 xl:p-16 flex-col justify-between relative overflow-hidden">
+        {/* Transparent Icon Pattern Background */}
+        <div 
+          className="absolute inset-0 bg-cover bg-center opacity-20 mix-blend-multiply pointer-events-none"
+          style={{ backgroundImage: 'url(/assets/login_hero_pattern.png)' }}
+        ></div>
+        <div className="absolute -top-24 -left-24 w-96 h-96 bg-white/10 rounded-full blur-3xl pointer-events-none"></div>
+        <div className="absolute -bottom-24 -right-24 w-96 h-96 bg-black/10 rounded-full blur-3xl pointer-events-none"></div>
 
-        {/* Top: Logo Brand */}
-        <div className="flex items-center gap-3 relative z-10">
-          <div className="w-10 h-10 rounded-xl bg-white text-[#D99A1C] flex items-center justify-center font-extrabold text-xl shadow-lg">
-            U
+        {/* Top: Logo Brand + Badge */}
+        <div className="flex items-center justify-between relative z-10">
+          <div className="flex items-center gap-3">
+            <img
+              src={unigatherLogo}
+              alt="Unigather"
+              className="w-10 h-10 rounded-xl object-cover shadow-md"
+            />
+            <span className="font-black text-2xl tracking-wider uppercase text-white drop-shadow-xs">UNIGATHER</span>
           </div>
-          <span className="font-extrabold text-2xl tracking-wider uppercase">UNIGATHER</span>
+          <span className="px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-black/15 text-white/95 border border-white/20 backdrop-blur-xs">
+            Admin Console
+          </span>
         </div>
 
-        {/* Center: Hero Statement */}
-        <div className="space-y-6 max-w-md relative z-10 my-auto">
-          <h2 className="text-4xl font-extrabold tracking-tight leading-tight">
-            Unigather Admin Control Center
-          </h2>
-          <p className="text-xs text-white/80 font-medium leading-relaxed">
-            Monitor daily application status reports, configure file requirements, verify academic course documents, and review B2B channel agent performance in one unified operations console.
-          </p>
+        {/* Center: Hero Statement & Mascot Showcase */}
+        <div className="space-y-6 max-w-lg relative z-10 my-auto py-6">
+          <div className="space-y-3">
+            <h2 className="text-3xl xl:text-4xl font-black tracking-tight leading-tight text-white drop-shadow-xs">
+              Unigather Admin Control Center
+            </h2>
+            <p className="text-xs xl:text-sm text-white/90 font-medium leading-relaxed max-w-md">
+              Monitor daily application status reports, configure file requirements, verify academic course documents, and review B2B channel agent performance in one unified operations console.
+            </p>
+          </div>
 
-          <div className="space-y-3.5 pt-6 text-xs font-semibold text-slate-350">
-            <div className="flex items-center gap-3">
-              <span className="w-5 h-5 bg-white/10 border border-white/20 rounded-full flex items-center justify-center shadow-inner text-[#D99A1C]">
-                <svg className="w-3.5 h-3.5 text-[#D99A1C]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7" />
-                </svg>
-              </span>
-              <span>Monitor B2B Agent Channels</span>
+          {/* Mascot & Highlights Showcase Box */}
+          <div className="bg-black/10 backdrop-blur-md border border-white/20 rounded-2xl p-5 flex items-center gap-5 shadow-lg">
+            <div className="shrink-0 flex items-center justify-center">
+              <img
+                src={unigatherMascot}
+                alt="Unigather Mascot"
+                className="h-32 xl:h-36 w-auto object-contain drop-shadow-xl select-none pointer-events-none -my-2"
+              />
             </div>
-            <div className="flex items-center gap-3">
-              <span className="w-5 h-5 bg-white/10 border border-white/20 rounded-full flex items-center justify-center shadow-inner text-[#D99A1C]">
-                <svg className="w-3.5 h-3.5 text-[#D99A1C]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7" />
-                </svg>
-              </span>
-              <span>Configure Stage Pipelines</span>
-            </div>
-            <div className="flex items-center gap-3">
-              <span className="w-5 h-5 bg-white/10 border border-white/20 rounded-full flex items-center justify-center shadow-inner text-[#D99A1C]">
-                <svg className="w-3.5 h-3.5 text-[#D99A1C]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7" />
-                </svg>
-              </span>
-              <span>Audit Document Rules</span>
+            <div className="space-y-2.5 min-w-0 flex-1">
+              <div className="flex items-center gap-2.5 text-xs font-bold text-white">
+                <span className="w-5 h-5 rounded-full bg-white text-[#D99A1C] flex items-center justify-center shrink-0 shadow-xs">
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="3" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                  </svg>
+                </span>
+                <span className="truncate">Monitor B2B Agent Channels</span>
+              </div>
+              <div className="flex items-center gap-2.5 text-xs font-bold text-white">
+                <span className="w-5 h-5 rounded-full bg-white text-[#D99A1C] flex items-center justify-center shrink-0 shadow-xs">
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="3" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                  </svg>
+                </span>
+                <span className="truncate">Configure Stage Pipelines</span>
+              </div>
+              <div className="flex items-center gap-2.5 text-xs font-bold text-white">
+                <span className="w-5 h-5 rounded-full bg-white text-[#D99A1C] flex items-center justify-center shrink-0 shadow-xs">
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="3" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                  </svg>
+                </span>
+                <span className="truncate">Audit Document Rules</span>
+              </div>
             </div>
           </div>
         </div>
 
-        <div className="text-[10px] text-white/60 font-semibold relative z-10">
-          © 2026 Unigather Inc. All rights reserved.
+        {/* Bottom Footer */}
+        <div className="flex items-center justify-between text-[11px] text-white/80 font-medium relative z-10 pt-4 border-t border-white/20">
+          <span>© 2026 Unigather Inc. All rights reserved.</span>
+          <span className="flex items-center gap-1.5 text-white/90">
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+            <span>Console Live</span>
+          </span>
         </div>
       </div>
 
       {/* Right side (50%): Form card centered */}
-      <div className="w-full lg:w-1/2 flex items-center justify-center p-8 md:p-16">
-        <div className="w-full max-w-md bg-white border border-[#E2E8F0] border-t-4 border-t-[#D99A1C] rounded-2xl shadow-xl p-8 md:p-10 space-y-8">
+      <div className="w-full lg:w-1/2 flex items-center justify-center p-8 md:p-16 bg-gradient-to-br from-[#F8FAFC] via-[#F1F5F9] to-slate-100 relative overflow-hidden">
+        <div className="absolute top-10 right-10 w-72 h-72 bg-[#D99A1C]/5 rounded-full blur-3xl pointer-events-none"></div>
+        <div className="absolute bottom-10 left-10 w-72 h-72 bg-[#07163B]/5 rounded-full blur-3xl pointer-events-none"></div>
+
+        <div className="w-full max-w-md bg-white border border-slate-200/80 border-t-4 border-t-[#D99A1C] rounded-2xl shadow-xl shadow-slate-200/60 p-8 md:p-10 space-y-7 relative z-10">
           
-          <div className="text-left space-y-1">
-            <h1 className="text-2xl font-bold tracking-tight text-[#0F172A]">Unigather Admin Portal</h1>
-            <p className="text-xs text-[#64748B] font-semibold">Sign in with administrator credentials to continue</p>
+          <div className="text-left space-y-2">
+            <div className="w-11 h-11 rounded-xl bg-gradient-to-tr from-[#D99A1C]/20 to-[#D99A1C]/10 border border-[#D99A1C]/30 text-[#07163B] flex items-center justify-center shadow-xs">
+              <svg className="w-5 h-5 text-[#D99A1C]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+              </svg>
+            </div>
+            <div>
+              <h1 className="text-2xl font-black tracking-tight text-[#07163B]">Unigather Admin Portal</h1>
+              <p className="text-xs text-slate-500 font-medium mt-0.5">Sign in with administrator credentials to continue</p>
+            </div>
           </div>
 
           <ActionForm onSubmit={handleSubmit} className="space-y-5">
             <div className="space-y-1.5">
-              <label className="block text-[10px] font-extrabold text-[#64748B] uppercase tracking-wider">Admin Email</label>
+              <label className="block text-[11px] font-bold text-[#07163B] uppercase tracking-wider">Admin Email</label>
               <div className="relative">
-                <span className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-[#64748B]">
+                <span className="absolute inset-y-0 left-0 flex items-center pl-3.5 pointer-events-none text-slate-400">
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                   </svg>
@@ -183,10 +224,10 @@ export default function Login({ onLoginSuccess }) {
                 <input
                   type="text"
                   autoComplete="username"
-                  className={`w-full bg-slate-50 border rounded-xl pl-10 pr-4 py-2.5 text-xs text-[#0F172A] placeholder-[#64748B] focus:outline-none focus:bg-white focus:ring-1 transition-all ${
+                  className={`w-full bg-slate-50/60 hover:bg-slate-50 focus:bg-white border rounded-xl pl-10 pr-4 py-3 text-xs text-[#07163B] font-medium placeholder-slate-400 focus:outline-none focus:ring-4 transition-all ${
                     emailError
-                      ? 'border-[#EF4444] focus:ring-[#EF4444] focus:border-[#EF4444]'
-                      : 'border-slate-200 focus:ring-[#D99A1C] focus:border-[#D99A1C]'
+                      ? 'border-[#EF4444] focus:ring-[#EF4444]/15 focus:border-[#EF4444]'
+                      : 'border-slate-200 focus:ring-[#D99A1C]/15 focus:border-[#D99A1C]'
                   }`}
                   placeholder="admin@unigather.com"
                   value={email}
@@ -203,9 +244,9 @@ export default function Login({ onLoginSuccess }) {
             </div>
 
             <div className="space-y-1.5">
-              <label className="block text-[10px] font-extrabold text-[#64748B] uppercase tracking-wider">Password</label>
+              <label className="block text-[11px] font-bold text-[#07163B] uppercase tracking-wider">Password</label>
               <div className="relative">
-                <span className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-[#64748B]">
+                <span className="absolute inset-y-0 left-0 flex items-center pl-3.5 pointer-events-none text-slate-400">
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                   </svg>
@@ -213,10 +254,10 @@ export default function Login({ onLoginSuccess }) {
                 <input
                   type={showPassword ? 'text' : 'password'}
                   autoComplete="current-password"
-                  className={`w-full bg-slate-50 border rounded-xl pl-10 pr-10 py-2.5 text-xs text-[#0F172A] placeholder-[#64748B] focus:outline-none focus:bg-white focus:ring-1 transition-all ${
+                  className={`w-full bg-slate-50/60 hover:bg-slate-50 focus:bg-white border rounded-xl pl-10 pr-10 py-3 text-xs text-[#07163B] font-medium placeholder-slate-400 focus:outline-none focus:ring-4 transition-all ${
                     passwordError
-                      ? 'border-[#EF4444] focus:ring-[#EF4444] focus:border-[#EF4444]'
-                      : 'border-slate-200 focus:ring-[#D99A1C] focus:border-[#D99A1C]'
+                      ? 'border-[#EF4444] focus:ring-[#EF4444]/15 focus:border-[#EF4444]'
+                      : 'border-slate-200 focus:ring-[#D99A1C]/15 focus:border-[#D99A1C]'
                   }`}
                   placeholder="••••••••"
                   value={password}
@@ -229,7 +270,7 @@ export default function Login({ onLoginSuccess }) {
                 <ActionButton
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute inset-y-0 right-0 pr-3 flex items-center text-[#64748B] hover:text-[#0F172A] focus:outline-none"
+                  className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-400 hover:text-[#07163B] focus:outline-none cursor-pointer transition-colors"
                   disabled={isLoading}
                 >
                   {showPassword ? (
@@ -250,7 +291,7 @@ export default function Login({ onLoginSuccess }) {
             </div>
 
             <div className="flex items-center justify-between text-xs select-none">
-              <label className="flex items-center gap-2 cursor-pointer font-semibold text-[#64748B] hover:text-[#0F172A] transition-colors">
+              <label className="flex items-center gap-2 cursor-pointer font-semibold text-slate-600 hover:text-[#07163B] transition-colors">
                 <input
                   type="checkbox"
                   className="w-4 h-4 rounded text-[#D99A1C] border-slate-300 focus:ring-[#D99A1C]"
@@ -263,7 +304,7 @@ export default function Login({ onLoginSuccess }) {
               <ActionButton
                 type="button"
                 onClick={handleOpenForgotModal}
-                className="text-[#D99A1C] font-bold hover:underline cursor-pointer bg-transparent border-0 p-0 text-xs focus:outline-none"
+                className="text-[#D99A1C] hover:text-[#C28410] font-bold hover:underline cursor-pointer bg-transparent border-0 p-0 text-xs focus:outline-none transition-colors"
               >
                 Forgot password?
               </ActionButton>
@@ -271,7 +312,7 @@ export default function Login({ onLoginSuccess }) {
 
             <ActionButton
               type="submit"
-              className="w-full bg-gradient-to-r from-[#D99A1C] to-[#F5B025] hover:scale-[1.02] text-white font-bold py-3 rounded-xl text-xs transition-all duration-150 shadow-md uppercase tracking-wider disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center justify-center gap-1.5 cursor-pointer"
+              className="w-full bg-[#D99A1C] hover:bg-[#C28410] active:scale-[0.98] text-[#07163B] font-black py-3.5 rounded-xl text-xs transition-all duration-150 shadow-md shadow-amber-500/20 uppercase tracking-wider disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center justify-center gap-2 cursor-pointer"
               disabled={isLoading}
             >
               {isLoading && (
@@ -280,8 +321,16 @@ export default function Login({ onLoginSuccess }) {
                   <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                 </svg>
               )}
-              {isLoading ? 'Authorizing...' : 'Admin Login'}
+              <span>{isLoading ? 'Authorizing...' : 'Admin Login'}</span>
             </ActionButton>
+
+            {/* Security Badge */}
+            <div className="pt-1 text-center flex items-center justify-center gap-1.5 text-[10px] text-slate-400 font-medium select-none">
+              <svg className="w-3.5 h-3.5 text-emerald-600 shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M2.166 4.999A11.954 11.954 0 0010 1.944 11.954 11.954 0 0017.834 5c.11.65.166 1.32.166 2.001 0 5.225-3.34 9.67-8 11.317C5.34 16.67 2 12.225 2 7c0-.682.057-1.35.166-2.001zm11.541 3.708a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+              </svg>
+              <span>256-bit Encrypted Session &middot; Authorized Personnel Only</span>
+            </div>
           </ActionForm>
         </div>
       </div>

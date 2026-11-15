@@ -17,8 +17,8 @@ import { useToast } from '../context/ToastContext';
 import API from '../api/axios';
 import { resolveDocumentUrl, documentFileName, downloadApplicationDocument } from '../utils/applicationDocuments';
 
-// Smart Document Viewer: Images are beautifully centered with object-contain (no scrollbars), while PDFs use iframe
-function SmartDocViewer({ url, title, isModal = false, isImage = false }) {
+// Smart Document Viewer: Supports Zoom, Rotation, Fit-to-screen vs 100% actual size, while PDFs use iframe
+function SmartDocViewer({ url, title, isModal = false, isImage = false, zoom = 1, rotation = 0, fitMode = 'fit', isFullscreen = false }) {
   const isExplicitPdf = /\.pdf(?:[?#]|$)/i.test(url) || (url && url.toLowerCase().includes('application/pdf'));
   const [useIframe, setUseIframe] = useState(isExplicitPdf && !isImage);
 
@@ -31,18 +31,33 @@ function SmartDocViewer({ url, title, isModal = false, isImage = false }) {
       <iframe
         src={url}
         title={title}
-        className="w-full h-full rounded-xl border-0 bg-white"
+        className="w-full h-full min-h-[440px] rounded-xl border-0 bg-white shadow-inner"
       />
     );
   }
 
+  const isFit = fitMode === 'fit';
+  const maxHeightStyle = isModal
+    ? (isFullscreen ? 'calc(90vh - 190px)' : 'calc(75vh - 190px)')
+    : '100%';
+
   return (
-    <img
-      src={url}
-      alt={title}
-      className={`${isModal ? 'max-h-[65vh]' : 'max-h-full'} max-w-full object-contain mx-auto my-auto rounded-lg shadow-2xs block`}
-      onError={() => setUseIframe(true)}
-    />
+    <div className="w-full h-full min-h-0 flex items-center justify-center p-2">
+      <img
+        src={url}
+        alt={title}
+        style={{
+          transform: `scale(${zoom}) rotate(${rotation}deg)`,
+          transformOrigin: 'center center',
+          maxHeight: isFit ? maxHeightStyle : 'none',
+          maxWidth: isFit ? '100%' : 'none',
+          objectFit: 'contain',
+          transition: 'transform 0.2s cubic-bezier(0.2, 0, 0, 1)'
+        }}
+        className={`${isFit ? 'w-auto h-auto block mx-auto rounded-lg shadow-sm' : 'w-auto h-auto block mx-auto rounded-lg shadow-sm'} select-none`}
+        onError={() => setUseIframe(true)}
+      />
+    </div>
   );
 }
 
@@ -103,6 +118,19 @@ export default function Students({ clients = [], setClients, applications = [], 
   });
 
   const [previewModalDoc, setPreviewModalDoc] = useState(null);
+  const [docZoom, setDocZoom] = useState(1);
+  const [docRotation, setDocRotation] = useState(0);
+  const [docFitMode, setDocFitMode] = useState('fit'); // 'fit' | 'actual'
+  const [docFullscreen, setDocFullscreen] = useState(false);
+
+  useEffect(() => {
+    if (previewModalDoc) {
+      setDocZoom(1);
+      setDocRotation(0);
+      setDocFitMode('fit');
+      setDocFullscreen(false);
+    }
+  }, [previewModalDoc?.previewUrl, previewModalDoc?.fileName]);
 
   // Find linked applications for a specific student
   const getStudentApplications = (student) => {
@@ -490,14 +518,23 @@ support@unigather.app`;
 
   const handleViewApplication = (app) => {
     const appId = app.id || app._id || app.camsId;
+    const enrichedApp = {
+      ...app,
+      student: (app.student && typeof app.student === 'object') ? app.student : singleViewStudent,
+      dob: app.dob || singleViewStudent?.dob || null,
+      phone: app.phone || singleViewStudent?.phone || null,
+      studentName: (app.studentName && app.studentName !== 'N/A') ? app.studentName : (singleViewStudent?.name || 'N/A'),
+      studentEmail: app.studentEmail || singleViewStudent?.email || null,
+      passportNo: (app.passportNo && app.passportNo !== 'N/A') ? app.passportNo : (singleViewStudent?.passportNo || 'N/A')
+    };
     localStorage.setItem('studegram_admin_single_view_app_id', String(appId));
     try {
-      localStorage.setItem('studegram_admin_single_view_app', JSON.stringify(app));
+      localStorage.setItem('studegram_admin_single_view_app', JSON.stringify(enrichedApp));
     } catch (e) {}
     if (onNavigateToApplication) {
       onNavigateToApplication(appId);
     } else {
-      window.dispatchEvent(new CustomEvent('navigate_to_application', { detail: { appId, app } }));
+      window.dispatchEvent(new CustomEvent('navigate_to_application', { detail: { appId, app: enrichedApp } }));
       try {
         const url = new URL(window.location.href);
         url.searchParams.set('appId', String(appId));
@@ -559,7 +596,7 @@ support@unigather.app`;
   };
 
   return (
-    <div className="workspace-page flex-1 min-w-0 p-4 sm:p-6 space-y-6 bg-[#F0F2F5]">
+    <div className="workspace-page flex-1 min-w-0 p-4 sm:p-6 space-y-6 bg-[#F8FAFC]">
       {/* 1. DIRECTORY TABLE VIEW (when no student single view is active) */}
       {!singleViewStudent ? (
         <>
@@ -827,15 +864,21 @@ support@unigather.app`;
                   </div>
                 </div>
 
-                {/* Main Dossier Grid */}
+                {/* Top Row: Personal Info (Left) + Associated Applications (Right) */}
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                   {/* Left Column: Personal & Contact Info */}
-                  <div className="space-y-6 lg:col-span-1">
+                  <div className="lg:col-span-1">
                     {/* Personal Profile Info Card */}
-                    <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm space-y-4">
-                      
+                    <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm space-y-4 h-full flex flex-col justify-between">
+                      <div className="flex items-center gap-2 border-b border-slate-100 pb-3">
+                        <span className="text-lg">👤</span>
+                        <div>
+                          <h3 className="text-xs font-black uppercase tracking-wider text-slate-900">Personal &amp; Contact Profile</h3>
+                          <p className="text-[10px] text-slate-400 font-semibold">Student core information and contact lines</p>
+                        </div>
+                      </div>
 
-                      <div className="space-y-3 text-xs">
+                      <div className="space-y-3 text-xs flex-1 flex flex-col justify-between pt-1">
                         <div className="flex justify-between py-1 border-b border-slate-100">
                           <span className="text-slate-400 font-bold">Passport Number:</span>
                           <span className="font-mono font-black text-slate-900 uppercase bg-slate-50 px-2 py-0.5 rounded border border-slate-200">
@@ -878,36 +921,27 @@ support@unigather.app`;
                         </div>
                       </div>
                     </div>
-
-                    {/* Verification & KYC Status Card: hidden until a verification workflow records these statuses.
-                    <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm space-y-3">
-                      <div className="flex justify-between items-center pb-2 border-b border-slate-100">
-                        <span className="text-[10px] font-black uppercase tracking-widest text-[#D99A1C]">Verification Compliance</span>
-                        <span className="text-[10px] font-black text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200">
-                          {singleViewStudent.verificationStatus || 'Not verified'}
-                        </span>
-                      </div>
-                      <p className="text-xs text-slate-600 font-medium leading-relaxed">
-                        Verification status is shown when recorded for this student.
-                      </p>
-                      <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 flex items-center justify-between text-xs">
-                        <span className="text-slate-500 font-bold">Passport Status:</span>
-                        <span className="font-black text-emerald-600">
-                          {singleViewStudent.passportVerificationStatus || 'Not verified'}
-                        </span>
-                      </div>
-                    </div>
-                    */}
                   </div>
 
-                  {/* Right Column: Associated Applications & Documents */}
-                  <div className="space-y-6 lg:col-span-2">
+                  {/* Right Column: Associated Applications Table */}
+                  <div className="lg:col-span-2">
                     {/* Associated University Applications Table */}
-                    <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm space-y-4">
-                      
+                    <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm space-y-4 h-full flex flex-col justify-between">
+                      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-3">
+                        <div className="flex items-center gap-2">
+                          <span className="text-lg">🎓</span>
+                          <div>
+                            <h3 className="text-xs font-black uppercase tracking-wider text-slate-900">Associated University Applications</h3>
+                            <p className="text-[10px] text-slate-400 font-semibold">Academic programs applied for by this student</p>
+                          </div>
+                        </div>
+                        <span className="text-[10px] font-black text-amber-700 bg-amber-50 px-2.5 py-0.5 rounded-full border border-amber-200">
+                          {studentApps.length} {studentApps.length === 1 ? 'Program' : 'Programs'}
+                        </span>
+                      </div>
 
                       {studentApps.length > 0 ? (
-                        <div className="border border-slate-200 rounded-2xl overflow-x-auto shadow-2xs">
+                        <div className="border border-slate-200 rounded-2xl overflow-x-auto shadow-2xs flex-1">
                           <table className="w-full text-left border-collapse text-xs">
                             <thead>
                               <tr className="bg-slate-50 border-b border-slate-200">
@@ -971,36 +1005,55 @@ support@unigather.app`;
                           </table>
                         </div>
                       ) : (
-                        <div className="bg-slate-50 p-6 border border-dashed border-slate-200 rounded-2xl text-center space-y-1">
+                        <div className="bg-slate-50 p-6 border border-dashed border-slate-200 rounded-2xl text-center space-y-1 flex-1 flex flex-col justify-center">
                           <p className="text-xs text-slate-500 font-bold">No university applications have been logged for this student yet.</p>
                           <p className="text-[10px] text-slate-400">Use the Sales Order / Study tab to create course applications for {singleViewStudent.name}.</p>
                         </div>
                       )}
                     </div>
+                  </div>
+                </div>
 
-                    {/* Submitted Verification Documents Gallery */}
-                    <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm space-y-5">
-                      
+                {/* Bottom Row: Submitted Verification Documents Gallery (Full Width - Zero Wasted Space) */}
+                <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm space-y-5">
+                  {(() => {
+                    const uploadedDocs = [
+                      ...(Array.isArray(singleViewStudent.documents) ? singleViewStudent.documents : []),
+                      ...getStudentApplications(singleViewStudent).flatMap(app => Array.isArray(app.documents) ? app.documents : [])
+                    ];
+                    const seenUrls = new Set();
+                    const docsToDisplay = uploadedDocs.filter(doc => {
+                      const source = typeof doc === 'string' ? doc : (doc?.url || doc?.fileUrl || doc?.path || doc?.dataUrl || doc?.data || doc?.src || doc?.previewUrl);
+                      const url = resolveDocumentUrl(source);
+                      if (!url || seenUrls.has(url)) return false;
+                      seenUrls.add(url);
+                      return true;
+                    });
 
-                      {(() => {
-                        const uploadedDocs = [
-                          ...(Array.isArray(singleViewStudent.documents) ? singleViewStudent.documents : []),
-                          ...getStudentApplications(singleViewStudent).flatMap(app => Array.isArray(app.documents) ? app.documents : [])
-                        ];
-                        const seenUrls = new Set();
-                        const docsToDisplay = uploadedDocs.filter(doc => {
-                          const source = typeof doc === 'string' ? doc : (doc?.url || doc?.fileUrl || doc?.path || doc?.dataUrl || doc?.data || doc?.src || doc?.previewUrl);
-                          const url = resolveDocumentUrl(source);
-                          if (!url || seenUrls.has(url)) return false;
-                          seenUrls.add(url);
-                          return true;
-                        });
-                        if (!docsToDisplay.length) {
-                          return <p className="text-xs text-slate-500 py-4">No documents uploaded yet.</p>;
-                        }
+                    return (
+                      <>
+                        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-3">
+                          <div className="flex items-center gap-2">
+                            <span className="text-xl">📁</span>
+                            <div>
+                              <h3 className="text-xs font-black uppercase tracking-wider text-slate-900">Submitted Verification Documents</h3>
+                              <p className="text-[10px] text-slate-400 font-semibold">Student identification, academic transcripts, and verification files</p>
+                            </div>
+                          </div>
+                          {docsToDisplay.length > 0 && (
+                            <span className="text-[10px] font-black text-indigo-700 bg-indigo-50 px-2.5 py-0.5 rounded-full border border-indigo-200">
+                              {docsToDisplay.length} {docsToDisplay.length === 1 ? 'Document' : 'Documents'}
+                            </span>
+                          )}
+                        </div>
 
-                        return (
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {!docsToDisplay.length ? (
+                          <div className="bg-slate-50 p-6 border border-dashed border-slate-200 rounded-2xl text-center space-y-1">
+                            <p className="text-xs text-slate-500 font-bold">No verification documents uploaded yet.</p>
+                            <p className="text-[10px] text-slate-400">Uploaded identification files, mark sheets, and degrees will appear here.</p>
+                          </div>
+                        ) : (
+                          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                             {docsToDisplay.map((doc, dIdx) => {
                               const rawUrl = typeof doc === 'string' ? doc : (doc.url || doc.fileUrl || doc.path || doc.dataUrl || doc.data || doc.src || doc.previewUrl);
                               const docBlobUrl = resolveDocumentUrl(rawUrl);
@@ -1040,14 +1093,14 @@ support@unigather.app`;
                                           type: isImg ? 'image' : 'pdf'
                                         });
                                       }}
-                                      className="flex-1 py-2 bg-white hover:bg-slate-100 text-slate-800 border border-slate-200 rounded-xl font-bold text-xs transition-all cursor-pointer flex items-center justify-center gap-1.5 shadow-2xs"
+                                      className="flex-1 h-9 bg-white hover:bg-slate-100 text-slate-800 border border-slate-200 rounded-xl font-bold text-xs transition-all cursor-pointer inline-flex items-center justify-center gap-1.5 shadow-2xs"
                                     >
                                       <span>🔍 Expand</span>
                                     </ActionButton>
                                     <ActionButton
                                       type="button"
                                       onClick={() => handleDownloadStudentDoc(rawUrl, docFileName)}
-                                      className="flex-1 py-2 bg-gradient-to-r from-[#D99A1C] to-[#F5B025] hover:from-[#c28815] hover:to-[#e09e1d] text-white rounded-xl font-bold text-xs transition-all cursor-pointer flex items-center justify-center gap-1.5 shadow-2xs"
+                                      className="flex-1 h-9 bg-gradient-to-r from-[#D99A1C] to-[#F5B025] hover:from-[#c28815] hover:to-[#e09e1d] text-white rounded-xl font-bold text-xs transition-all cursor-pointer inline-flex items-center justify-center gap-1.5 shadow-2xs"
                                     >
                                       <span>📥 Download</span>
                                     </ActionButton>
@@ -1056,10 +1109,10 @@ support@unigather.app`;
                               );
                             })}
                           </div>
-                        );
-                      })()}
-                    </div>
-                  </div>
+                        )}
+                      </>
+                    );
+                  })()}
                 </div>
               </>
             );
@@ -1186,55 +1239,142 @@ support@unigather.app`;
 
       {/* Document Expand Preview Modal */}
       {previewModalDoc && createPortal(
-        <div className="fixed inset-0 z-[9999] bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-2 sm:p-4 overflow-y-auto">
-          <div className="bg-white rounded-3xl max-w-4xl w-full p-4 sm:p-6 shadow-2xl border border-slate-100 space-y-4 animate-in fade-in zoom-in-95 my-auto max-h-[95vh] flex flex-col">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3 shrink-0">
-              <div className="flex items-center gap-2">
-                <span className="text-xl">📄</span>
-                <div>
-                  <h3 className="text-xs sm:text-sm font-black text-slate-900">{previewModalDoc.title}</h3>
-                  <p className="text-[10px] text-slate-400 font-semibold">{previewModalDoc.fileName}</p>
+        <div 
+          className="fixed inset-0 z-[9999] bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-2 sm:p-4 select-none"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setPreviewModalDoc(null);
+          }}
+        >
+          <div 
+            onClick={(e) => e.stopPropagation()}
+            className={docFullscreen 
+              ? "bg-white rounded-2xl w-[98vw] h-[96vh] max-w-none shadow-2xl border border-slate-200/80 flex flex-col overflow-hidden animate-in fade-in zoom-in-95 my-auto" 
+              : "bg-white rounded-3xl max-w-4xl w-full shadow-2xl border border-slate-200/80 flex flex-col max-h-[92vh] sm:max-h-[88vh] overflow-hidden animate-in fade-in zoom-in-95 my-auto"
+            }
+          >
+            {/* Modal Header */}
+            <div className="flex flex-wrap items-center justify-between gap-3 px-5 sm:px-6 py-3 sm:py-3.5 border-b border-slate-100 shrink-0 bg-white">
+              <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                <div className="w-8 h-8 rounded-xl bg-amber-50 text-[#D99A1C] flex items-center justify-center text-base shrink-0 border border-amber-200/60">
+                  📄
+                </div>
+                <div className="min-w-0">
+                  <h3 className="text-xs sm:text-sm font-black text-slate-900 truncate">{previewModalDoc.title}</h3>
+                  <p className="text-[10px] text-slate-400 font-semibold truncate">{previewModalDoc.fileName}</p>
                 </div>
               </div>
-              <ActionButton
-                type="button"
-                onClick={() => setPreviewModalDoc(null)}
-                className="text-slate-400 hover:text-slate-700 p-1.5 rounded-lg cursor-pointer transition-colors"
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </ActionButton>
+
+              {/* Document Viewing Controls Toolbar */}
+              <div className="flex items-center gap-1.5 shrink-0 bg-slate-100/90 p-1 rounded-xl border border-slate-200/60">
+                {/* Zoom Out */}
+                <ActionButton
+                  type="button"
+                  onClick={() => setDocZoom(prev => Math.max(Number((prev - 0.25).toFixed(2)), 0.5))}
+                  disabled={docZoom <= 0.5}
+                  className="w-7 h-7 rounded-lg bg-white hover:bg-slate-50 text-slate-700 font-bold text-xs flex items-center justify-center border border-slate-200 shadow-2xs disabled:opacity-40 cursor-pointer"
+                  title="Zoom Out"
+                >
+                  −
+                </ActionButton>
+
+                {/* Zoom / Mode Indicator & Reset */}
+                <ActionButton
+                  type="button"
+                  onClick={() => {
+                    setDocZoom(1);
+                    setDocFitMode(prev => prev === 'fit' ? 'actual' : 'fit');
+                  }}
+                  className="px-2 h-7 rounded-lg bg-white hover:bg-slate-50 text-slate-800 font-mono font-bold text-[10px] flex items-center justify-center border border-slate-200 shadow-2xs cursor-pointer"
+                  title="Click to reset zoom / toggle Fit mode"
+                >
+                  {Math.round(docZoom * 100)}% {docFitMode === 'fit' ? '(Fit)' : '(1:1)'}
+                </ActionButton>
+
+                {/* Zoom In */}
+                <ActionButton
+                  type="button"
+                  onClick={() => {
+                    setDocZoom(prev => Math.min(Number((prev + 0.25).toFixed(2)), 3));
+                    setDocFitMode('actual');
+                  }}
+                  disabled={docZoom >= 3}
+                  className="w-7 h-7 rounded-lg bg-white hover:bg-slate-50 text-slate-700 font-bold text-xs flex items-center justify-center border border-slate-200 shadow-2xs disabled:opacity-40 cursor-pointer"
+                  title="Zoom In"
+                >
+                  +
+                </ActionButton>
+
+                <div className="h-4 w-px bg-slate-300 mx-0.5" />
+
+                {/* Rotate 90deg */}
+                <ActionButton
+                  type="button"
+                  onClick={() => setDocRotation(prev => (prev + 90) % 360)}
+                  className="w-7 h-7 rounded-lg bg-white hover:bg-slate-50 text-slate-700 text-xs flex items-center justify-center border border-slate-200 shadow-2xs cursor-pointer"
+                  title="Rotate 90°"
+                >
+                  🔄
+                </ActionButton>
+
+                {/* Fullscreen Toggle */}
+                <ActionButton
+                  type="button"
+                  onClick={() => setDocFullscreen(prev => !prev)}
+                  className="w-7 h-7 rounded-lg bg-white hover:bg-slate-50 text-slate-700 text-xs flex items-center justify-center border border-slate-200 shadow-2xs cursor-pointer"
+                  title={docFullscreen ? "Exit Fullscreen" : "Fullscreen Preview"}
+                >
+                  {docFullscreen ? "⤓" : "⛶"}
+                </ActionButton>
+
+                <div className="h-4 w-px bg-slate-300 mx-0.5" />
+
+                {/* Close Button */}
+                <ActionButton
+                  type="button"
+                  onClick={() => setPreviewModalDoc(null)}
+                  className="w-7 h-7 rounded-lg bg-white hover:bg-rose-50 text-slate-400 hover:text-rose-600 text-xs flex items-center justify-center border border-slate-200 shadow-2xs cursor-pointer transition-colors"
+                  title="Close Preview"
+                >
+                  ✕
+                </ActionButton>
+              </div>
             </div>
 
-            {/* Document Body */}
-            <div className="flex-1 bg-slate-100/70 border border-slate-200 rounded-2xl overflow-hidden flex items-center justify-center min-h-[400px] max-h-[65vh] p-3">
-              {previewModalDoc.previewUrl ? (
-                <SmartDocViewer
-                  url={previewModalDoc.previewUrl}
-                  title={previewModalDoc.title}
-                  isModal={true}
-                  isImage={previewModalDoc.type === 'image' || /\.(png|jpe?g|gif|svg|webp|avif|bmp|jfif)(?:[?#]|$)/i.test(previewModalDoc.fileName || '') || /\.(png|jpe?g|gif|svg|webp|avif|bmp|jfif)(?:[?#]|$)/i.test(previewModalDoc.rawUrl || previewModalDoc.previewUrl || '')}
-                />
-              ) : (
-                <div className="text-center space-y-3 p-6 bg-white border border-slate-200 rounded-2xl max-w-md w-full shadow-xs">
-                  <div className="w-14 h-14 bg-amber-100 text-[#D99A1C] rounded-2xl flex items-center justify-center mx-auto text-2xl font-bold border border-amber-200 shadow-xs">
-                    📄
+            {/* Document Body with Scroll Support */}
+            <div className="flex-1 min-h-0 p-3 sm:p-5 bg-slate-50/60 flex items-center justify-center overflow-hidden">
+              <div className="w-full h-full max-h-full bg-slate-100/70 border border-slate-200 rounded-2xl overflow-auto flex items-center justify-center p-3 sm:p-4">
+                {previewModalDoc.previewUrl ? (
+                  <SmartDocViewer
+                    url={previewModalDoc.previewUrl}
+                    title={previewModalDoc.title}
+                    isModal={true}
+                    isImage={previewModalDoc.type === 'image' || /\.(png|jpe?g|gif|svg|webp|avif|bmp|jfif)(?:[?#]|$)/i.test(previewModalDoc.fileName || '') || /\.(png|jpe?g|gif|svg|webp|avif|bmp|jfif)(?:[?#]|$)/i.test(previewModalDoc.rawUrl || previewModalDoc.previewUrl || '')}
+                    zoom={docZoom}
+                    rotation={docRotation}
+                    fitMode={docFitMode}
+                    isFullscreen={docFullscreen}
+                  />
+                ) : (
+                  <div className="text-center space-y-3 p-6 bg-white border border-slate-200 rounded-2xl max-w-md w-full shadow-xs">
+                    <div className="w-14 h-14 bg-amber-100 text-[#D99A1C] rounded-2xl flex items-center justify-center mx-auto text-2xl font-bold border border-amber-200 shadow-xs">
+                      📄
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-black text-slate-900">{previewModalDoc.title}</h4>
+                      <p className="text-xs font-bold text-slate-600 mt-0.5">{previewModalDoc.fileName}</p>
+                      <p className="text-[11px] text-emerald-700 font-extrabold bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200 inline-block mt-2">
+                        ✓ Student Verification Document
+                      </p>
+                    </div>
                   </div>
-                  <div>
-                    <h4 className="text-sm font-black text-slate-900">{previewModalDoc.title}</h4>
-                    <p className="text-xs font-bold text-slate-600 mt-0.5">{previewModalDoc.fileName}</p>
-                    <p className="text-[11px] text-emerald-700 font-extrabold bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200 inline-block mt-2">
-                      ✓ Student Verification Document
-                    </p>
-                  </div>
-                </div>
-              )}
+                )}
+              </div>
             </div>
 
-            <div className="flex justify-between items-center pt-3 border-t border-slate-100 shrink-0">
+            {/* Modal Footer Controls */}
+            <div className="flex flex-wrap items-center justify-between gap-3 px-5 sm:px-6 py-3.5 sm:py-4 border-t border-slate-100 shrink-0 bg-white">
               {previewModalDoc.previewUrl ? (
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2.5">
                   <ActionButton
                     type="button"
                     onClick={() => {
@@ -1242,7 +1382,7 @@ support@unigather.app`;
                         handleDownloadStudentDoc(previewModalDoc.rawUrl || previewModalDoc.previewUrl, previewModalDoc.fileName);
                       }
                     }}
-                    className="px-3 py-1.5 sm:px-4 sm:py-2 bg-gradient-to-r from-[#D99A1C] to-[#F5B025] hover:from-[#c28815] hover:to-[#e09e1d] text-white font-black text-[11px] sm:text-xs rounded-xl transition-all flex items-center gap-1.5 cursor-pointer shadow-xs"
+                    className="inline-flex items-center justify-center gap-1.5 h-10 px-4 sm:px-5 bg-gradient-to-r from-[#D99A1C] to-[#F5B025] hover:from-[#c28815] hover:to-[#e09e1d] text-white font-extrabold text-xs rounded-xl transition-all cursor-pointer shadow-xs active:scale-95"
                   >
                     <span>📥 Download</span>
                   </ActionButton>
@@ -1253,19 +1393,29 @@ support@unigather.app`;
                         window.open(previewModalDoc.previewUrl, '_blank');
                       }
                     }}
-                    className="px-3 py-1.5 sm:px-4 sm:py-2 bg-amber-50 hover:bg-amber-100 text-[#D99A1C] border border-amber-200 font-extrabold text-[11px] sm:text-xs rounded-xl transition-all flex items-center gap-1.5 cursor-pointer shadow-xs"
+                    className="inline-flex items-center justify-center gap-1.5 h-10 px-4 sm:px-5 bg-amber-50 hover:bg-amber-100 text-[#D99A1C] border border-amber-200 font-extrabold text-xs rounded-xl transition-all cursor-pointer shadow-xs active:scale-95"
                   >
                     <span>↗ Open in New Tab</span>
                   </ActionButton>
                 </div>
               ) : <div />}
-              <ActionButton
-                type="button"
-                onClick={() => setPreviewModalDoc(null)}
-                className="px-4 py-1.5 sm:px-5 sm:py-2 bg-slate-800 hover:bg-slate-900 text-white font-extrabold text-[11px] sm:text-xs rounded-xl shadow-md transition-all cursor-pointer"
-              >
-                Close Preview
-              </ActionButton>
+              <div className="flex items-center gap-2">
+                <ActionButton
+                  type="button"
+                  onClick={() => setDocFitMode(prev => prev === 'fit' ? 'actual' : 'fit')}
+                  className="inline-flex items-center justify-center h-10 px-3.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl border border-slate-200 transition-all cursor-pointer"
+                  title="Toggle between fitting entire document vs 100% actual size"
+                >
+                  <span>{docFitMode === 'fit' ? '🔍 View 100% Size' : '↔ Fit Entire Document'}</span>
+                </ActionButton>
+                <ActionButton
+                  type="button"
+                  onClick={() => setPreviewModalDoc(null)}
+                  className="inline-flex items-center justify-center h-10 px-5 sm:px-6 bg-slate-900 hover:bg-slate-800 text-white font-extrabold text-xs rounded-xl shadow-xs transition-all cursor-pointer active:scale-95"
+                >
+                  Close Preview
+                </ActionButton>
+              </div>
             </div>
           </div>
         </div>,
