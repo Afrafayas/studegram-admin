@@ -1605,7 +1605,7 @@ if (!token) throw new Error('Please sign in to save changes.');
   };
 
   return (
-    <div className="workspace-page flex-1 p-6 bg-[#F0F2F5]">
+    <div className="workspace-page flex-1 p-6 bg-[#F8FAFC]">
       {!isWritable && (
         <div className="bg-blue-50 border border-blue-200 text-blue-700 text-[11.5px] font-bold py-2.5 px-4 rounded-xl flex items-center gap-2 shadow-xs mb-5">
           <span>ℹ️</span>

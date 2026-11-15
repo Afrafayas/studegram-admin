@@ -11,8 +11,9 @@ export const STUDENT_DOCUMENTS = [
   'Police Clearance Certificate', 'Other Supporting Document'
 ];
 export const AGENT_DOCUMENTS = [
-  'Company Incorporation Certificate', 'Business Registration License', 'Tax / GST Registration Certificate',
-  'PAN Card', 'Authorised Signatory ID Proof', 'Individual ID Proof (Passport / National ID)',
+  'Company Incorporation Certificate', 'Business Registration License', 'Trade License',
+  'Tax / GST Registration Certificate', 'GST Certificate', 'PAN Card',
+  'Authorised Signatory ID Proof', 'Individual ID Proof (Passport / National ID)',
   'Address Proof / Resume', 'Company Address Proof', 'Bank Statement', 'Cancelled Cheque',
   'Bank Account Proof', 'Agency Agreement', 'Authorisation Letter', 'Company Profile',
   'Professional License', 'Other Agent Document'

@@ -127,7 +127,7 @@ export default function Staff({ staffList, setStaffList, applications }) {
   // Permission Guard
   if (!hasPermission('staff:view')) {
     return (
-      <div className="flex-1 p-6 flex items-center justify-center bg-[#F0F2F5]">
+      <div className="flex-1 p-6 flex items-center justify-center bg-[#F8FAFC]">
         <div className="bg-white border border-rose-200 border-t-4 border-t-rose-500 p-8 rounded-2xl shadow-md max-w-md text-center">
           <span className="text-4xl">🚫</span>
           <h2 className="text-sm font-black text-rose-900 uppercase mt-4">Access Denied</h2>
@@ -373,7 +373,7 @@ export default function Staff({ staffList, setStaffList, applications }) {
   const getSubmittedApplications = staff => (applications || []).filter(app => matchesStaff(app.submittedByStaff, staff));
 
   return (
-    <div className="workspace-page flex-1 min-w-0 p-4 sm:p-6 space-y-6 bg-[#F0F2F5]">
+    <div className="workspace-page flex-1 min-w-0 p-4 sm:p-6 space-y-6 bg-[#F8FAFC]">
       {selectedStaffId ? <AdminStaffDetails staff={selectedStaff} countries={selectedStaff ? (selectedStaff.countries?.length ? selectedStaff.countries : selectedStaff.country ? [selectedStaff.country] : []) : []} assignedApplications={getAssignedApplications(selectedStaff)} submittedApplications={getSubmittedApplications(selectedStaff)} onBack={() => navigateToStaff(null)} onEdit={handleOpenEditModal} /> : <>
       {/* Header */}
       <div className="workspace-panel flex flex-wrap gap-3 justify-between items-center bg-white border border-[#E2E8F0] border-t-4 border-t-[#D99A1C] p-6 rounded-2xl shadow-xs">

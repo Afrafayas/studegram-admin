@@ -290,7 +290,7 @@ function ApplicationChatDrawerContent({ app, onClose }) {
       {/* Slide-over Panel */}
       <aside className="fixed inset-y-0 right-0 max-w-md w-full bg-white shadow-2xl z-[9999] flex flex-col h-full transform transition-transform duration-300 animate-in slide-in-from-right">
         {/* Drawer Header */}
-        <div className="p-4 border-b border-slate-100 bg-[#0A0A0F] text-slate-100 flex items-center justify-between">
+        <div className="p-4 border-b border-[#0D2357] bg-[#07163B] text-white flex items-center justify-between">
           <div className="space-y-1">
             <h3 className="text-xs font-black uppercase tracking-wider text-white">Application Workspace</h3>
             <div className="flex items-center gap-2">
@@ -590,28 +590,28 @@ function ApplicationChatDrawerContent({ app, onClose }) {
               <div className="space-y-2 text-xs font-semibold text-slate-700">
                 <div className="flex justify-between">
                   <span className="text-slate-400">Full Name:</span>
-                  <span className="text-slate-900 font-bold">{app.studentName}</span>
+                  <span className="text-slate-900 font-bold">{app.studentName && app.studentName !== 'N/A' ? app.studentName : (app.student?.name || 'N/A')}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-slate-400">Passport Number:</span>
-                  <span className="text-slate-900 font-mono">{app.passportNo || 'Pending'}</span>
+                  <span className="text-slate-900 font-mono">{(app.passportNo && app.passportNo !== 'N/A') ? app.passportNo : (app.student?.passportNo || 'Pending')}</span>
                 </div>
-                {app.dob && (
+                {(app.dob || app.student?.dob) && (
                   <div className="flex justify-between">
                     <span className="text-slate-400">Date of Birth:</span>
-                    <span className="text-slate-900">{app.dob}</span>
+                    <span className="text-slate-900">{app.dob || (app.student?.dob ? (isNaN(new Date(app.student.dob).getTime()) ? app.student.dob : new Date(app.student.dob).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })) : 'N/A')}</span>
                   </div>
                 )}
-                {app.studentEmail && (
+                {(app.studentEmail || app.student?.email) && (
                   <div className="flex justify-between">
                     <span className="text-slate-400">Email Address:</span>
-                    <span className="text-indigo-600 font-bold">{app.studentEmail}</span>
+                    <span className="text-indigo-600 font-bold">{app.studentEmail || app.student?.email}</span>
                   </div>
                 )}
-                {app.phone && (
+                {(app.phone || app.student?.phone) && (
                   <div className="flex justify-between">
                     <span className="text-slate-400">Contact Number:</span>
-                    <span className="text-slate-900">{app.phone}</span>
+                    <span className="text-slate-900">{app.phone || app.student?.phone}</span>
                   </div>
                 )}
               </div>

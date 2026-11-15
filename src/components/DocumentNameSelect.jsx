@@ -1,4 +1,4 @@
-﻿import { useState } from 'react';
+import { useState } from 'react';
 import SearchableSelect from './SearchableSelect';
 import { documentNamesForRole, parseDocumentNames, addCustomDocumentName } from '../utils/documentNames.mjs';
 export default function DocumentNameSelect({ role = 'Student', value, onChange, disabled = false, id, multiple = true, label }) {
@@ -47,7 +47,23 @@ export default function DocumentNameSelect({ role = 'Student', value, onChange, 
         <option value={customAction} data-action="true">+ Add custom document name</option>
       </SearchableSelect>)}
     </label>
-    {multiple && selected.length > 0 && <div className="flex flex-wrap gap-1">{selected.map(name => <button key={name} type="button" disabled={disabled} onClick={() => change(selected.filter(item => item !== name).join(', '))} className="rounded-lg border border-amber-200 bg-amber-50 px-2 py-1 text-[11px] text-amber-800 disabled:opacity-50" aria-label={'Remove selected name ' + name}>{name} &times;</button>)}</div>}
+    {multiple && selected.length > 0 && (
+      <div className="flex flex-wrap gap-1.5 pt-1">
+        {selected.map(name => (
+          <button
+            key={name}
+            type="button"
+            disabled={disabled}
+            onClick={() => change(selected.filter(item => item !== name).join(', '))}
+            className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-bold bg-amber-100 hover:bg-amber-200 text-amber-900 border border-amber-300 transition-all cursor-pointer disabled:opacity-50 shadow-2xs group"
+            aria-label={'Remove selected document ' + name}
+          >
+            <span>📄 {name}</span>
+            <span className="text-amber-700 group-hover:text-amber-950 font-black ml-0.5 text-sm leading-none">&times;</span>
+          </button>
+        ))}
+      </div>
+    )}
 
     {error && <p role="alert" className="text-xs text-red-700">{error}</p>}
   </div>;

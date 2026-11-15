@@ -193,7 +193,7 @@ export default function DailyReport({ applications,
         <div className="flex items-center gap-3">
           <ActionButton
             onClick={() => onNavigateToCreateApplication && onNavigateToCreateApplication()}
-            className="bg-gradient-to-r from-[#D99A1C] to-[#F5B025] hover:scale-[1.02] active:scale-95 text-white font-extrabold text-xs px-4 py-2.5 rounded-xl transition-all shadow-md inline-flex items-center gap-2 cursor-pointer"
+            className="bg-[#D99A1C] hover:bg-[#C28410] active:scale-95 text-[#07163B] font-extrabold text-xs px-4 py-2.5 rounded-xl transition-all shadow-md shadow-amber-500/15 inline-flex items-center gap-2 cursor-pointer"
             title="Create New Application"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

@@ -301,6 +301,19 @@ export default function BecomePartner({ clients = [], setClients, applications =
 
   // Document Preview Modal State
   const [previewModalDoc, setPreviewModalDoc] = useState(null);
+  const [docZoom, setDocZoom] = useState(1);
+  const [docRotation, setDocRotation] = useState(0);
+  const [docFitMode, setDocFitMode] = useState('fit'); // 'fit' | 'actual'
+  const [docFullscreen, setDocFullscreen] = useState(false);
+
+  useEffect(() => {
+    if (previewModalDoc) {
+      setDocZoom(1);
+      setDocRotation(0);
+      setDocFitMode('fit');
+      setDocFullscreen(false);
+    }
+  }, [previewModalDoc?.previewUrl, previewModalDoc?.fileName]);
 
   // Edit Partner Modal State
   const [editingPartner, setEditingPartner] = useState(null);
@@ -1546,59 +1559,153 @@ export default function BecomePartner({ clients = [], setClients, applications =
 
       {/* DOCUMENT PREVIEW MODAL PORTAL */}
       {previewModalDoc && createPortal(
-        <div className="fixed inset-0 z-[9999] bg-black/75 backdrop-blur-xs p-3 sm:p-6 flex justify-center items-center select-none animate-fade-in overflow-y-auto">
-          <div className="relative bg-white border border-slate-200 border-t-4 border-t-[#D99A1C] rounded-3xl p-4 sm:p-6 w-full max-w-3xl shadow-2xl flex flex-col my-auto max-h-[85vh]">
-            <div className="flex justify-between items-center pb-3 border-b border-slate-100 shrink-0">
-              <div className="space-y-0.5">
+        <div 
+          className="fixed inset-0 z-[9999] bg-slate-900/60 backdrop-blur-xs p-2 sm:p-4 flex justify-center items-center select-none animate-fade-in"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setPreviewModalDoc(null);
+          }}
+        >
+          <div 
+            onClick={(e) => e.stopPropagation()}
+            className={docFullscreen
+              ? "relative bg-white border border-slate-200 border-t-4 border-t-[#D99A1C] rounded-2xl w-[98vw] h-[96vh] max-w-none shadow-2xl flex flex-col my-auto overflow-hidden animate-in fade-in zoom-in-95"
+              : "relative bg-white border border-slate-200 border-t-4 border-t-[#D99A1C] rounded-3xl w-full max-w-4xl shadow-2xl flex flex-col my-auto max-h-[92vh] sm:max-h-[88vh] overflow-hidden animate-in fade-in zoom-in-95"
+            }
+          >
+            {/* Modal Header */}
+            <div className="flex flex-wrap items-center justify-between gap-3 px-5 sm:px-6 py-3 sm:py-3.5 border-b border-slate-100 shrink-0 bg-white">
+              <div className="space-y-0.5 min-w-0 flex-1">
                 <span className="text-[10px] font-extrabold text-[#D99A1C] uppercase tracking-wider block">Document Verification Preview</span>
-                <h3 className="text-xs sm:text-sm font-black text-slate-900">{previewModalDoc.title}</h3>
-                <p className="text-[10px] sm:text-[11px] text-slate-400 font-semibold">{previewModalDoc.fileName}</p>
+                <h3 className="text-xs sm:text-sm font-black text-slate-900 truncate">{previewModalDoc.title}</h3>
+                <p className="text-[10px] sm:text-[11px] text-slate-400 font-semibold truncate">{previewModalDoc.fileName}</p>
               </div>
-              <ActionButton
-                type="button"
-                onClick={() => setPreviewModalDoc(null)}
-                className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold flex items-center justify-center transition-all cursor-pointer shrink-0"
-              >
-                ✕
-              </ActionButton>
+
+              {/* Document Viewing Controls Toolbar */}
+              <div className="flex items-center gap-1.5 shrink-0 bg-slate-100/90 p-1 rounded-xl border border-slate-200/60">
+                {/* Zoom Out */}
+                <ActionButton
+                  type="button"
+                  onClick={() => setDocZoom(prev => Math.max(Number((prev - 0.25).toFixed(2)), 0.5))}
+                  disabled={docZoom <= 0.5}
+                  className="w-7 h-7 rounded-lg bg-white hover:bg-slate-50 text-slate-700 font-bold text-xs flex items-center justify-center border border-slate-200 shadow-2xs disabled:opacity-40 cursor-pointer"
+                  title="Zoom Out"
+                >
+                  −
+                </ActionButton>
+
+                {/* Zoom / Mode Indicator & Reset */}
+                <ActionButton
+                  type="button"
+                  onClick={() => {
+                    setDocZoom(1);
+                    setDocFitMode(prev => prev === 'fit' ? 'actual' : 'fit');
+                  }}
+                  className="px-2 h-7 rounded-lg bg-white hover:bg-slate-50 text-slate-800 font-mono font-bold text-[10px] flex items-center justify-center border border-slate-200 shadow-2xs cursor-pointer"
+                  title="Click to reset zoom / toggle Fit mode"
+                >
+                  {Math.round(docZoom * 100)}% {docFitMode === 'fit' ? '(Fit)' : '(1:1)'}
+                </ActionButton>
+
+                {/* Zoom In */}
+                <ActionButton
+                  type="button"
+                  onClick={() => {
+                    setDocZoom(prev => Math.min(Number((prev + 0.25).toFixed(2)), 3));
+                    setDocFitMode('actual');
+                  }}
+                  disabled={docZoom >= 3}
+                  className="w-7 h-7 rounded-lg bg-white hover:bg-slate-50 text-slate-700 font-bold text-xs flex items-center justify-center border border-slate-200 shadow-2xs disabled:opacity-40 cursor-pointer"
+                  title="Zoom In"
+                >
+                  +
+                </ActionButton>
+
+                <div className="h-4 w-px bg-slate-300 mx-0.5" />
+
+                {/* Rotate 90deg */}
+                <ActionButton
+                  type="button"
+                  onClick={() => setDocRotation(prev => (prev + 90) % 360)}
+                  className="w-7 h-7 rounded-lg bg-white hover:bg-slate-50 text-slate-700 text-xs flex items-center justify-center border border-slate-200 shadow-2xs cursor-pointer"
+                  title="Rotate 90°"
+                >
+                  🔄
+                </ActionButton>
+
+                {/* Fullscreen Toggle */}
+                <ActionButton
+                  type="button"
+                  onClick={() => setDocFullscreen(prev => !prev)}
+                  className="w-7 h-7 rounded-lg bg-white hover:bg-slate-50 text-slate-700 text-xs flex items-center justify-center border border-slate-200 shadow-2xs cursor-pointer"
+                  title={docFullscreen ? "Exit Fullscreen" : "Fullscreen Preview"}
+                >
+                  {docFullscreen ? "⤓" : "⛶"}
+                </ActionButton>
+
+                <div className="h-4 w-px bg-slate-300 mx-0.5" />
+
+                {/* Close Button */}
+                <ActionButton
+                  type="button"
+                  onClick={() => setPreviewModalDoc(null)}
+                  className="w-7 h-7 rounded-lg bg-white hover:bg-rose-50 text-slate-400 hover:text-rose-600 text-xs flex items-center justify-center border border-slate-200 shadow-2xs cursor-pointer transition-colors"
+                  title="Close Preview"
+                >
+                  ✕
+                </ActionButton>
+              </div>
             </div>
 
-            <div className="flex-1 overflow-auto bg-slate-50 rounded-2xl border border-slate-200 p-2 sm:p-3 flex items-center justify-center my-3 min-h-[300px]">
-              {previewModalDoc.previewUrl ? (
-                (previewModalDoc.type === 'image' || 
-                 (typeof previewModalDoc.fileName === 'string' && previewModalDoc.fileName.match(/\.(png|jpg|jpeg|gif|svg|webp|avif|bmp|jfif)(?:[?#]|$)/i)) ||
-                 (typeof previewModalDoc.previewUrl === 'string' && previewModalDoc.previewUrl.match(/\.(png|jpe?g|gif|svg|webp|avif|bmp|jfif)(?:[?#]|$)/i))) ? (
-                  <img
-                    src={previewModalDoc.previewUrl}
-                    alt={previewModalDoc.title}
-                    className="max-h-[350px] sm:max-h-[460px] w-auto max-w-full object-contain rounded-xl shadow-md"
-                  />
+            {/* Document Body with Scroll Support */}
+            <div className="flex-1 min-h-0 p-3 sm:p-5 bg-slate-50/60 flex items-center justify-center overflow-hidden">
+              <div className="w-full h-full max-h-full bg-slate-100/70 border border-slate-200 rounded-2xl overflow-auto flex items-center justify-center p-3 sm:p-4">
+                {previewModalDoc.previewUrl ? (
+                  (previewModalDoc.type === 'image' || 
+                   (typeof previewModalDoc.fileName === 'string' && previewModalDoc.fileName.match(/\.(png|jpg|jpeg|gif|svg|webp|avif|bmp|jfif)(?:[?#]|$)/i)) ||
+                   (typeof previewModalDoc.previewUrl === 'string' && previewModalDoc.previewUrl.match(/\.(png|jpe?g|gif|svg|webp|avif|bmp|jfif)(?:[?#]|$)/i))) ? (
+                    <div className="w-full h-full min-h-0 flex items-center justify-center p-2">
+                      <img
+                        src={previewModalDoc.previewUrl}
+                        alt={previewModalDoc.title}
+                        style={{
+                          transform: `scale(${docZoom}) rotate(${docRotation}deg)`,
+                          transformOrigin: 'center center',
+                          maxHeight: docFitMode === 'fit' ? (docFullscreen ? 'calc(90vh - 190px)' : 'calc(75vh - 190px)') : 'none',
+                          maxWidth: docFitMode === 'fit' ? '100%' : 'none',
+                          objectFit: 'contain',
+                          transition: 'transform 0.2s cubic-bezier(0.2, 0, 0, 1)'
+                        }}
+                        className={`${docFitMode === 'fit' ? 'w-auto h-auto block mx-auto rounded-lg shadow-sm' : 'w-auto h-auto block mx-auto rounded-lg shadow-sm'} select-none`}
+                      />
+                    </div>
+                  ) : (
+                    <iframe
+                      src={previewModalDoc.previewUrl}
+                      title={previewModalDoc.title}
+                      className="w-full h-full min-h-[440px] rounded-xl border border-slate-200 shadow-inner bg-white"
+                    />
+                  )
                 ) : (
-                  <iframe
-                    src={previewModalDoc.previewUrl}
-                    title={previewModalDoc.title}
-                    className="w-full h-[350px] sm:h-[460px] rounded-xl border border-slate-200 shadow-inner bg-white"
-                  />
-                )
-              ) : (
-                <div className="text-center space-y-3 p-6 bg-white border border-slate-200 rounded-2xl max-w-md w-full shadow-xs">
-                  <div className="w-14 h-14 bg-amber-100 text-[#D99A1C] rounded-2xl flex items-center justify-center mx-auto text-2xl font-bold border border-amber-200 shadow-xs">
-                    📄
+                  <div className="text-center space-y-3 p-6 bg-white border border-slate-200 rounded-2xl max-w-md w-full shadow-xs">
+                    <div className="w-14 h-14 bg-amber-100 text-[#D99A1C] rounded-2xl flex items-center justify-center mx-auto text-2xl font-bold border border-amber-200 shadow-xs">
+                      📄
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-black text-slate-900">{previewModalDoc.title}</h4>
+                      <p className="text-xs font-bold text-slate-600 mt-0.5">{previewModalDoc.fileName}</p>
+                      <p className="text-[11px] text-emerald-700 font-extrabold bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200 inline-block mt-2">
+                        Uploaded Partner Document
+                      </p>
+                    </div>
                   </div>
-                  <div>
-                    <h4 className="text-sm font-black text-slate-900">{previewModalDoc.title}</h4>
-                    <p className="text-xs font-bold text-slate-600 mt-0.5">{previewModalDoc.fileName}</p>
-                    <p className="text-[11px] text-emerald-700 font-extrabold bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200 inline-block mt-2">
-                      Uploaded Partner Document
-                    </p>
-                  </div>
-                </div>
-              )}
+                )}
+              </div>
             </div>
 
-            <div className="flex justify-between items-center pt-3 border-t border-slate-100 shrink-0">
+            {/* Modal Footer Controls */}
+            <div className="flex flex-wrap items-center justify-between gap-3 px-5 sm:px-6 py-3.5 sm:py-4 border-t border-slate-100 shrink-0 bg-white">
               {previewModalDoc.previewUrl ? (
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2.5">
                   <ActionButton
                     type="button"
                     onClick={() => {
@@ -1606,7 +1713,7 @@ export default function BecomePartner({ clients = [], setClients, applications =
                         handleDownloadDocument(previewModalDoc.previewUrl, `${(previewModalDoc.title || 'document').replace(/\s+/g, '_')}.pdf`);
                       }
                     }}
-                    className="px-3 py-1.5 sm:px-4 sm:py-2 bg-gradient-to-r from-[#D99A1C] to-[#F5B025] hover:from-[#c28815] hover:to-[#e09e1d] text-white font-black text-[11px] sm:text-xs rounded-xl transition-all flex items-center gap-1.5 cursor-pointer shadow-xs"
+                    className="inline-flex items-center justify-center gap-1.5 h-10 px-4 sm:px-5 bg-gradient-to-r from-[#D99A1C] to-[#F5B025] hover:from-[#c28815] hover:to-[#e09e1d] text-white font-extrabold text-xs rounded-xl transition-all cursor-pointer shadow-xs active:scale-95"
                   >
                     <span>📥 Download</span>
                   </ActionButton>
@@ -1617,19 +1724,29 @@ export default function BecomePartner({ clients = [], setClients, applications =
                         window.open(previewModalDoc.previewUrl, '_blank');
                       }
                     }}
-                    className="px-3 py-1.5 sm:px-4 sm:py-2 bg-amber-50 hover:bg-amber-100 text-[#D99A1C] border border-amber-200 font-extrabold text-[11px] sm:text-xs rounded-xl transition-all flex items-center gap-1.5 cursor-pointer shadow-xs"
+                    className="inline-flex items-center justify-center gap-1.5 h-10 px-4 sm:px-5 bg-amber-50 hover:bg-amber-100 text-[#D99A1C] border border-amber-200 font-extrabold text-xs rounded-xl transition-all cursor-pointer shadow-xs active:scale-95"
                   >
                     <span>↗ Open in New Tab</span>
                   </ActionButton>
                 </div>
               ) : <div />}
-              <ActionButton
-                type="button"
-                onClick={() => setPreviewModalDoc(null)}
-                className="px-4 py-1.5 sm:px-5 sm:py-2 bg-slate-800 hover:bg-white text-slate-900 font-extrabold text-[11px] sm:text-xs rounded-xl shadow-md transition-all cursor-pointer border-b border-slate-200"
-              >
-                Close Preview
-              </ActionButton>
+              <div className="flex items-center gap-2">
+                <ActionButton
+                  type="button"
+                  onClick={() => setDocFitMode(prev => prev === 'fit' ? 'actual' : 'fit')}
+                  className="inline-flex items-center justify-center h-10 px-3.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl border border-slate-200 transition-all cursor-pointer"
+                  title="Toggle between fitting entire document vs 100% actual size"
+                >
+                  <span>{docFitMode === 'fit' ? '🔍 View 100% Size' : '↔ Fit Entire Document'}</span>
+                </ActionButton>
+                <ActionButton
+                  type="button"
+                  onClick={() => setPreviewModalDoc(null)}
+                  className="inline-flex items-center justify-center h-10 px-5 sm:px-6 bg-slate-900 hover:bg-slate-800 text-white font-extrabold text-xs rounded-xl shadow-xs transition-all cursor-pointer active:scale-95"
+                >
+                  Close Preview
+                </ActionButton>
+              </div>
             </div>
           </div>
         </div>,
