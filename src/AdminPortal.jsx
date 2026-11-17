@@ -22,9 +22,6 @@ import CommissionManagement from './pages/CommissionManagement';
 import RoleHierarchy from './pages/RoleHierarchy';
 import BecomePartner from './pages/BecomePartner';
 import StaffActivityLogs from './pages/StaffActivityLogs';
-import { loadingManager } from './utils/loadingManager';
-
-
 // Auth & API
 import { useAuth } from './context/AuthContext';
 import API from './api/axios';
@@ -48,7 +45,6 @@ export default function AdminPortal({ onLogout }) {
     if (!adminToken) return;
     setIsDataSyncing(true);
     setDataLoadError('');
-    const syncKey = loadingManager.start('admin_init_sync', 'Syncing workspace data...');
     try {
       // Execute all API requests concurrently in parallel
       const [intakeRes, univRes, courseRes, partnerRes, studentRes, appRes, userRes] = await Promise.all([
@@ -218,7 +214,6 @@ export default function AdminPortal({ onLogout }) {
       setDataLoadError('Records could not be loaded. Please refresh to retry.');
     } finally {
       setIsDataSyncing(false);
-      loadingManager.stop(syncKey);
     }
   };
 
@@ -664,11 +659,6 @@ export default function AdminPortal({ onLogout }) {
       url.searchParams.delete('adminStaffId');
       window.history.replaceState(window.history.state, '', url.toString());
       window.dispatchEvent(new CustomEvent('clear_single_view_admin_staff'));
-    }
-    if (tabId !== activeTab) {
-      const cleanName = String(tabId || '').replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-      const navKey = loadingManager.start(`tab_nav_${tabId}`, `Opening ${cleanName}...`);
-      setTimeout(() => loadingManager.stop(navKey), 220);
     }
     setActiveTab(tabId);
   };

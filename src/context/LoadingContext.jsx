@@ -42,13 +42,6 @@ export function LoadingProvider({ children }) {
   return (
     <LoadingContext.Provider value={{ isLoading, loadingText, startLoading, stopLoading, withLoading }}>
       {children}
-      {isLoading && (
-        <UnigatherLoader
-          variant="fullscreen"
-          size="lg"
-          text={loadingText}
-        />
-      )}
     </LoadingContext.Provider>
   );
 }
