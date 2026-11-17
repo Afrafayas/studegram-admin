@@ -22,23 +22,28 @@ API.interceptors.request.use(
     }
     if (!config.silent && !config.headers?.['x-silent-loader']) {
       const url = String(config.url || '');
-      let label = 'Processing request...';
-      if (config.loadingText) {
-        label = config.loadingText;
-      } else if (url.includes('/auth/login')) {
-        label = 'Signing in to Unigather Admin...';
-      } else if (url.includes('/auth/forgot-password')) {
-        label = 'Sending password recovery...';
-      } else if (config.method === 'get') {
-        label = 'Loading workspace data...';
-      } else if (config.method === 'post') {
-        label = 'Saving changes...';
-      } else if (config.method === 'put' || config.method === 'patch') {
-        label = 'Updating records...';
-      } else if (config.method === 'delete') {
-        label = 'Removing record...';
+      const method = String(config.method || 'get').toLowerCase();
+      const isMutation = ['post', 'put', 'patch', 'delete'].includes(method);
+      const isAuth = url.includes('/auth/login') || url.includes('/auth/forgot-password');
+      const shouldShowGlobalLoader = isMutation || isAuth || Boolean(config.fullscreen);
+
+      if (shouldShowGlobalLoader) {
+        let label = 'Processing request...';
+        if (config.loadingText) {
+          label = config.loadingText;
+        } else if (url.includes('/auth/login')) {
+          label = 'Signing in to Unigather Admin...';
+        } else if (url.includes('/auth/forgot-password')) {
+          label = 'Sending password recovery...';
+        } else if (method === 'post') {
+          label = 'Saving changes...';
+        } else if (method === 'put' || method === 'patch') {
+          label = 'Updating records...';
+        } else if (method === 'delete') {
+          label = 'Removing record...';
+        }
+        config._loaderKey = loadingManager.start(null, label);
       }
-      config._loaderKey = loadingManager.start(null, label);
     }
     return config;
   },

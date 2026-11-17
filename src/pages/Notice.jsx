@@ -9,6 +9,7 @@ import API from '../api/axios';
 import { ActionButton, ActionForm } from '../components/ActionControls';
 import { createPortal } from 'react-dom';
 import React, { useState, useEffect } from 'react';
+import UnigatherLoader from '../components/UnigatherLoader';
 const mapNotice = notice => ({ ...notice, id: notice._id, message: notice.content || '', type: notice.category || 'General', badge: notice.badge || notice.priority, date: notice.createdAt ? new Date(notice.createdAt).toLocaleDateString('en-GB') : '', isNew: !notice.isRead, image: notice.image || '' });
 import { useToast } from '../context/ToastContext';
 
@@ -316,8 +317,6 @@ export default function Notice({ selectedNoticeId, setSelectedNoticeId }) {
       </div>
 
       {readError && <p role="alert" className="text-red-700">{readError}</p>}
-      {!isLoading && !loadError && localNotices.length === 0 && <p>No notices yet.</p>}
-      {isLoading && <p className="text-sm text-slate-500">Loading notices...</p>}
       {loadError && <p role="alert" className="text-sm text-red-600">{loadError}</p>}
       <div className="workspace-panel workspace-list-frame bg-white border border-[#E2E8F0] border-t-4 border-t-[#D99A1C] rounded-2xl shadow-xs overflow-hidden">
         {/* Scoping Tabs on top of table */}
@@ -341,7 +340,9 @@ export default function Notice({ selectedNoticeId, setSelectedNoticeId }) {
         
 
         <div className="overflow-x-auto">
-          {serverList.data.length > 0 ? (
+          {serverList.loading || isLoading ? (
+            <UnigatherLoader variant="inline" text="Loading notices..." />
+          ) : serverList.data.length > 0 ? (
             <table className="workspace-table w-full text-left border-collapse">
               <thead>
                 <tr className="bg-slate-50 border-b border-[#E2E8F0]">

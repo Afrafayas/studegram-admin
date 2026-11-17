@@ -17,6 +17,7 @@ import { resolveDocumentUrl, downloadApplicationDocument } from '../utils/applic
 import { useToast } from '../context/ToastContext';
 import { useAuth } from '../context/AuthContext';
 import { getPartnerReferredStudents } from '../utils/partnerReferrals';
+import UnigatherLoader from '../components/UnigatherLoader';
 
 // Helper to convert base64 string or data URL to Blob URL for clean PDF/Image rendering in iframe
 const getDocumentBlobUrl = (urlOrBase64, mimeType = 'application/pdf') => {
@@ -794,6 +795,8 @@ export default function BecomePartner({ clients = [], setClients, applications =
                     })}
                   </tbody>
                 </table>
+              ) : serverList.loading ? (
+                <UnigatherLoader variant="inline" text="Loading partner requests..." />
               ) : (
                 <div className="p-12 text-center space-y-3">
                   <div className="w-14 h-14 bg-slate-100 rounded-full flex items-center justify-center mx-auto text-2xl text-slate-400">
