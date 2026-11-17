@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import API from '../api/axios';
+
 export default function useServerList(endpoint, { search = '', filters = {}, page = 1, limit = 15, params = {}, enabled = true, reloadKey = '', localRecords, resource = endpoint, onPageChange } = {}) {
   const [result, setResult] = useState({ data: [], totalCount: 0, totalPages: 1, currentPage: 1, facets: {} });
   const [loading, setLoading] = useState(false);
@@ -7,12 +8,32 @@ export default function useServerList(endpoint, { search = '', filters = {}, pag
   const [revision, setRevision] = useState(0);
   const request = useRef(0);
   const pageCallback = useRef(onPageChange); pageCallback.current = onPageChange;
-  const key = JSON.stringify({ endpoint, search, filters, page, limit, params, enabled, reloadKey, revision, localRecords, resource });
+
+  const prevReloadKeyRef = useRef(reloadKey);
+  const hasHydratedRef = useRef(false);
+  const [effectiveReloadKey, setEffectiveReloadKey] = useState(reloadKey);
+
+  useEffect(() => {
+    if (reloadKey !== prevReloadKeyRef.current) {
+      const wasEmpty = !prevReloadKeyRef.current || prevReloadKeyRef.current === '[]' || prevReloadKeyRef.current === '""';
+      const isNowPopulated = reloadKey && reloadKey !== '[]' && reloadKey !== '""';
+      prevReloadKeyRef.current = reloadKey;
+
+      if (wasEmpty && isNowPopulated && !hasHydratedRef.current && localRecords === undefined) {
+        hasHydratedRef.current = true;
+        return;
+      }
+      hasHydratedRef.current = true;
+      setEffectiveReloadKey(reloadKey);
+    }
+  }, [reloadKey, localRecords]);
+
+  const key = JSON.stringify({ endpoint, search, filters, page, limit, params, enabled, reloadKey: effectiveReloadKey, revision, localRecords, resource });
   useEffect(() => {
     const version = ++request.current;
     if (!enabled || !endpoint) { setLoading(false); return; }
     const controller = new AbortController();
-    setLoading(true); setError(''); setResult(prev => ({ ...prev, data: [] }));
+    setLoading(true); setError('');
     const timer = setTimeout(async () => {
       try {
         const query = { ...params, list: 'true', search: search.trim(), filters: JSON.stringify(filters), page, limit };

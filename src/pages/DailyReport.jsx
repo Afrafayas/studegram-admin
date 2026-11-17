@@ -18,7 +18,10 @@ export default function DailyReport({ applications,
   const activeLeadsApps = (applications || []).filter(app => !/closed|enrolled|rejected|withdrawn/i.test(app.status || app.secondaryStatus || ''));
   const successfulApps = (applications || []).filter(app => {
     const s = String(app.status || app.secondaryStatus || '').trim().toLowerCase();
-    return /paid|enrolled|visa/i.test(s) || app.paymentStatus === 'Paid' || app.commissionStatus === 'Paid';
+    if (/withdrawn|rejected|not processed|under review|received|offer issued|cas|visa/i.test(s)) {
+      return false;
+    }
+    return /enrolled|fees paid|paid student/i.test(s);
   });
   const pendingApps = (applications || []).filter(a => a.secondaryStatus === 'Pending' || a.secondaryStatus === 'Document Verification' || a.status === 'Submitted');
 

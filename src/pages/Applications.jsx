@@ -821,7 +821,7 @@ export default function Applications({ applications, referralAgents = [], intake
       status, secondaryStatus: status,
       ...(data.statusHistory ? { statusHistory: data.statusHistory } : {}),
       ...(data.paymentStatus ? { paymentStatus: data.paymentStatus } : {}),
-      ...(/paid|enrolled|visa|cas/i.test(status) ? { paymentStatus: 'Paid' } : {}),
+      ...(/enrolled|fees paid|paid students/i.test(status) ? { paymentStatus: 'Paid' } : {}),
     };
     setSingleViewApp(prev => prev && String(prev.id || prev._id) === String(appId)
       ? { ...prev, ...changes } : prev);
@@ -837,7 +837,7 @@ export default function Applications({ applications, referralAgents = [], intake
       const appId = singleViewApp.id || singleViewApp._id;
       const res = await API.put(`/applications/${appId}`, {
         status: step, remarks: `Stage updated to ${step}`,
-        ...(/paid|enrolled|visa|cas/i.test(step) ? { paymentStatus: 'Paid' } : {}),
+        ...(/enrolled|fees paid|paid students/i.test(step) ? { paymentStatus: 'Paid' } : {}),
       });
       if (!res.data?.success) throw new Error(res.data?.message || 'Failed to update status.');
       applySavedStatus(appId, step, res.data.data);
@@ -878,7 +878,7 @@ export default function Applications({ applications, referralAgents = [], intake
         remarks: remarks || `Status updated to ${selectedStatus}`
       };
 
-      if (/paid|enrolled|visa|cas/i.test(selectedStatus)) {
+      if (/enrolled|fees paid|paid students/i.test(selectedStatus)) {
         payload.paymentStatus = 'Paid';
       }
 
@@ -1046,7 +1046,10 @@ export default function Applications({ applications, referralAgents = [], intake
     } else if (dashboardFilter === 'success' || dashboardFilter === 'paid') {
       apps = apps.filter(app => {
         const s = String(app.status || app.secondaryStatus || '').trim().toLowerCase();
-        return /paid|enrolled|visa/i.test(s) || app.paymentStatus === 'Paid' || app.commissionStatus === 'Paid';
+        if (/withdrawn|rejected|not processed|under review|received|offer issued|cas|visa/i.test(s)) {
+          return false;
+        }
+        return /enrolled|fees paid|paid student/i.test(s);
       });
     } else if (dashboardFilter === 'pending') {
       apps = apps.filter(a => a.secondaryStatus === 'Pending' || a.secondaryStatus === 'Document Verification' || a.status === 'Submitted');
