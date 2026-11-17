@@ -7,6 +7,7 @@ import { ActionButton } from '../components/ActionControls';
 import React, { useState, useEffect } from 'react';
 import API from '../api/axios';
 import { useToast } from '../context/ToastContext';
+import UnigatherLoader from '../components/UnigatherLoader';
 
 // Helper to format date nicely
 const formatDateHeader = (dateStr) => {
@@ -108,10 +109,7 @@ export default function StaffActivitySingleView({ staffId, onBack }) {
   if (loading) {
     return (
       <div className="flex-1 p-8 flex flex-col items-center justify-center min-h-[500px]">
-        <div className="w-12 h-12 border-4 border-[#D99A1C]/20 border-t-[#D99A1C] rounded-full animate-spin"></div>
-        <p className="mt-4 text-xs font-bold text-slate-500 uppercase tracking-widest">
-          Loading Staff Activity Timeline...
-        </p>
+        <UnigatherLoader variant="inline" text="Loading Staff Activity Timeline..." />
       </div>
     );
   }

@@ -106,8 +106,8 @@ export default function SalesOrderStudy({
       toast.error(dobError);
       return;
     }
-    if (studentSelectionMode === 'new' && (!fullName || !studentEmail || !phoneNumber || !dob)) {
-      toast.error("Please fill in all required fields.");
+    if (studentSelectionMode === 'new' && (!fullName || !studentEmail || !phoneNumber || !dob || !passportNo.trim())) {
+      toast.error("Please fill in all required fields (including Passport Number).");
       return;
     }
     if (studentSelectionMode === 'existing' && !selectedStudent) {
@@ -415,8 +415,8 @@ export default function SalesOrderStudy({
           <label className="text-xs font-bold text-slate-600">Student Email *
             <input type="email" required value={studentEmail} onChange={e => setStudentEmail(e.target.value)} className="mt-2 w-full border border-slate-200 rounded-xl p-3" />
           </label>
-          <label className="text-xs font-bold text-slate-600">Passport Number
-            <ValidatedInput validationKind="passport" value={passportNo} onChange={e => setPassportNo(e.target.value)} className="mt-2 w-full border border-slate-200 rounded-xl p-3" />
+          <label className="text-xs font-bold text-slate-600">Passport Number <span className="text-rose-500">*</span>
+            <ValidatedInput required validationKind="passport" value={passportNo} onChange={e => setPassportNo(e.target.value)} className="mt-2 w-full border border-slate-200 rounded-xl p-3 uppercase" placeholder="e.g. Z1234567" />
           </label>
         </div>
       )}

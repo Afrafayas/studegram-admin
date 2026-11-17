@@ -128,8 +128,8 @@ export default function PartnerDocumentRequests({
             label="Select Document Names"
           />
 
-          {/* Quick-Pick Popular Badges */}
-          <div className="space-y-1.5 pt-2">
+          {/* Quick-Pick Popular Badges - commented out per request */}
+          {/* <div className="space-y-1.5 pt-2">
             <span className="block text-[11px] font-bold text-slate-600">Quick-add common documents:</span>
             <div className="flex flex-wrap gap-1.5">
               {QUICK_DOC_SUGGESTIONS.map(doc => {
@@ -158,7 +158,7 @@ export default function PartnerDocumentRequests({
                 );
               })}
             </div>
-          </div>
+          </div> */}
         </div>
 
         {/* Optional Manual Freeform textarea */}

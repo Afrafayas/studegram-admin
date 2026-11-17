@@ -12,6 +12,7 @@ import { createPortal } from 'react-dom';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import API from '../api/axios';
+import UnigatherLoader from '../components/UnigatherLoader';
 
 export default function Staff({ staffList, setStaffList, applications }) {
   const toast = useToast();
@@ -500,6 +501,8 @@ export default function Staff({ staffList, setStaffList, applications }) {
                 })}
               </tbody>
             </table>
+          ) : serverList.loading ? (
+            <UnigatherLoader variant="inline" text="Loading staff directory..." />
           ) : (
             <div className="p-8 text-center text-slate-400 font-semibold text-xs">
               No staff members found matching the specified search and filter criteria.

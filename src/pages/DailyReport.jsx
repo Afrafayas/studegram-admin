@@ -18,7 +18,7 @@ export default function DailyReport({ applications,
   const activeLeadsApps = (applications || []).filter(app => !/closed|enrolled|rejected|withdrawn/i.test(app.status || app.secondaryStatus || ''));
   const successfulApps = (applications || []).filter(app => {
     const s = String(app.status || app.secondaryStatus || '').trim().toLowerCase();
-    return s.includes('enrolled') || s.includes('visa received') || s.includes('visa approved');
+    return /paid|enrolled|visa/i.test(s) || app.paymentStatus === 'Paid' || app.commissionStatus === 'Paid';
   });
   const pendingApps = (applications || []).filter(a => a.secondaryStatus === 'Pending' || a.secondaryStatus === 'Document Verification' || a.status === 'Submitted');
 
@@ -30,18 +30,8 @@ export default function DailyReport({ applications,
   const successRate = `${successRateValue}%`;
   const pendingVerification = pendingApps.length;
 
-  // Generic click handler for cards
+  // Generic click handler for cards - always navigate to applications list with filter
   const handleCardClick = (filteredList, filterType) => {
-    if (filteredList && filteredList.length === 1) {
-      // Exactly 1 -> redirect to application detail page
-      const singleApp = filteredList[0];
-      const appId = singleApp.id || singleApp._id;
-      if (onOpenApplicationDetail && appId) {
-        onOpenApplicationDetail(appId);
-        return;
-      }
-    }
-    // 0 or > 1 -> redirect to applications list page with filter
     if (onNavigateToApplications) {
       onNavigateToApplications(filterType);
     }
@@ -269,14 +259,14 @@ export default function DailyReport({ applications,
         <div onClick={() => handleCardClick(successfulApps, 'success')} className="bg-white border border-[#E2E8F0] border-t-4 border-t-[#D99A1C] rounded-2xl p-5 shadow-xs flex flex-col justify-between transition-all duration-150 cursor-pointer hover:shadow-md">
           <div className="flex justify-between items-start">
             <span className="text-[10px] font-extrabold uppercase tracking-widest text-slate-400">Success Rate</span>
-            <span className="text-amber-600 bg-amber-50 text-[10px] font-bold px-2 py-0.5 rounded-full border border-amber-100">Visa / Enrolled</span>
+            <span className="text-amber-600 bg-amber-50 text-[10px] font-bold px-2 py-0.5 rounded-full border border-amber-100">Paid Students</span>
           </div>
           <div className="mt-4 flex items-baseline gap-2">
             <span className="text-3xl font-black text-slate-900 tracking-tight">{successRate}</span>
             <span className="text-[10px] font-bold text-slate-400 uppercase">{successfulApplications} of {applications?.length || 0} applications</span>
           </div>
           <div className="mt-4 w-full bg-slate-100 h-1 rounded-full overflow-hidden">
-            <div role="progressbar" aria-label="Visa approved or enrolled application rate" aria-valuemin={0} aria-valuemax={100} aria-valuenow={successRateValue} className="bg-[#D99A1C] h-full transition-[width]" style={{ width: `${successRateValue}%` }} />
+            <div role="progressbar" aria-label="Paid students application rate" aria-valuemin={0} aria-valuemax={100} aria-valuenow={successRateValue} className="bg-[#D99A1C] h-full transition-[width]" style={{ width: `${successRateValue}%` }} />
           </div>
         </div>
 

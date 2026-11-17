@@ -13,6 +13,7 @@ import { createPortal } from 'react-dom';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import API from '../api/axios';
+import UnigatherLoader from '../components/UnigatherLoader';
 
 export default function CommissionManagement({ clients = [], referralAgents = [], applications = [] }) {
   const toast = useToast();
@@ -513,6 +514,8 @@ export default function CommissionManagement({ clients = [], referralAgents = []
                 })}
               </tbody>
             </table>
+          ) : serverList.loading ? (
+            <UnigatherLoader variant="inline" text="Loading commission records..." />
           ) : (
             <div className="p-12 text-center text-slate-400 font-bold">
               No commission records found matching scope filter.

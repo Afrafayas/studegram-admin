@@ -1,5 +1,6 @@
 import React from 'react';
 import SearchableSelect from './SearchableSelect';
+import UnigatherLoader from './UnigatherLoader';
 export default function ListToolbar({ search, onSearchChange, filters = [], onReset, loading, error, onRetry, label = 'records' }) {
   const active = Boolean(search || filters.some(filter => filter.value && filter.value !== 'All'));
   return <div className="w-full min-w-0 border-b border-slate-200 bg-white px-4 py-3">
@@ -10,7 +11,7 @@ export default function ListToolbar({ search, onSearchChange, filters = [], onRe
         return <label key={filter.key} className="w-[145px] min-w-[125px] shrink-0"><span className="sr-only">{filter.label}</span><SearchableSelect aria-label={filter.label} value={filter.value || 'All'} onChange={event => filter.onChange(event.target.value)} className="h-9 w-full rounded-lg border border-slate-200 bg-slate-50 px-2.5 text-xs text-slate-800"><option value="All">All {filter.label}</option>{options.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}</SearchableSelect></label>;
       })}
       <button type="button" onClick={onReset} disabled={!active} className="ml-auto h-9 shrink-0 rounded-lg border border-slate-200 px-3 text-xs font-semibold text-slate-700 hover:bg-slate-50 disabled:cursor-default disabled:opacity-40">Reset</button>
-      {loading && <span role="status" className="shrink-0 text-xs text-slate-500">Loading...</span>}
+      {loading && <UnigatherLoader variant="compact" text={`Updating ${label}...`} />}
     </div>
     {error && <p role="alert" className="mt-2 text-xs text-red-700">{error} <button type="button" onClick={onRetry} className="font-bold underline">Retry</button></p>}
   </div>;
