@@ -10,6 +10,8 @@ import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import API from '../api/axios';
 import { useToast } from '../context/ToastContext';
+import { downloadApplicationDocument } from '../utils/applicationDocuments';
+import UnigatherLoader from '../components/UnigatherLoader';
 
 export default function Partners({ clients, setClients }) {
   const toast = useToast();
@@ -23,6 +25,24 @@ export default function Partners({ clients, setClients }) {
   const [isRejecting, setIsRejecting] = useState(false);
   const [partnerSubTabs, setPartnerSubTabs] = useState({});
   const [previewDocModal, setPreviewDocModal] = useState(null);
+
+  const handleDownloadDoc = async (url, fileName) => {
+    try {
+      await downloadApplicationDocument(url, fileName || 'partner_document.pdf');
+    } catch (err) {
+      console.error('Download failed, using direct fallback:', err);
+      try {
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = fileName || 'partner_document.pdf';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      } catch (e) {
+        toast.error('Unable to download the document.');
+      }
+    }
+  };
   
   // Modal State for adding new Partner
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -401,15 +421,13 @@ if (!token) throw new Error('Please sign in to save changes.');
                                                   >
                                                     View / Preview
                                                   </ActionButton>
-                                                  <a
-                                                    href={docUrl}
-                                                    target="_blank"
-                                                    rel="noopener noreferrer"
-                                                    download
-                                                    className="flex-1 bg-[#D99A1C] hover:bg-[#F5B025] text-white text-[10px] font-bold py-1.5 rounded-lg text-center transition-all shadow-xs"
+                                                  <ActionButton
+                                                    type="button"
+                                                    onClick={() => handleDownloadDoc(docUrl, `${docName.replace(/\s+/g, '_')}.pdf`)}
+                                                    className="flex-1 bg-[#D99A1C] hover:bg-[#F5B025] text-white text-[10px] font-bold py-1.5 rounded-lg text-center transition-all shadow-xs cursor-pointer"
                                                   >
                                                     Download
-                                                  </a>
+                                                  </ActionButton>
                                                 </div>
                                               </div>
                                             );
@@ -469,6 +487,8 @@ if (!token) throw new Error('Please sign in to save changes.');
                 })}
               </tbody>
             </table>
+          ) : serverList.loading ? (
+            <UnigatherLoader variant="inline" text="Loading partners..." />
           ) : (
             <div className="p-8 text-center space-y-2">
               <svg className="w-12 h-12 text-slate-300 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">

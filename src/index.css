@@ -135,3 +135,39 @@ button[aria-busy="true"] { cursor: wait; opacity: .75; }
 .workspace-page button[class*='from-[#D99A1C]']:hover { background-color: var(--ug-gold-hover); }
 .workspace-page > .workspace-panel:has(> div > h1), .workspace-page > .workspace-panel:has(> div > h2) { border-top-width: 1px; padding-block: 24px; }
 body { -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
+
+/* Unigather Branded Loader Animations */
+@keyframes ug-spin-smooth {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes ug-pulse-scale {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(0.96); opacity: 0.88; }
+}
+
+@keyframes ug-indeterminate-bar {
+  0% { transform: translateX(-100%); width: 35%; }
+  50% { transform: translateX(50%); width: 55%; }
+  100% { transform: translateX(200%); width: 35%; }
+}
+
+.ug-loader-ring {
+  animation: ug-spin-smooth 0.85s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+.ug-loader-pulse {
+  animation: ug-pulse-scale 1.8s ease-in-out infinite;
+}
+
+.ug-loader-bar {
+  animation: ug-indeterminate-bar 1.3s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ug-loader-ring, .ug-loader-pulse, .ug-loader-bar {
+    animation: none;
+  }
+}
+

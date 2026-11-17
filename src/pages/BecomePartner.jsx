@@ -13,7 +13,7 @@ import Pagination from '../components/Pagination';
 import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import API from '../api/axios';
-import { resolveDocumentUrl } from '../utils/applicationDocuments';
+import { resolveDocumentUrl, downloadApplicationDocument } from '../utils/applicationDocuments';
 import { useToast } from '../context/ToastContext';
 import { useAuth } from '../context/AuthContext';
 import { getPartnerReferredStudents } from '../utils/partnerReferrals';
@@ -50,14 +50,24 @@ const getDocumentBlobUrl = (urlOrBase64, mimeType = 'application/pdf') => {
   }
 };
 
-const handleDownloadDocument = (docUrl, fileName) => {
+const handleDownloadDocument = async (docUrl, fileName) => {
   if (!docUrl) return;
-  const link = document.createElement('a');
-  link.href = docUrl;
-  link.download = fileName || 'verification_document.pdf';
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
+  const safeName = fileName || 'verification_document.pdf';
+  try {
+    await downloadApplicationDocument(docUrl, safeName);
+  } catch (error) {
+    console.error('Download via blob/api failed, trying fallback link:', error);
+    try {
+      const link = document.createElement('a');
+      link.href = docUrl;
+      link.download = safeName;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (fallbackError) {
+      console.error('Fallback link click failed:', fallbackError);
+    }
+  }
 };
 
 export default function BecomePartner({ clients = [], setClients, applications = [], onPartnerOnboarded, onBack, initialSelectedPartnerId }) {
@@ -1101,7 +1111,7 @@ export default function BecomePartner({ clients = [], setClients, applications =
                             </ActionButton>
                             <ActionButton
                               type="button"
-                              onClick={() => handleDownloadDocument(docBlobUrl, `${docTitle.replace(/\s+/g, '_')}.pdf`)}
+                              onClick={() => handleDownloadDocument(rawUrl || docBlobUrl, `${docTitle.replace(/\s+/g, '_')}.pdf`)}
                               className="flex-1 py-2 bg-gradient-to-r from-[#D99A1C] to-[#F5B025] hover:from-[#c28815] hover:to-[#e09e1d] text-white rounded-xl font-bold text-xs transition-all cursor-pointer flex items-center justify-center gap-1.5 shadow-2xs"
                             >
                               <span>📥 Download</span>
@@ -1710,7 +1720,7 @@ export default function BecomePartner({ clients = [], setClients, applications =
                     type="button"
                     onClick={() => {
                       if (previewModalDoc.previewUrl) {
-                        handleDownloadDocument(previewModalDoc.previewUrl, `${(previewModalDoc.title || 'document').replace(/\s+/g, '_')}.pdf`);
+                        handleDownloadDocument(previewModalDoc.rawUrl || previewModalDoc.previewUrl, `${(previewModalDoc.title || 'document').replace(/\s+/g, '_')}.pdf`);
                       }
                     }}
                     className="inline-flex items-center justify-center gap-1.5 h-10 px-4 sm:px-5 bg-gradient-to-r from-[#D99A1C] to-[#F5B025] hover:from-[#c28815] hover:to-[#e09e1d] text-white font-extrabold text-xs rounded-xl transition-all cursor-pointer shadow-xs active:scale-95"

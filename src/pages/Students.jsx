@@ -13,6 +13,7 @@ import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useAuth } from '../context/AuthContext';
 import ApplicationChatDrawer from '../components/ApplicationChatDrawer';
+import UnigatherLoader from '../components/UnigatherLoader';
 import { useToast } from '../context/ToastContext';
 import API from '../api/axios';
 import { resolveDocumentUrl, documentFileName, downloadApplicationDocument } from '../utils/applicationDocuments';
@@ -155,16 +156,25 @@ export default function Students({ clients = [], setClients, applications = [], 
   // Get dynamic display status for student (e.g. Paid Students vs Lead vs Active)
   const getStudentDisplayStatus = (student) => {
     if (!student) return 'Lead';
-    if (student.listFields?.paidStatus === 'Paid Students' || student.paidStatus === 'Paid Students') {
+    if (
+      student.listFields?.paidStatus === 'Paid Students' ||
+      student.paidStatus === 'Paid Students' ||
+      student.status === 'Paid Students'
+    ) {
       return 'Paid Students';
     }
     const sApps = getStudentApplications(student);
-    const hasPaidApp = sApps.some(app => 
-      app.status === 'Paid Students' || 
-      app.paymentStatus === 'Paid' || 
-      app.status === 'Fees Paid' || 
-      app.secondaryStatus === 'Fees Paid'
-    );
+    const hasPaidApp = sApps.some(app => {
+      const s = String(app.status || app.secondaryStatus || '').toLowerCase();
+      return (
+        app.paymentStatus === 'Paid' ||
+        s === 'paid students' ||
+        s.includes('paid') ||
+        s.includes('enrolled') ||
+        s.includes('visa') ||
+        s.includes('cas')
+      );
+    });
     if (hasPaidApp) return 'Paid Students';
     return student.status || 'Lead';
   };
@@ -551,8 +561,8 @@ support@unigather.app`;
       return;
     }
     if (!canOnboard) return;
-    if (!newStudentName || !newStudentEmail || !newStudentPhone) {
-      toast.error("Please fill out required fields.");
+    if (!newStudentName || !newStudentEmail || !newStudentPhone || !newStudentPassport.trim()) {
+      toast.error("Please fill out required fields (including Passport Number).");
       return;
     }
     setIsSubmitting(true);
@@ -724,6 +734,8 @@ support@unigather.app`;
                     })}
                   </tbody>
                 </table>
+              ) : serverList.loading ? (
+                <UnigatherLoader variant="inline" text="Loading students..." />
               ) : (
                 <div className="p-8 text-center space-y-2">
                   <svg className="w-12 h-12 text-slate-300 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1152,8 +1164,8 @@ support@unigather.app`;
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-1.5">
-                  <label className="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">Passport Number</label>
-                  <ValidatedInput validationKind="passport"
+                  <label className="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">Passport Number <span className="text-rose-500">*</span></label>
+                  <ValidatedInput required validationKind="passport"
                     type="text"
                     value={newStudentPassport}
                     onChange={(e) => setNewStudentPassport(e.target.value)}

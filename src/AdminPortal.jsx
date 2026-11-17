@@ -22,6 +22,7 @@ import CommissionManagement from './pages/CommissionManagement';
 import RoleHierarchy from './pages/RoleHierarchy';
 import BecomePartner from './pages/BecomePartner';
 import StaffActivityLogs from './pages/StaffActivityLogs';
+import { loadingManager } from './utils/loadingManager';
 
 
 // Auth & API
@@ -47,6 +48,7 @@ export default function AdminPortal({ onLogout }) {
     if (!adminToken) return;
     setIsDataSyncing(true);
     setDataLoadError('');
+    const syncKey = loadingManager.start('admin_init_sync', 'Syncing workspace data...');
     try {
       // Execute all API requests concurrently in parallel
       const [intakeRes, univRes, courseRes, partnerRes, studentRes, appRes, userRes] = await Promise.all([
@@ -121,25 +123,36 @@ export default function AdminPortal({ onLogout }) {
 
       let mappedStudents = [];
       if (studentRes.data?.success && Array.isArray(studentRes.data.data)) {
-        mappedStudents = studentRes.data.data.map((student) => ({
-          ...student,
-          id: student._id,
-          name: student.name,
-          type: 'Student',
-          email: student.email,
-          phone: student.phone || '',
-          activeApps: (appRes.data?.data || []).filter(app => String(app.student?._id || app.student || '') === String(student._id)).length,
-          studentCode: getDisplayId(student),
-          passportNo: student.passportNo || 'Pending',
-          documents: Array.isArray(student.documents) ? student.documents : [],
-          dob: student.dob || '',
-          dateAdded: new Date(student.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
-          referredBy: student.referredBy || 'Direct',
-          partner: student.partner || null,
-          partnerId: student.partner?._id || student.partner?.id || student.partner || null,
-          country: student.country || '',
-          status: student.status || 'Active'
-        }));
+        mappedStudents = studentRes.data.data.map((student) => {
+          const studentApps = (appRes.data?.data || []).filter(app => {
+            const sId = String(app.student?._id || app.student?.id || app.studentId || (typeof app.student === 'string' ? app.student : ''));
+            return sId === String(student._id);
+          });
+          const isPaid = student.status === 'Paid Students' || studentApps.some(app => {
+            const s = String(app.status || app.secondaryStatus || '').toLowerCase();
+            return app.paymentStatus === 'Paid' || s === 'paid students' || s.includes('paid') || s.includes('enrolled') || s.includes('visa') || s.includes('cas');
+          });
+
+          return {
+            ...student,
+            id: student._id,
+            name: student.name,
+            type: 'Student',
+            email: student.email,
+            phone: student.phone || '',
+            activeApps: studentApps.length,
+            studentCode: getDisplayId(student),
+            passportNo: student.passportNo || 'Pending',
+            documents: Array.isArray(student.documents) ? student.documents : [],
+            dob: student.dob || '',
+            dateAdded: new Date(student.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
+            referredBy: student.referredBy || 'Direct',
+            partner: student.partner || null,
+            partnerId: student.partner?._id || student.partner?.id || student.partner || null,
+            country: student.country || '',
+            status: isPaid ? 'Paid Students' : (student.status || 'Active')
+          };
+        });
       }
 
       if (partnerRes.data?.success || studentRes.data?.success) {
@@ -205,6 +218,7 @@ export default function AdminPortal({ onLogout }) {
       setDataLoadError('Records could not be loaded. Please refresh to retry.');
     } finally {
       setIsDataSyncing(false);
+      loadingManager.stop(syncKey);
     }
   };
 
@@ -401,6 +415,12 @@ export default function AdminPortal({ onLogout }) {
             setDashboardFilter(filterType || null);
             localStorage.removeItem('studegram_admin_single_view_app_id');
             localStorage.removeItem('studegram_admin_single_view_app');
+            try {
+              const url = new URL(window.location.href);
+              url.searchParams.delete('appId');
+              url.searchParams.delete('applicationId');
+              window.history.replaceState({}, '', url.pathname + (url.search ? url.search : ''));
+            } catch (e) {}
             window.dispatchEvent(new CustomEvent('clear_single_view_app'));
             setActiveTab('applications');
           }}
@@ -587,10 +607,25 @@ export default function AdminPortal({ onLogout }) {
       localStorage.removeItem('studegram_admin_single_view_app_id');
       localStorage.removeItem('studegram_admin_single_view_app');
       // Clear the URL before Applications mounts and restores a saved detail view.
-      const url = new URL(window.location.href);
-      url.searchParams.delete('appId');
-      url.searchParams.delete('applicationId');
-      window.history.replaceState(window.history.state, '', url.toString());
+      try {
+        const url = new URL(window.location.href);
+        url.searchParams.delete('appId');
+        url.searchParams.delete('applicationId');
+        window.history.replaceState({}, '', url.pathname + (url.search ? url.search : ''));
+      } catch (e) {}
+      window.dispatchEvent(new CustomEvent('clear_single_view_app'));
+    } else {
+      setSelectedAppIdForSingleView(null);
+      localStorage.removeItem('studegram_admin_single_view_app_id');
+      localStorage.removeItem('studegram_admin_single_view_app');
+      try {
+        const url = new URL(window.location.href);
+        if (url.searchParams.has('appId') || url.searchParams.has('applicationId')) {
+          url.searchParams.delete('appId');
+          url.searchParams.delete('applicationId');
+          window.history.replaceState({}, '', url.pathname + (url.search ? url.search : ''));
+        }
+      } catch (e) {}
       window.dispatchEvent(new CustomEvent('clear_single_view_app'));
     }
     if (tabId === 'become-partner' || tabId === 'partners') {
@@ -629,6 +664,11 @@ export default function AdminPortal({ onLogout }) {
       url.searchParams.delete('adminStaffId');
       window.history.replaceState(window.history.state, '', url.toString());
       window.dispatchEvent(new CustomEvent('clear_single_view_admin_staff'));
+    }
+    if (tabId !== activeTab) {
+      const cleanName = String(tabId || '').replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+      const navKey = loadingManager.start(`tab_nav_${tabId}`, `Opening ${cleanName}...`);
+      setTimeout(() => loadingManager.stop(navKey), 220);
     }
     setActiveTab(tabId);
   };

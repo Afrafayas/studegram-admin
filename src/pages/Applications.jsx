@@ -10,11 +10,12 @@ import { getAssignedExecutiveName } from '../utils/applicationAssignment';
 import { ActionButton, ActionForm } from '../components/ActionControls';
 import Pagination from '../components/Pagination';
 import { resolveUniversityCourses } from '../utils/courseMatching';
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { useAuth } from '../context/AuthContext';
 import ApplicationChatDrawer from '../components/ApplicationChatDrawer';
 import ApplicationMessagesActivity from '../components/ApplicationMessagesActivity';
+import UnigatherLoader from '../components/UnigatherLoader';
 import API from '../api/axios';
 import { useToast } from '../context/ToastContext';
 import { resolveDocumentUrl, documentFileName, downloadApplicationDocument } from '../utils/applicationDocuments';
@@ -101,6 +102,7 @@ export default function Applications({ applications, referralAgents = [], intake
   // Single View Application State (persists across page refresh)
   const [singleViewApp, setSingleViewApp] = useState(() => {
     try {
+      if (typeof dashboardFilter !== 'undefined' && dashboardFilter) return null; // When dashboard filter is active, start in list view
       const params = new URLSearchParams(window.location.search);
       const urlAppId = params.get('appId') || params.get('applicationId');
       const savedAppId = urlAppId || localStorage.getItem('studegram_admin_single_view_app_id');
@@ -329,6 +331,7 @@ export default function Applications({ applications, referralAgents = [], intake
   // Auto-open Single View when initialSelectedAppId or saved single view ID is provided
   useEffect(() => {
     let cancelled = false;
+    if (dashboardFilter) return; // Never auto-restore saved view when user navigated to a dashboard filter
     if (dismissedTargetRef.current && !initialSelectedAppId) return;
 
     const params = new URLSearchParams(window.location.search);
@@ -505,6 +508,22 @@ export default function Applications({ applications, referralAgents = [], intake
       window.removeEventListener('clear_single_view_app', handleClearSingleView);
     };
   }, []);
+
+  // When a dashboard filter is passed or changed, always exit single view and show the filtered list
+  useEffect(() => {
+    if (dashboardFilter) {
+      dismissedTargetRef.current = true;
+      setSingleViewApp(null);
+      try {
+        const url = new URL(window.location.href);
+        url.searchParams.delete('appId');
+        url.searchParams.delete('applicationId');
+        window.history.replaceState({}, '', url.pathname + (url.search ? url.search : ''));
+      } catch (e) { }
+      localStorage.removeItem('studegram_admin_single_view_app_id');
+      localStorage.removeItem('studegram_admin_single_view_app');
+    }
+  }, [dashboardFilter]);
 
   // Handle browser Back / Forward history navigation
   useEffect(() => {
@@ -802,7 +821,7 @@ export default function Applications({ applications, referralAgents = [], intake
       status, secondaryStatus: status,
       ...(data.statusHistory ? { statusHistory: data.statusHistory } : {}),
       ...(data.paymentStatus ? { paymentStatus: data.paymentStatus } : {}),
-      ...(status === 'Paid Students' ? { paymentStatus: 'Paid' } : {}),
+      ...(/paid|enrolled|visa|cas/i.test(status) ? { paymentStatus: 'Paid' } : {}),
     };
     setSingleViewApp(prev => prev && String(prev.id || prev._id) === String(appId)
       ? { ...prev, ...changes } : prev);
@@ -818,7 +837,7 @@ export default function Applications({ applications, referralAgents = [], intake
       const appId = singleViewApp.id || singleViewApp._id;
       const res = await API.put(`/applications/${appId}`, {
         status: step, remarks: `Stage updated to ${step}`,
-        ...(step === 'Paid Students' ? { paymentStatus: 'Paid' } : {}),
+        ...(/paid|enrolled|visa|cas/i.test(step) ? { paymentStatus: 'Paid' } : {}),
       });
       if (!res.data?.success) throw new Error(res.data?.message || 'Failed to update status.');
       applySavedStatus(appId, step, res.data.data);
@@ -859,7 +878,7 @@ export default function Applications({ applications, referralAgents = [], intake
         remarks: remarks || `Status updated to ${selectedStatus}`
       };
 
-      if (selectedStatus === 'Paid Students') {
+      if (/paid|enrolled|visa|cas/i.test(selectedStatus)) {
         payload.paymentStatus = 'Paid';
       }
 
@@ -1016,45 +1035,136 @@ export default function Applications({ applications, referralAgents = [], intake
 
   const serverList = useServerList('/applications', { search: searchTerm, filters: { status: statusFilter, partner: partnerFilter, intake: intakeFilter, ...(ownershipTab === 'Unreplied' ? { hasUnrepliedMessage: 'true' } : {}) }, params: { scope: ownershipTab === 'My Picked' ? 'my_picked' : ownershipTab === 'Unpicked' ? 'unpicked' : 'all' }, page: currentPage, limit: itemsPerPage, onPageChange: setCurrentPage, reloadKey: JSON.stringify(applications) });
 
-  // Search and filter applications
-  let filteredApps = restoreListRows(serverList.data, applications);
-  if (dashboardFilter === 'today') {
-    filteredApps = (applications || []).filter(app => new Date(app.createdAt || app.dateAdded).toDateString() === new Date().toDateString());
-  } else if (dashboardFilter === 'active') {
-    filteredApps = (applications || []).filter(app => !/closed|enrolled|rejected|withdrawn/i.test(app.status || app.secondaryStatus || ''));
-  } else if (dashboardFilter === 'success') {
-    filteredApps = (applications || []).filter(app => ['visa approved', 'enrolled / closed'].includes(String(app.status || app.secondaryStatus || '').trim().toLowerCase()));
-  } else if (dashboardFilter === 'pending') {
-    filteredApps = (applications || []).filter(a => a.secondaryStatus === 'Pending' || a.secondaryStatus === 'Document Verification' || a.status === 'Submitted');
-  } else if (typeof dashboardFilter === 'object' && dashboardFilter?.type === 'date') {
-    filteredApps = (applications || []).filter(app => {
-      const created = new Date(app.createdAt || app.dateAdded);
-      return !Number.isNaN(created.getTime()) && created.toDateString() === dashboardFilter.dateString;
+  // 1. Calculate base pool when dashboardFilter is active
+  const baseDashboardApps = useMemo(() => {
+    if (!dashboardFilter) return null;
+    let apps = applications || [];
+    if (dashboardFilter === 'today') {
+      apps = apps.filter(app => new Date(app.createdAt || app.dateAdded).toDateString() === new Date().toDateString());
+    } else if (dashboardFilter === 'active') {
+      apps = apps.filter(app => !/closed|enrolled|rejected|withdrawn/i.test(app.status || app.secondaryStatus || ''));
+    } else if (dashboardFilter === 'success' || dashboardFilter === 'paid') {
+      apps = apps.filter(app => {
+        const s = String(app.status || app.secondaryStatus || '').trim().toLowerCase();
+        return /paid|enrolled|visa/i.test(s) || app.paymentStatus === 'Paid' || app.commissionStatus === 'Paid';
+      });
+    } else if (dashboardFilter === 'pending') {
+      apps = apps.filter(a => a.secondaryStatus === 'Pending' || a.secondaryStatus === 'Document Verification' || a.status === 'Submitted');
+    } else if (typeof dashboardFilter === 'object' && dashboardFilter?.type === 'date') {
+      apps = apps.filter(app => {
+        const created = new Date(app.createdAt || app.dateAdded);
+        return !Number.isNaN(created.getTime()) && created.toDateString() === dashboardFilter.dateString;
+      });
+    } else if (typeof dashboardFilter === 'string' && dashboardFilter.startsWith('date:')) {
+      const targetDateStr = dashboardFilter.replace('date:', '');
+      apps = apps.filter(app => {
+        const created = new Date(app.createdAt || app.dateAdded);
+        return !Number.isNaN(created.getTime()) && created.toDateString() === targetDateStr;
+      });
+    } else if (typeof dashboardFilter === 'object' && dashboardFilter?.type === 'university') {
+      const targetUni = String(dashboardFilter.universityName || '').trim().toLowerCase();
+      apps = apps.filter(app => {
+        const uName = String(app.universityName || app.university?.name || (typeof app.university === 'string' && app.university ? app.university : 'N/A')).trim().toLowerCase();
+        return uName === targetUni;
+      });
+    } else if (typeof dashboardFilter === 'string' && dashboardFilter.startsWith('university:')) {
+      const targetUni = dashboardFilter.replace('university:', '').trim().toLowerCase();
+      apps = apps.filter(app => {
+        const uName = String(app.universityName || app.university?.name || (typeof app.university === 'string' && app.university ? app.university : 'N/A')).trim().toLowerCase();
+        return uName === targetUni;
+      });
+    }
+    return apps;
+  }, [dashboardFilter, applications]);
+
+  // Combined dropdown options across server facets and local applications
+  const intakeOptions = useMemo(() => {
+    const set = new Set(serverList.facets.intake || []);
+    (applications || []).forEach(a => {
+      const val = a.intake || a.intakes;
+      if (val) set.add(val);
     });
-  } else if (typeof dashboardFilter === 'string' && dashboardFilter.startsWith('date:')) {
-    const targetDateStr = dashboardFilter.replace('date:', '');
-    filteredApps = (applications || []).filter(app => {
-      const created = new Date(app.createdAt || app.dateAdded);
-      return !Number.isNaN(created.getTime()) && created.toDateString() === targetDateStr;
+    return Array.from(set).filter(Boolean);
+  }, [serverList.facets.intake, applications]);
+
+  const partnerOptions = useMemo(() => {
+    const set = new Set(serverList.facets.partner || []);
+    (applications || []).forEach(a => {
+      const p = a.partnerName || a.partner?.companyName || a.partner?.name || (typeof a.partner === 'string' ? a.partner : '') || a.referralAgent;
+      if (p) set.add(p);
     });
-  } else if (typeof dashboardFilter === 'object' && dashboardFilter?.type === 'university') {
-    const targetUni = String(dashboardFilter.universityName || '').trim().toLowerCase();
-    filteredApps = (applications || []).filter(app => {
-      const uName = String(app.universityName || app.university?.name || (typeof app.university === 'string' && app.university ? app.university : 'N/A')).trim().toLowerCase();
-      return uName === targetUni;
-    });
-  } else if (typeof dashboardFilter === 'string' && dashboardFilter.startsWith('university:')) {
-    const targetUni = dashboardFilter.replace('university:', '').trim().toLowerCase();
-    filteredApps = (applications || []).filter(app => {
-      const uName = String(app.universityName || app.university?.name || (typeof app.university === 'string' && app.university ? app.university : 'N/A')).trim().toLowerCase();
-      return uName === targetUni;
-    });
-  }
+    return Array.from(set).filter(Boolean);
+  }, [serverList.facets.partner, applications]);
+
+  // Search and filter applications (layers toolbar filters and search over dashboard filter if active)
+  const filteredApps = useMemo(() => {
+    if (!dashboardFilter) {
+      return restoreListRows(serverList.data, applications);
+    }
+    let apps = baseDashboardApps || [];
+
+    // Ownership / Scoping tab
+    if (ownershipTab === 'My Picked') {
+      apps = apps.filter(app => isPicked(app) && (
+        app.pickedBy?.id === currentUser?._id ||
+        app.pickedBy?.email === currentUser?.email ||
+        app.pickedBy?._id === currentUser?._id
+      ));
+    } else if (ownershipTab === 'Unpicked') {
+      apps = apps.filter(app => !isPicked(app));
+    } else if (ownershipTab === 'Unreplied') {
+      apps = apps.filter(app => Boolean(app.hasUnrepliedMessage));
+    }
+
+    // Status filter
+    if (statusFilter && statusFilter !== 'All') {
+      const targetStatus = statusFilter.toLowerCase().trim();
+      apps = apps.filter(app => {
+        const s = String(app.secondaryStatus || app.status || '').toLowerCase().trim();
+        return s === targetStatus;
+      });
+    }
+
+    // Intake filter
+    if (intakeFilter && intakeFilter !== 'All') {
+      const targetIntake = intakeFilter.toLowerCase().trim();
+      apps = apps.filter(app => {
+        const i = String(app.intake || app.intakes || '').toLowerCase().trim();
+        return i.includes(targetIntake);
+      });
+    }
+
+    // Partner / Channel filter
+    if (partnerFilter && partnerFilter !== 'All') {
+      const targetPartner = partnerFilter.toLowerCase().trim();
+      apps = apps.filter(app => {
+        const p = String(app.partnerName || app.partner?.companyName || app.partner?.name || (typeof app.partner === 'string' ? app.partner : '') || app.referralAgent || app.channel || '').toLowerCase().trim();
+        return p === targetPartner;
+      });
+    }
+
+    // Search query filter
+    if (searchTerm && searchTerm.trim()) {
+      const q = searchTerm.toLowerCase().trim();
+      apps = apps.filter(app => {
+        const sName = String(app.studentName || app.studentProfile?.name || app.student?.name || '').toLowerCase();
+        const pNo = String(app.passportNo || app.passport || app.studentProfile?.passportNo || '').toLowerCase();
+        const cId = String(app.camsId || app.applicationId || app.id || app._id || '').toLowerCase();
+        const uName = String(app.universityName || app.university?.name || (typeof app.university === 'string' ? app.university : '')).toLowerCase();
+        const cName = String(app.courseName || app.course?.name || (typeof app.course === 'string' ? app.course : '')).toLowerCase();
+        const partName = String(app.partnerName || app.partner?.companyName || app.partner?.name || (typeof app.partner === 'string' ? app.partner : '') || app.referralAgent || '').toLowerCase();
+        const staff = String(app.handlingStaff?.name || app.pickedBy?.name || '').toLowerCase();
+        return sName.includes(q) || pNo.includes(q) || cId.includes(q) || uName.includes(q) || cName.includes(q) || partName.includes(q) || staff.includes(q);
+      });
+    }
+
+    return apps;
+  }, [dashboardFilter, baseDashboardApps, serverList.data, applications, ownershipTab, statusFilter, intakeFilter, partnerFilter, searchTerm, currentUser]);
 
   let filterLabel = '';
   if (dashboardFilter === 'today') filterLabel = "Applications Filed Today";
   else if (dashboardFilter === 'active') filterLabel = "Active Leads";
-  else if (dashboardFilter === 'success') filterLabel = "Successful Applications (Visa / Enrolled)";
+  else if (dashboardFilter === 'success' || dashboardFilter === 'paid') filterLabel = "Paid Students";
   else if (dashboardFilter === 'pending') filterLabel = "Pending Verification";
   else if (typeof dashboardFilter === 'object' && dashboardFilter?.type === 'date') {
     filterLabel = `${dashboardFilter.label || dashboardFilter.dateString}`;
@@ -1066,6 +1176,54 @@ export default function Applications({ applications, referralAgents = [], intake
     filterLabel = `University: ${dashboardFilter.replace('university:', '')}`;
   }
 
+  // Dashboard scoping tab counts computed over baseDashboardApps filtered by toolbar
+  const dashboardTabCounts = useMemo(() => {
+    if (!dashboardFilter || !baseDashboardApps) return null;
+    const matchesToolbar = (app) => {
+      if (statusFilter && statusFilter !== 'All') {
+        const targetStatus = statusFilter.toLowerCase().trim();
+        const s = String(app.secondaryStatus || app.status || '').toLowerCase().trim();
+        if (s !== targetStatus) return false;
+      }
+      if (intakeFilter && intakeFilter !== 'All') {
+        const targetIntake = intakeFilter.toLowerCase().trim();
+        const i = String(app.intake || app.intakes || '').toLowerCase().trim();
+        if (!i.includes(targetIntake)) return false;
+      }
+      if (partnerFilter && partnerFilter !== 'All') {
+        const targetPartner = partnerFilter.toLowerCase().trim();
+        const p = String(app.partnerName || app.partner?.companyName || app.partner?.name || (typeof app.partner === 'string' ? app.partner : '') || app.referralAgent || app.channel || '').toLowerCase().trim();
+        if (p !== targetPartner) return false;
+      }
+      if (searchTerm && searchTerm.trim()) {
+        const q = searchTerm.toLowerCase().trim();
+        const sName = String(app.studentName || app.studentProfile?.name || app.student?.name || '').toLowerCase();
+        const pNo = String(app.passportNo || app.passport || app.studentProfile?.passportNo || '').toLowerCase();
+        const cId = String(app.camsId || app.applicationId || app.id || app._id || '').toLowerCase();
+        const uName = String(app.universityName || app.university?.name || (typeof app.university === 'string' ? app.university : '')).toLowerCase();
+        const cName = String(app.courseName || app.course?.name || (typeof app.course === 'string' ? app.course : '')).toLowerCase();
+        const partName = String(app.partnerName || app.partner?.companyName || app.partner?.name || (typeof app.partner === 'string' ? app.partner : '') || app.referralAgent || '').toLowerCase();
+        const staff = String(app.handlingStaff?.name || app.pickedBy?.name || '').toLowerCase();
+        if (!sName.includes(q) && !pNo.includes(q) && !cId.includes(q) && !uName.includes(q) && !cName.includes(q) && !partName.includes(q) && !staff.includes(q)) {
+          return false;
+        }
+      }
+      return true;
+    };
+
+    const pool = baseDashboardApps.filter(matchesToolbar);
+    return {
+      All: pool.length,
+      'My Picked': pool.filter(app => isPicked(app) && (
+        app.pickedBy?.id === currentUser?._id ||
+        app.pickedBy?.email === currentUser?.email ||
+        app.pickedBy?._id === currentUser?._id
+      )).length,
+      Unpicked: pool.filter(app => !isPicked(app)).length,
+      Unreplied: pool.filter(app => Boolean(app.hasUnrepliedMessage)).length
+    };
+  }, [dashboardFilter, baseDashboardApps, statusFilter, intakeFilter, partnerFilter, searchTerm, currentUser]);
+
   const unpickedCount = applications.filter(a => !isPicked(a)).length;
   const unrepliedCount = applications.filter(a => a.hasUnrepliedMessage).length;
   const myPickedCount = applications.filter(a => isPicked(a) && (a.pickedBy?.id === currentUser?._id || a.pickedBy?.email === currentUser?.email || a.pickedBy?._id === currentUser?._id)).length;
@@ -1075,6 +1233,33 @@ export default function Applications({ applications, referralAgents = [], intake
   const totalPages = dashboardFilter ? (Math.ceil(filteredApps.length / itemsPerPage) || 1) : serverList.totalPages;
   const startIndex = (currentPage - 1) * itemsPerPage;
   const paginatedApps = dashboardFilter ? filteredApps.slice(startIndex, startIndex + itemsPerPage) : filteredApps;
+
+  const isToolbarFiltered = Boolean(
+    (searchTerm && searchTerm.trim()) ||
+    (statusFilter && statusFilter !== 'All') ||
+    (intakeFilter && intakeFilter !== 'All') ||
+    (partnerFilter && partnerFilter !== 'All') ||
+    (ownershipTab && ownershipTab !== 'All')
+  );
+
+  const handleResetToolbar = () => {
+    setSearchTerm('');
+    setStatusFilter('All');
+    setIntakeFilter('All');
+    setPartnerFilter('All');
+    setOwnershipTab('All');
+    setCurrentPage(1);
+  };
+
+  const handleClearDashboardFilter = () => {
+    setSearchTerm('');
+    setStatusFilter('All');
+    setIntakeFilter('All');
+    setPartnerFilter('All');
+    setOwnershipTab('All');
+    setCurrentPage(1);
+    if (onClearDashboardFilter) onClearDashboardFilter();
+  };
   return (
     <div className="workspace-page flex-1 min-w-0 p-4 sm:p-6 space-y-6 bg-[#F8FAFC]">
       <div className={editModalApp ? 'hidden' : 'contents'}>
@@ -1109,11 +1294,15 @@ export default function Applications({ applications, referralAgents = [], intake
                     <span className="bg-amber-200/80 text-amber-950 px-2.5 py-0.5 rounded-full font-black text-[11px]">
                       {filterLabel}
                     </span>
-                    <span className="text-amber-700 font-semibold">({filteredApps.length} application{filteredApps.length === 1 ? '' : 's'})</span>
+                    <span className="text-amber-700 font-semibold">
+                      {isToolbarFiltered
+                        ? `(${filteredApps.length} of ${baseDashboardApps?.length || 0} application${(baseDashboardApps?.length || 0) === 1 ? '' : 's'})`
+                        : `(${baseDashboardApps?.length || 0} application${(baseDashboardApps?.length || 0) === 1 ? '' : 's'})`}
+                    </span>
                   </div>
                   <button
                     type="button"
-                    onClick={onClearDashboardFilter}
+                    onClick={handleClearDashboardFilter}
                     className="text-xs font-bold text-amber-900 hover:text-amber-950 bg-white border border-amber-300 hover:bg-amber-100 px-3 py-1 rounded-lg transition-all cursor-pointer shadow-2xs"
                   >
                     ✕ Clear Filter
@@ -1122,9 +1311,31 @@ export default function Applications({ applications, referralAgents = [], intake
               )}
 
               {/* Ownership & Scoping Tabs on top of table */}
-              <ListFilterTabs value={ownershipTab} onChange={value => { setOwnershipTab(value); setCurrentPage(1); }} options={[{ value: 'All', label: 'All applications', params: { scope: 'all' } }, { value: 'My Picked', label: 'My picked', params: { scope: 'my_picked' } }, { value: 'Unpicked', label: 'Waiting / unpicked', params: { scope: 'unpicked' } }, { value: 'Unreplied', label: 'Unreplied messages', params: { scope: 'all' }, filters: { hasUnrepliedMessage: 'true' } }]} query={{ endpoint: '/applications', search: searchTerm, filters: { status: statusFilter, partner: partnerFilter, intake: intakeFilter }, reloadKey: JSON.stringify(applications) }} />
+              <ListFilterTabs
+                value={ownershipTab}
+                onChange={value => { setOwnershipTab(value); setCurrentPage(1); }}
+                options={[
+                  { value: 'All', label: 'All applications', params: { scope: 'all' }, ...(dashboardTabCounts ? { count: dashboardTabCounts.All } : {}) },
+                  { value: 'My Picked', label: 'My picked', params: { scope: 'my_picked' }, ...(dashboardTabCounts ? { count: dashboardTabCounts['My Picked'] } : {}) },
+                  { value: 'Unpicked', label: 'Waiting / unpicked', params: { scope: 'unpicked' }, ...(dashboardTabCounts ? { count: dashboardTabCounts.Unpicked } : {}) },
+                  { value: 'Unreplied', label: 'Unreplied messages', params: { scope: 'all' }, filters: { hasUnrepliedMessage: 'true' }, ...(dashboardTabCounts ? { count: dashboardTabCounts.Unreplied } : {}) }
+                ]}
+                query={{ endpoint: '/applications', search: searchTerm, filters: { status: statusFilter, partner: partnerFilter, intake: intakeFilter }, reloadKey: JSON.stringify(applications) }}
+              />
 
-              <ListToolbar search={searchTerm} onSearchChange={setSearchTerm} filters={[{ key: 'status', label: 'statuses', value: statusFilter, onChange: setStatusFilter, options: STATUS_STEPS }, { key: 'intake', label: 'intakes', value: intakeFilter, onChange: setIntakeFilter, options: serverList.facets.intake || [] }, { key: 'partner', label: 'channels', value: partnerFilter, onChange: setPartnerFilter, options: serverList.facets.partner || [] }]} onReset={() => { setSearchTerm(''); setStatusFilter('All'); setIntakeFilter('All'); setPartnerFilter('All'); setCurrentPage(1); onClearDashboardFilter?.(); }} loading={serverList.loading} error={serverList.error} onRetry={serverList.reload} />
+              <ListToolbar
+                search={searchTerm}
+                onSearchChange={setSearchTerm}
+                filters={[
+                  { key: 'status', label: 'statuses', value: statusFilter, onChange: setStatusFilter, options: STATUS_STEPS },
+                  { key: 'intake', label: 'intakes', value: intakeFilter, onChange: setIntakeFilter, options: intakeOptions },
+                  { key: 'partner', label: 'channels', value: partnerFilter, onChange: setPartnerFilter, options: partnerOptions }
+                ]}
+                onReset={handleResetToolbar}
+                loading={serverList.loading}
+                error={serverList.error}
+                onRetry={serverList.reload}
+              />
 
               <div className="overflow-x-auto">
                 {filteredApps.length > 0 ? (
@@ -1263,6 +1474,8 @@ export default function Applications({ applications, referralAgents = [], intake
                       })}
                     </tbody>
                   </table>
+                ) : serverList.loading ? (
+                  <UnigatherLoader variant="inline" text="Loading applications..." />
                 ) : (
                   <div className="p-8 text-center space-y-2">
                     <svg className="w-12 h-12 text-slate-300 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">

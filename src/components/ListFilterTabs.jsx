@@ -8,8 +8,14 @@ export default function ListFilterTabs({ value, onChange, options, query, label 
   useEffect(() => {
     const controller = new AbortController();
     setCounts({});
+    const hasDirectCounts = options.every(option => option.count !== undefined);
+    if (hasDirectCounts) {
+      setCounts(Object.fromEntries(options.map(option => [option.value, option.count])));
+      return;
+    }
     const timer = setTimeout(() => {
       Promise.all(options.map(async option => {
+        if (option.count !== undefined) return [option.value, option.count];
         const params = { ...query.params, ...option.params, list:'true', page:1, limit:1, search:query.search || '', filters:JSON.stringify({...query.filters,...option.filters}) };
         try {
           const response = query.localRecords === undefined ? await API.get(option.endpoint || query.endpoint,{params,signal:controller.signal}) : await API.post('/lists/query',{resource:query.resource,records:query.localRecords},{params,signal:controller.signal});
@@ -21,6 +27,6 @@ export default function ListFilterTabs({ value, onChange, options, query, label 
     return () => { clearTimeout(timer); controller.abort(); };
   }, [key]);
   return <div role="tablist" aria-label={label} className="flex flex-wrap gap-2 rounded-xl border border-slate-200 bg-white p-3">{options.map(option => <button key={option.value} type="button" role="tab" aria-selected={value === option.value} onClick={() => onChange(option.value)} className={`inline-flex items-center gap-2 rounded-lg px-4 py-2 text-xs font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 ${value===option.value?'bg-amber-400 text-slate-950':'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>
-    {option.label}<span className="rounded bg-white/60 px-1.5 py-0.5 tabular-nums">{counts[option.value] === undefined ? '�' : counts[option.value] ?? '�'}</span>
+    {option.label}<span className="rounded bg-white/60 px-1.5 py-0.5 tabular-nums">{option.count !== undefined ? option.count : (counts[option.value] === undefined ? '-' : counts[option.value] ?? '-')}</span>
   </button>)}</div>;
 }
