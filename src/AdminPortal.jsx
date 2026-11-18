@@ -654,12 +654,14 @@ export default function AdminPortal({ onLogout }) {
       window.history.replaceState(window.history.state, '', url.toString());
       window.dispatchEvent(new CustomEvent('clear_student_expanded'));
     }
-    if (tabId === 'staff') {
+    try {
       const url = new URL(window.location.href);
-      url.searchParams.delete('adminStaffId');
-      window.history.replaceState(window.history.state, '', url.toString());
-      window.dispatchEvent(new CustomEvent('clear_single_view_admin_staff'));
-    }
+      if (url.searchParams.has('adminStaffId')) {
+        url.searchParams.delete('adminStaffId');
+        window.history.replaceState(window.history.state, '', url.pathname + (url.search ? url.search : ''));
+        window.dispatchEvent(new CustomEvent('clear_single_view_admin_staff'));
+      }
+    } catch (e) {}
     setActiveTab(tabId);
   };
 

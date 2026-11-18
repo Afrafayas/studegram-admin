@@ -86,7 +86,7 @@ export default function Notice({ selectedNoticeId, setSelectedNoticeId }) {
     } catch (error) { toast.error(error.response?.data?.message || 'Unable to delete notice.'); }
   };
   const noticeActions = (notice, showEdit = true) => <div className="flex flex-wrap gap-x-3 gap-y-1 text-[11px] py-1" onClick={e => e.stopPropagation()}>
-    <span>{notice.status}{notice.isExpired ? ' � Expired' : ''} � {notice.isRead ? 'Read' : 'Unread'}{notice.expiresOn ? ' � Show until ' + notice.expiresOn + ' (India time)' : ''}</span>
+    <span>{notice.status}{notice.isExpired ? ' · Expired' : ''} · {notice.isRead ? 'Read' : 'Unread'}{notice.expiresOn ? ' · Show until ' + notice.expiresOn + ' (India time)' : ''}</span>
     {!notice.isRead && <ActionButton onClick={() => markRead(notice.id)} className="text-amber-700 font-bold">Mark as Read</ActionButton>}
     {notice.canManage && <>{showEdit && <ActionButton type="button" onClick={() => editNotice(notice)} className="text-amber-700 font-bold">Edit</ActionButton>}<ActionButton onClick={() => deleteNotice(notice)} className="text-red-700 font-bold">Delete</ActionButton></>}
   </div>;

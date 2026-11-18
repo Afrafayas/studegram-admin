@@ -107,8 +107,11 @@ export default function Staff({ staffList, setStaffList, applications }) {
   };
 
   const getStaffCountries = (s) => {
-    if (Array.isArray(s?.countries) && s.countries.length > 0) return s.countries;
-    if (s?.country) return [s.country];
+    if (Array.isArray(s?.countries) && s.countries.length > 0) {
+      const valid = s.countries.map(c => String(c || '').trim()).filter(Boolean);
+      if (valid.length > 0) return valid;
+    }
+    if (s?.country && String(s.country).trim()) return [String(s.country).trim()];
     return ['India'];
   };
 
@@ -121,7 +124,7 @@ export default function Staff({ staffList, setStaffList, applications }) {
       ...defaultCountries,
       ...safeStaffList.flatMap(s => getStaffCountries(s))
     ])
-  );
+  ).map(c => String(c || '').trim()).filter(Boolean);
 
   const serverList = useServerList('/users', { search: searchTerm, filters: { status: statusFilter, country: countryFilter, role: roleFilter }, page: currentPage, limit: itemsPerPage, onPageChange: setCurrentPage, enabled: hasPermission('staff:view'), reloadKey: JSON.stringify(safeStaffList) });
 
@@ -193,14 +196,15 @@ export default function Staff({ staffList, setStaffList, applications }) {
     setIsEditSubmitting(true);
     const staffTargetId = editingStaff._id || editingStaff.id;
 
+    const validEditCountries = editStaffCountries.map(c => String(c || '').trim()).filter(Boolean);
     const payload = {
       name: editStaffName.trim(),
       email: editStaffEmail.trim().toLowerCase(),
       phone: editStaffPhone,
       role: editStaffRole,
       status: editStaffStatus,
-      countries: editStaffCountries.length > 0 ? editStaffCountries : ['India'],
-      country: editStaffCountries[0] || 'India',
+      countries: validEditCountries.length > 0 ? validEditCountries : ['India'],
+      country: validEditCountries[0] || 'India',
       accessLevel: `${editStaffRole} (${editStaffAccess})`
     };
 
@@ -284,7 +288,8 @@ export default function Staff({ staffList, setStaffList, applications }) {
       return;
     }
 
-    const assignedCountries = currentUser?.role === 'Country Head' ? [currentUser.country] : (newStaffCountries.length > 0 ? newStaffCountries : ['India']);
+    const validNewCountries = newStaffCountries.map(c => String(c || '').trim()).filter(Boolean);
+    const assignedCountries = currentUser?.role === 'Country Head' ? [currentUser.country] : (validNewCountries.length > 0 ? validNewCountries : ['India']);
     const assignedCountry = assignedCountries[0];
 
     const passToSend = passwordMode === 'auto' ? generateRandomPassword() : manualPassword;
@@ -623,7 +628,7 @@ export default function Staff({ staffList, setStaffList, applications }) {
                 <div className="space-y-1.5 col-span-2">
                   <label className="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">Assigned Countries (Select Multiple) <span className="text-rose-500">*</span></label>
                   <div className="flex flex-wrap gap-2 bg-slate-50 p-3 border border-slate-200 rounded-xl">
-                    {availableCountries.map(country => {
+                    {availableCountries.filter(c => String(c || '').trim()).map(country => {
                       const isSelected = newStaffCountries.includes(country);
                       return (
                         <ActionButton
@@ -868,7 +873,7 @@ export default function Staff({ staffList, setStaffList, applications }) {
               <div className="space-y-1.5">
                 <label className="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">Assigned Countries (Select Multiple)</label>
                 <div className="flex flex-wrap gap-2 bg-slate-50 p-3 border border-slate-200 rounded-xl">
-                  {availableCountries.map(country => {
+                  {availableCountries.filter(c => String(c || '').trim()).map(country => {
                     const isSelected = editStaffCountries.includes(country);
                     return (
                       <ActionButton
