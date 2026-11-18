@@ -1338,7 +1338,7 @@ export default function BecomePartner({ clients = [], setClients, applications =
                 <BatchDocumentUpload key={partnerType} role="Agent" disabled={isSubmitting} onBusyChange={setIsSubmitting} onPendingChange={setHasQueuedOnboardingDocuments} onComplete={async uploaded => { setOnboardingDocuments(prev => [...prev, ...uploaded]); }} />
                 {onboardingDocuments.length > 0 && <div className="space-y-2">
                   <p className="text-xs font-semibold">Attached: {onboardingDocuments.map(doc => doc.name).join(', ')}</p>
-                  {onboardingDocuments.map((doc, index) => <div key={doc.url} className="flex items-center justify-between gap-2 text-xs"><DocumentPreview url={doc.url || doc.previewUrl} name={doc.fileName || doc.name} type={doc.type} /><span>{doc.name} � {doc.fileName}</span><ActionButton type="button" onClick={() => setOnboardingDocuments(prev => prev.filter((_, i) => i !== index))} className="text-red-700">Remove</ActionButton></div>)}
+                  {onboardingDocuments.map((doc, index) => <div key={doc.url} className="flex items-center justify-between gap-2 text-xs"><DocumentPreview url={doc.url || doc.previewUrl} name={doc.fileName || doc.name} type={doc.type} /><span>{doc.name} · {doc.fileName}</span><ActionButton type="button" onClick={() => setOnboardingDocuments(prev => prev.filter((_, i) => i !== index))} className="text-red-700">Remove</ActionButton></div>)}
                 </div>}
               </div>
 
