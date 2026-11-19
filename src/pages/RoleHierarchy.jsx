@@ -10,6 +10,7 @@ import { createPortal } from 'react-dom';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import API from '../api/axios';
+import UnigatherLoader from '../components/UnigatherLoader';
 
 const SIDEBAR_PERMISSION_ITEMS = [
   { key: 'sidebar:daily-report', label: 'Daily Report', portal: 'Admin' },
@@ -296,8 +297,10 @@ export default function RoleHierarchy() {
                     ))}
                   </tbody>
                 </table>
+              ) : serverList.loading ? (
+                <UnigatherLoader variant="inline" text="Loading roles and permissions..." />
               ) : (
-                <div className="p-8 text-center text-xs text-slate-400">No roles found</div>
+                <div className="p-8 text-center text-xs text-slate-400 font-semibold">No roles found</div>
               )}
             </div>
 
@@ -354,28 +357,34 @@ export default function RoleHierarchy() {
             Live System RBAC Audit Logs
           </h2>
           <div className="border border-slate-200 rounded-xl overflow-x-auto">
-            <table className="workspace-table w-full text-left border-collapse text-xs">
-              <thead>
-                <tr className="bg-slate-50 border-b border-slate-200 text-[10px] font-extrabold uppercase text-slate-400">
-                  <th className="p-3">Timestamp</th>
-                  <th className="p-3">User</th>
-                  <th className="p-3">Role</th>
-                  <th className="p-3">Action</th>
-                  <th className="p-3">Details</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100 font-semibold">
-                {auditList.data.map((log) => (
-                  <tr key={log.id} className="hover:bg-slate-50/50">
-                    <td className="p-3 text-slate-400 font-mono text-[10px]">{new Date(log.timestamp).toLocaleString('en-GB')}</td>
-                    <td className="p-3 font-bold text-slate-900">{log.userName}</td>
-                    <td className="p-3"><span className="px-2 py-0.5 bg-amber-50 text-[#D99A1C] border border-amber-200 rounded text-[9px] font-bold">{log.userRole}</span></td>
-                    <td className="p-3 font-extrabold text-slate-800">{log.action}</td>
-                    <td className="p-3 text-slate-500 text-[11px]">{log.details}</td>
+            {auditList.data.length > 0 ? (
+              <table className="workspace-table w-full text-left border-collapse text-xs">
+                <thead>
+                  <tr className="bg-slate-50 border-b border-slate-200 text-[10px] font-extrabold uppercase text-slate-400">
+                    <th className="p-3">Timestamp</th>
+                    <th className="p-3">User</th>
+                    <th className="p-3">Role</th>
+                    <th className="p-3">Action</th>
+                    <th className="p-3">Details</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="divide-y divide-slate-100 font-semibold">
+                  {auditList.data.map((log) => (
+                    <tr key={log.id} className="hover:bg-slate-50/50">
+                      <td className="p-3 text-slate-400 font-mono text-[10px]">{new Date(log.timestamp).toLocaleString('en-GB')}</td>
+                      <td className="p-3 font-bold text-slate-900">{log.userName}</td>
+                      <td className="p-3"><span className="px-2 py-0.5 bg-amber-50 text-[#D99A1C] border border-amber-200 rounded text-[9px] font-bold">{log.userRole}</span></td>
+                      <td className="p-3 font-extrabold text-slate-800">{log.action}</td>
+                      <td className="p-3 text-slate-500 text-[11px]">{log.details}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            ) : auditList.loading ? (
+              <UnigatherLoader variant="inline" text="Loading audit logs..." />
+            ) : (
+              <div className="p-8 text-center text-xs text-slate-400 font-semibold">No audit logs found</div>
+            )}
           </div>
 <ListPager list={auditList} page={auditPage} onPageChange={setAuditPage} limit={auditLimit} onLimitChange={setAuditLimit} />
         </div>

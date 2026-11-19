@@ -9,6 +9,7 @@ import API from '../api/axios';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import StaffActivitySingleView from './StaffActivitySingleView';
+import UnigatherLoader from '../components/UnigatherLoader';
 
 // Helper to format date and time nicely
 const formatDateTime = (dateStr) => {
@@ -80,7 +81,7 @@ export default function StaffActivityLogs() {
         const url = new URL(window.location.href);
         if (url.searchParams.get('staffId') !== String(selectedStaffId)) {
           url.searchParams.set('staffId', String(selectedStaffId));
-          window.history.replaceState({}, '', url.toString());
+          window.history.replaceState({}, '', url.pathname + (url.search ? url.search : ''));
         }
       } catch (e) {}
     } else {
@@ -89,7 +90,7 @@ export default function StaffActivityLogs() {
         const url = new URL(window.location.href);
         if (url.searchParams.has('staffId')) {
           url.searchParams.delete('staffId');
-          window.history.replaceState({}, '', url.toString());
+          window.history.replaceState({}, '', url.pathname + (url.search ? url.search : ''));
         }
       } catch (e) {}
     }
@@ -102,7 +103,7 @@ export default function StaffActivityLogs() {
       try {
         const url = new URL(window.location.href);
         url.searchParams.delete('staffId');
-        window.history.replaceState({}, '', url.toString());
+        window.history.replaceState({}, '', url.pathname + (url.search ? url.search : ''));
       } catch (e) {}
     };
 
@@ -298,33 +299,27 @@ export default function StaffActivityLogs() {
         /* ================= SUBVIEW 1: STAFF SUMMARY LIST ================= */
         <div className="workspace-list-frame bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-xs">
 <ListToolbar search={searchTerm} onSearchChange={setSearchTerm} filters={[{key:'role',label:'roles',value:roleFilter,onChange:setRoleFilter,options:serverList.facets.role || availableRoles},{key:'status',label:'online status',value:statusFilter,onChange:setStatusFilter,options:['Online','Offline']},{key:'timeframe',label:'timeframes',value:timeframe,onChange:setTimeframe,options:[{value:'today',label:'Today'},{value:'yesterday',label:'Yesterday'},{value:'week',label:'Past 7 days'},{value:'15days',label:'Past 15 days'},{value:'month',label:'Past 30 days'}]}]} onReset={() => { setSearchTerm(''); setRoleFilter('All'); setStatusFilter('All'); setTimeframe('All'); }} loading={serverList.loading} error={serverList.error} onRetry={serverList.reload} />
-          <div className="overflow-x-auto">
-            <table className="workspace-table w-full text-left border-collapse">
-              <thead>
-                <tr className="bg-slate-50 border-b border-slate-200 text-[10px] font-black uppercase text-slate-400 tracking-wider">
-                  <th className="py-3 px-4">Staff Member</th>
-                  <th className="py-3 px-4">Role & Country</th>
-                  <th className="py-3 px-4">Current Status</th>
-                  <th className="py-3 px-4">Last Login Time</th>
-                  <th className="py-3 px-4">Last Logout Time</th>
-                  <th className="py-3 px-4">
-                    {timeframe === 'All' || timeframe === 'today'
-                      ? 'Time Spent (Today)'
-                      : `Time Spent (${getTimeframeLabel(timeframe)})`}
-                  </th>
-                  <th className="py-3 px-4">Total Time Spent</th>
-                  <th className="py-3 px-4 text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100 text-xs">
-                {filteredStaffSummary.length === 0 ? (
-                  <tr>
-                    <td colSpan="8" className="py-12 text-center text-slate-400 font-semibold">
-                      No staff activity records found matching your filters.
-                    </td>
+          {filteredStaffSummary.length > 0 ? (
+            <div className="overflow-x-auto">
+              <table className="workspace-table w-full text-left border-collapse">
+                <thead>
+                  <tr className="bg-slate-50 border-b border-slate-200 text-[10px] font-black uppercase text-slate-400 tracking-wider">
+                    <th className="py-3 px-4">Staff Member</th>
+                    <th className="py-3 px-4">Role & Country</th>
+                    <th className="py-3 px-4">Current Status</th>
+                    <th className="py-3 px-4">Last Login Time</th>
+                    <th className="py-3 px-4">Last Logout Time</th>
+                    <th className="py-3 px-4">
+                      {timeframe === 'All' || timeframe === 'today'
+                        ? 'Time Spent (Today)'
+                        : `Time Spent (${getTimeframeLabel(timeframe)})`}
+                    </th>
+                    <th className="py-3 px-4">Total Time Spent</th>
+                    <th className="py-3 px-4 text-right">Actions</th>
                   </tr>
-                ) : (
-                  filteredStaffSummary.map((staff) => (
+                </thead>
+                <tbody className="divide-y divide-slate-100 text-xs">
+                  {filteredStaffSummary.map((staff) => (
                     <tr tabIndex={0} onKeyDown={event => { if (event.target === event.currentTarget && event.key === "Enter") { event.preventDefault(); event.currentTarget.click(); } }}
                       key={staff.userId || staff.email}
                       className="hover:bg-slate-50/70 transition-colors group cursor-pointer"
@@ -434,40 +429,40 @@ export default function StaffActivityLogs() {
                         />
                       </td>
                     </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : serverList.loading ? (
+            <UnigatherLoader variant="inline" text="Loading staff activity records..." />
+          ) : (
+            <div className="py-12 text-center text-slate-400 font-semibold text-xs">
+              No staff activity records found matching your filters.
+            </div>
+          )}
 <ListPager list={serverList} page={currentPage} onPageChange={setCurrentPage} limit={itemsPerPage} onLimitChange={setItemsPerPage} />
         </div>
       ) : (
         /* ================= SUBVIEW 2: GRANULAR SESSION LOGS ================= */
         <div className="workspace-list-frame bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-xs">
 <ListToolbar search={searchTerm} onSearchChange={setSearchTerm} filters={[{key:'role',label:'roles',value:roleFilter,onChange:setRoleFilter,options:serverList.facets.role || availableRoles},{key:'status',label:'online status',value:statusFilter,onChange:setStatusFilter,options:['Online','Offline']},{key:'timeframe',label:'timeframes',value:timeframe,onChange:setTimeframe,options:[{value:'today',label:'Today'},{value:'yesterday',label:'Yesterday'},{value:'week',label:'Past 7 days'},{value:'15days',label:'Past 15 days'},{value:'month',label:'Past 30 days'}]}]} onReset={() => { setSearchTerm(''); setRoleFilter('All'); setStatusFilter('All'); setTimeframe('All'); }} loading={serverList.loading} error={serverList.error} onRetry={serverList.reload} />
-          <div className="overflow-x-auto">
-            <table className="workspace-table w-full text-left border-collapse">
-              <thead>
-                <tr className="bg-slate-50 border-b border-slate-200 text-[10px] font-black uppercase text-slate-400 tracking-wider">
-                  <th className="py-3 px-4">Staff Member</th>
-                  <th className="py-3 px-4">Role</th>
-                  <th className="py-3 px-4">Login Time</th>
-                  <th className="py-3 px-4">Logout Time</th>
-                  <th className="py-3 px-4">Time Spent</th>
-                  <th className="py-3 px-4">Device & IP</th>
-                  <th className="py-3 px-4">Status</th>
-                  <th className="py-3 px-4 text-right">Action</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100 text-xs">
-                {sessionLogs.length === 0 ? (
-                  <tr>
-                    <td colSpan="8" className="py-12 text-center text-slate-400 font-semibold">
-                      No session logs found for the selected criteria.
-                    </td>
+          {sessionLogs.length > 0 ? (
+            <div className="overflow-x-auto">
+              <table className="workspace-table w-full text-left border-collapse">
+                <thead>
+                  <tr className="bg-slate-50 border-b border-slate-200 text-[10px] font-black uppercase text-slate-400 tracking-wider">
+                    <th className="py-3 px-4">Staff Member</th>
+                    <th className="py-3 px-4">Role</th>
+                    <th className="py-3 px-4">Login Time</th>
+                    <th className="py-3 px-4">Logout Time</th>
+                    <th className="py-3 px-4">Time Spent</th>
+                    <th className="py-3 px-4">Device & IP</th>
+                    <th className="py-3 px-4">Status</th>
+                    <th className="py-3 px-4 text-right">Action</th>
                   </tr>
-                ) : (
-                  sessionLogs.map((sess) => (
+                </thead>
+                <tbody className="divide-y divide-slate-100 text-xs">
+                  {sessionLogs.map((sess) => (
                     <tr tabIndex={0} onKeyDown={event => { if (event.target === event.currentTarget && event.key === "Enter") { event.preventDefault(); event.currentTarget.click(); } }}
                       key={sess._id}
                       className="hover:bg-slate-50/70 transition-colors cursor-pointer"
@@ -543,11 +538,17 @@ export default function StaffActivityLogs() {
                         />
                       </td>
                     </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : serverList.loading ? (
+            <UnigatherLoader variant="inline" text="Loading session logs..." />
+          ) : (
+            <div className="py-12 text-center text-slate-400 font-semibold text-xs">
+              No session logs found for the selected criteria.
+            </div>
+          )}
 
 <ListPager list={serverList} page={currentPage} onPageChange={setCurrentPage} limit={itemsPerPage} onLimitChange={setItemsPerPage} />
         </div>

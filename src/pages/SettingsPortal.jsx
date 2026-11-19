@@ -16,6 +16,7 @@ import * as XLSX from 'xlsx';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import API from '../api/axios';
+import UnigatherLoader from '../components/UnigatherLoader';
 
 export default function SettingsPortal({ 
   activeSubTab,
@@ -23,6 +24,7 @@ export default function SettingsPortal({
   universities, setUniversities,
   courses, setCourses,
   intakes, setIntakes,
+  countries = [], setCountries,
   fileFormats, setFileFormats,
   courseDocuments, setCourseDocuments,
   referralAgents, setReferralAgents,
@@ -52,14 +54,14 @@ useEffect(()=>setListRecord(null),[activeSubTab]);
 
   const [listSearch, setListSearch] = useState('');
   const [listFilters, setListFilters] = useState({});
-  const settingsSources = { 'settings-university': universities, 'settings-course': courses, 'settings-intake': intakes, 'settings-agent': referralAgents, 'settings-course-docs': courseDocuments, 'settings-stages': stages, 'settings-formats': fileFormats, 'settings-qualifications': qualifications, 'settings-documents': verificationDocuments || [], 'settings-actions': stagedActions || [] };
-  const settingsEndpoints = { 'settings-university': '/universities', 'settings-course': '/courses', 'settings-intake': '/intakes', 'settings-agent': '/partners' };
+  const settingsSources = { 'settings-university': universities, 'settings-course': courses, 'settings-intake': intakes, 'settings-country': countries, 'settings-agent': referralAgents, 'settings-course-docs': courseDocuments, 'settings-stages': stages, 'settings-formats': fileFormats, 'settings-qualifications': qualifications, 'settings-documents': verificationDocuments || [], 'settings-actions': stagedActions || [] };
+  const settingsEndpoints = { 'settings-university': '/universities', 'settings-course': '/courses', 'settings-intake': '/intakes', 'settings-country': '/countries', 'settings-agent': '/partners' };
   const settingsSource = settingsSources[activeSubTab] || [];
   const serverList = useServerList(settingsEndpoints[activeSubTab] || '/lists/query', { search: listSearch, filters: listFilters, page: currentPage, limit: itemsPerPage, onPageChange: setCurrentPage, enabled: Boolean(settingsSources[activeSubTab]), resource: activeSubTab, localRecords: settingsEndpoints[activeSubTab] ? undefined : settingsSource, reloadKey: JSON.stringify(settingsSource) });
   const settingsRows = settingsEndpoints[activeSubTab] ? restoreListRows(serverList.data, settingsSource) : serverList.data;
   useEffect(() => { setCurrentPage(1); }, [listSearch, JSON.stringify(listFilters)]);
   useEffect(() => { setListSearch(''); setListFilters({}); }, [activeSubTab]);
-  const settingsFilterKeys = activeSubTab === 'settings-university' ? ['country', 'status'] : activeSubTab === 'settings-course' ? ['university', 'degreeLevel', 'status'] : activeSubTab === 'settings-course-docs' ? ['format'] : activeSubTab === 'settings-agent' ? ['country', 'status'] : ['status'];
+  const settingsFilterKeys = activeSubTab === 'settings-university' ? ['country', 'status'] : activeSubTab === 'settings-country' ? ['status'] : activeSubTab === 'settings-course' ? ['university', 'degreeLevel', 'status'] : activeSubTab === 'settings-course-docs' ? ['format'] : activeSubTab === 'settings-agent' ? ['country', 'status'] : ['status'];
   const settingsToolbar = <><ListToolbar search={listSearch} onSearchChange={setListSearch} filters={settingsFilterKeys.filter(key => (serverList.facets[key] || []).length).map(key => ({ key, label: key === 'degreeLevel' ? 'degree levels' : key, value: listFilters[key] || 'All', onChange: value => setListFilters(prev => ({ ...prev, [key]: value })), options: serverList.facets[key] || [] }))} onReset={() => { setListSearch(''); setListFilters({}); }} loading={serverList.loading} error={serverList.error} onRetry={serverList.reload} />{!serverList.loading && !serverList.error && settingsRows.length === 0 && <p role="status" className="px-4 py-3 text-xs text-slate-500">No matching records.</p>}</>;
 
   // University Full State
@@ -109,6 +111,14 @@ useEffect(()=>setListRecord(null),[activeSubTab]);
   const [intakeDesc, setIntakeDesc] = useState('');
   const [editingIntake, setEditingIntake] = useState(null);
   const [viewingIntake, setViewingIntake] = useState(null);
+
+  // Country Add/Edit/View State
+  const [countryName, setCountryName] = useState('');
+  const [countryCode, setCountryCode] = useState('');
+  const [countryDesc, setCountryDesc] = useState('');
+  const [countryStatus, setCountryStatus] = useState('Active');
+  const [editingCountry, setEditingCountry] = useState(null);
+  const [viewingCountry, setViewingCountry] = useState(null);
   
   const [docName, setDocName] = useState('');
   const [docFormat, setDocFormat] = useState('.pdf');
@@ -819,6 +829,118 @@ if (!token) throw new Error('Please sign in to save changes.');
     }
   };
 
+  const resetCountryForm = () => {
+    setCountryName('');
+    setCountryCode('');
+    setCountryDesc('');
+    setCountryStatus('Active');
+    setEditingCountry(null);
+  };
+
+  const openAddCountryModal = () => {
+    if (!isWritable) return;
+    resetCountryForm();
+    setModalType('settings-country');
+  };
+
+  const openEditCountryModal = (country) => {
+    if (!isWritable) return;
+    setEditingCountry(country);
+    setCountryName(typeof country === 'object' && country !== null ? (country.name || country.title || '') : String(country || ''));
+    setCountryCode(typeof country === 'object' && country !== null ? (country.code || '') : '');
+    setCountryDesc(typeof country === 'object' && country !== null ? (country.description || '') : '');
+    setCountryStatus(typeof country === 'object' && country !== null ? (country.status || 'Active') : 'Active');
+    setModalType('settings-country');
+  };
+
+  const handleDeleteCountry = async (country) => {
+    if (!isWritable) {
+      toast.error("Permission Denied: System configurations can only be modified by SuperAdmin, Admin, or Director.");
+      return;
+    }
+    const countryId = typeof country === 'object' ? (country._id || country.id) : country;
+    const nameStr = typeof country === 'object' ? (country.name || country.title) : country;
+    if (!window.confirm(`Are you sure you want to delete country "${nameStr}"?`)) return;
+
+    const token = localStorage.getItem('admin_token');
+    try {
+      const isValidMongoId = countryId && /^[a-f\d]{24}$/i.test(String(countryId));
+      if (!token) throw new Error('Please sign in to save changes.');
+      if (!isValidMongoId) throw new Error('This record has no server ID. Refresh the page and retry.');
+      
+      const response = await API.delete(`/countries/${countryId}`);
+      if (!response.data?.success) {
+        throw new Error(response.data?.message || 'Failed to delete country');
+      }
+      setCountries(prev => prev.filter(c => (typeof c === 'object' ? (c._id || c.id) : c) !== countryId));
+      addAuditLog('DELETE_COUNTRY', 'Settings', nameStr, `Deleted country: ${nameStr}`);
+      toast.success(`Country "${nameStr}" deleted successfully!`);
+    } catch (err) {
+      toast.error(err.response?.data?.message || err.message || 'Failed to delete country');
+    }
+  };
+
+  const handleSaveCountry = async (e) => {
+    e.preventDefault();
+    if (!isWritable) return;
+    const trimmedName = (countryName || '').trim();
+    if (!trimmedName) {
+      toast.error("Please enter a valid Country Name.");
+      return;
+    }
+
+    const token = localStorage.getItem('admin_token');
+    const countryPayload = {
+      name: trimmedName,
+      code: (countryCode || '').trim().toUpperCase(),
+      description: (countryDesc || '').trim(),
+      status: countryStatus
+    };
+
+    setIsSubmitting(true);
+    try {
+      if (editingCountry) {
+        const cId = typeof editingCountry === 'object' && editingCountry !== null
+          ? (editingCountry._id || editingCountry.id)
+          : null;
+        const isValidMongoId = cId && /^[a-f\d]{24}$/i.test(String(cId));
+        if (!token) throw new Error('Please sign in to save changes.');
+        if (!isValidMongoId) throw new Error('This record has no server ID. Refresh the page and retry.');
+
+        const response = await API.put(`/countries/${cId}`, countryPayload);
+        const resData = response.data;
+        if (resData?.success) {
+          setCountries(prev => prev.map(c => {
+            const currentId = typeof c === 'object' && c !== null ? (c._id || c.id) : c;
+            return currentId === cId ? resData.data : c;
+          }));
+          addAuditLog('EDIT_COUNTRY', 'Settings', trimmedName, `Updated country setting: ${trimmedName}`);
+          toast.success(`Country "${trimmedName}" updated successfully!`);
+        } else {
+          throw new Error(resData?.message || 'Failed to update country');
+        }
+      } else {
+        if (!token) throw new Error('Please sign in to save changes.');
+        const response = await API.post('/countries', countryPayload);
+        const resData = response.data;
+        if (resData?.success) {
+          setCountries(prev => [resData.data, ...prev]);
+          addAuditLog('ADD_SETTING_COUNTRY', 'Settings', trimmedName, `Added country setting: ${trimmedName}`);
+          toast.success(`Country "${trimmedName}" created successfully!`);
+        } else {
+          throw new Error(resData?.message || 'Failed to save country');
+        }
+      }
+      resetCountryForm();
+      setModalType(null);
+    } catch (err) {
+      const backendMsg = err.response?.data?.message || err.message || 'Operation failed';
+      toast.error(backendMsg);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   const handleAddSimpleItem = (e, listStateSetter, list, typeLabel) => {
     e.preventDefault();
     if (!isWritable) return;
@@ -1005,10 +1127,16 @@ if (!token) throw new Error('Please sign in to save changes.');
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 text-xs font-semibold text-slate-700">
-                  {universities.length === 0 ? (
+                  {paginatedUnivs.length === 0 ? (
                     <tr>
-                      <td colSpan={5} className="px-6 py-8 text-center text-slate-400 text-xs italic">
-                        No universities found. Click "+ Add University" above to create one.
+                      <td colSpan={5} className="px-6 py-12 text-center">
+                        {serverList.loading ? (
+                          <UnigatherLoader variant="inline" text="Loading universities..." />
+                        ) : (
+                          <span className="text-slate-400 text-xs italic font-semibold">
+                            No universities found. Click "+ Add University" above to create one.
+                          </span>
+                        )}
                       </td>
                     </tr>
                   ) : (
@@ -1156,10 +1284,16 @@ if (!token) throw new Error('Please sign in to save changes.');
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 text-xs font-semibold text-slate-700">
-                  {courses.length === 0 ? (
+                  {paginatedCourses.length === 0 ? (
                     <tr>
-                      <td colSpan={6} className="px-6 py-8 text-center text-slate-400 text-xs italic">
-                        No course programs found. Click "+ Add Course Program" above to create one.
+                      <td colSpan={6} className="px-6 py-12 text-center">
+                        {serverList.loading ? (
+                          <UnigatherLoader variant="inline" text="Loading courses..." />
+                        ) : (
+                          <span className="text-slate-400 text-xs italic font-semibold">
+                            No course programs found. Click "+ Add Course Program" above to create one.
+                          </span>
+                        )}
                       </td>
                     </tr>
                   ) : (
@@ -1279,10 +1413,16 @@ if (!token) throw new Error('Please sign in to save changes.');
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 text-xs font-semibold text-slate-700">
-                  {intakes.length === 0 ? (
+                  {paginatedIntakes.length === 0 ? (
                     <tr>
-                      <td colSpan={4} className="px-6 py-8 text-center text-slate-400 text-xs italic">
-                        No intake seasons found. Click "+ Add Intake Season" above to create one.
+                      <td colSpan={4} className="px-6 py-12 text-center">
+                        {serverList.loading ? (
+                          <UnigatherLoader variant="inline" text="Loading intake seasons..." />
+                        ) : (
+                          <span className="text-slate-400 text-xs italic font-semibold">
+                            No intake seasons found. Click "+ Add Intake Season" above to create one.
+                          </span>
+                        )}
                       </td>
                     </tr>
                   ) : (
@@ -1347,6 +1487,135 @@ if (!token) throw new Error('Please sign in to save changes.');
         );
       }
 
+      case 'settings-country': {
+        const paginatedCountries = settingsRows;
+
+        return (
+          <div className="space-y-4">
+            <div className="flex flex-wrap gap-3 justify-between items-center">
+              <div>
+                <h2 className="text-xs font-black text-slate-900 uppercase tracking-wider">Countries Master Directory</h2>
+                <p className="text-[10px] text-slate-400 font-semibold mt-0.5">Define global study destinations, ISO country codes, and regional destination parameters.</p>
+              </div>
+              <ActionButton
+                onClick={openAddCountryModal}
+                className="bg-[#D99A1C] hover:bg-[#F5B025] text-white font-extrabold text-[10px] px-3.5 py-2 rounded-xl transition-all shadow-md uppercase tracking-wider cursor-pointer flex items-center gap-1"
+              >
+                <span>+ Add Country</span>
+              </ActionButton>
+            </div>
+            {settingsToolbar}
+
+            <div className="workspace-list-frame bg-white border border-[#E2E8F0] border-t-4 border-t-[#D99A1C] rounded-2xl shadow-xs overflow-hidden">
+              <div className="w-full min-w-0 overflow-x-auto"><table className="workspace-table w-full text-left border-collapse">
+                <thead>
+                  <tr className="bg-slate-50 border-b border-[#E2E8F0]">
+                    <th className="px-5 py-3 text-slate-400 text-[10px] font-extrabold uppercase tracking-wider">Country Name</th>
+                    <th className="px-5 py-3 text-slate-400 text-[10px] font-extrabold uppercase tracking-wider">ISO Code</th>
+                    <th className="px-5 py-3 text-slate-400 text-[10px] font-extrabold uppercase tracking-wider">Description / Region</th>
+                    <th className="px-5 py-3 text-slate-400 text-[10px] font-extrabold uppercase tracking-wider">Linked Institutions</th>
+                    <th className="px-5 py-3 text-slate-400 text-[10px] font-extrabold uppercase tracking-wider">Status</th>
+                    <th className="px-5 py-3 text-slate-400 text-[10px] font-extrabold uppercase tracking-wider text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 text-xs font-semibold text-slate-700">
+                  {paginatedCountries.length === 0 ? (
+                    <tr>
+                      <td colSpan={6} className="px-6 py-12 text-center">
+                        {serverList.loading ? (
+                          <UnigatherLoader variant="inline" text="Loading countries..." />
+                        ) : (
+                          <span className="text-slate-400 text-xs italic font-semibold">
+                            No countries found. Click "+ Add Country" above to create one.
+                          </span>
+                        )}
+                      </td>
+                    </tr>
+                  ) : (
+                    paginatedCountries.map((c) => {
+                      const cId = c._id || c.id;
+                      const cName = c.name || c.title || '';
+                      const linkedUnivCount = universities.filter(u => (u.country || '').trim().toLowerCase() === cName.trim().toLowerCase()).length;
+                      return (
+                        <tr {...rowViewProps(()=>showListRecord(c))} key={cId} className="hover:bg-slate-50/60 transition-colors">
+                          <td className="px-5 py-3.5">
+                            <div className="flex items-center gap-2">
+                              <span className="text-base">🌍</span>
+                              <div>
+                                <p className="text-xs font-black text-slate-900">{cName}</p>
+                                {c.displayId && <p className="text-[10px] text-slate-400 font-mono font-bold">{c.displayId}</p>}
+                              </div>
+                            </div>
+                          </td>
+                          <td className="px-5 py-3.5">
+                            {c.code ? (
+                              <span className="bg-slate-100 border border-slate-200 text-slate-700 text-[10px] font-mono font-black px-2 py-0.5 rounded">
+                                {c.code}
+                              </span>
+                            ) : (
+                              <span className="text-slate-400 italic text-[11px]">-</span>
+                            )}
+                          </td>
+                          <td className="px-5 py-3.5 text-slate-600">
+                            {c.description || <span className="text-slate-400 italic">No description</span>}
+                          </td>
+                          <td className="px-5 py-3.5">
+                            <span className="text-[11px] font-bold text-slate-700">
+                              {linkedUnivCount} {linkedUnivCount === 1 ? 'institution' : 'institutions'}
+                            </span>
+                          </td>
+                          <td className="px-5 py-3.5">
+                            <span className={`text-[9px] font-extrabold px-2 py-0.5 rounded-full border ${
+                              c.status === 'Inactive' 
+                                ? 'bg-slate-100 text-slate-600 border-slate-200' 
+                                : 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                            }`}>
+                              {c.status || 'Active'}
+                            </span>
+                          </td>
+                          <td className="px-5 py-3.5 text-right"><RowActions>
+                            <div className="flex items-center justify-end gap-1.5">
+                              <ActionButton
+                                onClick={() => setViewingCountry(c)}
+                                title="View Details"
+                                className="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-[10px] rounded-lg cursor-pointer transition-colors"
+                              >
+                                👁️ View
+                              </ActionButton>
+                              <ActionButton
+                                onClick={() => openEditCountryModal(c)}
+                                title="Edit Country"
+                                className="px-2.5 py-1 bg-amber-50 hover:bg-amber-100 text-amber-800 font-bold text-[10px] rounded-lg cursor-pointer transition-colors"
+                              >
+                                ✏️ Edit
+                              </ActionButton>
+                              <ActionButton
+                                onClick={() => handleDeleteCountry(c)}
+                                title="Delete Country"
+                                className="px-2.5 py-1 bg-rose-50 hover:bg-rose-100 text-rose-600 font-bold text-[10px] rounded-lg cursor-pointer transition-colors"
+                              >
+                                🗑️ Delete
+                              </ActionButton>
+                            </div>
+                          </RowActions></td>
+                        </tr>
+                      );
+                    })
+                  )}
+                </tbody>
+              </table></div>
+              <PaginationFooter
+                totalItems={serverList.totalCount}
+                currentPage={currentPage}
+                setCurrentPage={setCurrentPage}
+                itemsPerPage={itemsPerPage}
+                setItemsPerPage={setItemsPerPage}
+              />
+            </div>
+          </div>
+        );
+      }
+
       case 'settings-course-docs': {
         const docStartIndex = (currentPage - 1) * itemsPerPage;
         const paginatedCourseDocs = settingsRows;
@@ -1377,7 +1646,20 @@ if (!token) throw new Error('Please sign in to save changes.');
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 text-xs font-semibold text-slate-700">
-                  {paginatedCourseDocs.map((doc, idx) => (
+                  {paginatedCourseDocs.length === 0 ? (
+                    <tr>
+                      <td colSpan={6} className="px-6 py-12 text-center">
+                        {serverList.loading ? (
+                          <UnigatherLoader variant="inline" text="Loading document rules..." />
+                        ) : (
+                          <span className="text-slate-400 text-xs italic font-semibold">
+                            No document rules found. Click "Add New Document Rule" to create one.
+                          </span>
+                        )}
+                      </td>
+                    </tr>
+                  ) : (
+                    paginatedCourseDocs.map((doc, idx) => (
                     <tr {...rowViewProps(()=>showListRecord(doc))} key={doc.siNo || idx} className="hover:bg-slate-50/50 transition-colors">
                       <td className="px-6 py-4 font-bold text-slate-400">{docStartIndex + idx + 1}</td>
                       <td className="px-6 py-4 text-slate-950 font-black">{doc.name}</td>
@@ -1393,7 +1675,7 @@ if (!token) throw new Error('Please sign in to save changes.');
                         </ActionButton>
                       </RowActions></td>
                     </tr>
-                  ))}
+                  )))}
                 </tbody>
               </table></div>
               <PaginationFooter
@@ -1436,21 +1718,35 @@ if (!token) throw new Error('Please sign in to save changes.');
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 text-xs font-semibold text-slate-700">
-                  {paginatedAgents.map((agent, idx) => (
-                    <tr {...rowViewProps(()=>showListRecord(agent))} key={agent.siNo || idx} className="hover:bg-slate-50/50 transition-colors">
-                      <td className="px-6 py-4 font-bold text-slate-400">{agentStartIndex + idx + 1}</td>
-                      <td className="px-6 py-4 text-slate-950 font-black">{agent.agentName}</td>
-                      <td className="px-6 py-4 text-[#2563EB] font-bold">{agent.email}</td>
-                      <td className="px-6 py-4 text-right"><RowActions>
-                        <ActionButton
-                          onClick={() => handleDeleteAgent(agent.siNo, agent.agentName)}
-                          className="text-rose-600 hover:text-rose-900 font-bold cursor-pointer"
-                        >
-                          Revoke Access
-                        </ActionButton>
-                      </RowActions></td>
+                  {paginatedAgents.length === 0 ? (
+                    <tr>
+                      <td colSpan={4} className="px-6 py-12 text-center">
+                        {serverList.loading ? (
+                          <UnigatherLoader variant="inline" text="Loading referral agents..." />
+                        ) : (
+                          <span className="text-slate-400 text-xs italic font-semibold">
+                            No referral agents found. Click "Invite/Add Agent" to add one.
+                          </span>
+                        )}
+                      </td>
                     </tr>
-                  ))}
+                  ) : (
+                    paginatedAgents.map((agent, idx) => (
+                      <tr {...rowViewProps(()=>showListRecord(agent))} key={agent.siNo || idx} className="hover:bg-slate-50/50 transition-colors">
+                        <td className="px-6 py-4 font-bold text-slate-400">{agentStartIndex + idx + 1}</td>
+                        <td className="px-6 py-4 text-slate-950 font-black">{agent.agentName}</td>
+                        <td className="px-6 py-4 text-[#2563EB] font-bold">{agent.email}</td>
+                        <td className="px-6 py-4 text-right"><RowActions>
+                          <ActionButton
+                            onClick={() => handleDeleteAgent(agent.siNo, agent.agentName)}
+                            className="text-rose-600 hover:text-rose-900 font-bold cursor-pointer"
+                          >
+                            Revoke Access
+                          </ActionButton>
+                        </RowActions></td>
+                      </tr>
+                    ))
+                  )}
                 </tbody>
               </table></div>
               <PaginationFooter
@@ -1506,6 +1802,7 @@ if (!token) throw new Error('Please sign in to save changes.');
           { id: 'settings-university', title: 'Universities Directory', desc: 'Configure partner institutions, logos, and regional parameters.', count: universities.length, icon: '🏛️' },
           { id: 'settings-course', title: 'Academic Programs', desc: 'Add or modify degrees, course codes, and catalog details.', count: courses.length, icon: '🎓' },
           { id: 'settings-intake', title: 'Intake Seasons', desc: 'Define active application calendar seasons and milestones.', count: intakes.length, icon: '📅' },
+          { id: 'settings-country', title: 'Countries Directory', desc: 'Define active destination countries and ISO regional parameters.', count: countries.length, icon: '🌍' },
           { id: 'settings-formats', title: 'Allowed Extensions', desc: 'Restrict candidate documents to specific file types.', count: fileFormats.length, icon: '📎' },
           { id: 'settings-course-docs', title: 'Document Checklist Rules', desc: 'Define naming structures and size parameters for certificates.', count: courseDocuments.length, icon: '📑' },
           { id: 'settings-documents', title: 'Verification Requirements', desc: 'Manage dynamic student core compliance documents checklists.', count: verificationDocuments?.length || 0, icon: '✔️' },
@@ -1589,7 +1886,7 @@ if (!token) throw new Error('Please sign in to save changes.');
             {settingsToolbar}
 
             <div className="workspace-list-frame bg-white border border-[#E2E8F0] border-t-4 border-t-[#D99A1C] rounded-2xl shadow-xs overflow-hidden">
-              <div className="overflow-x-auto"><table className="workspace-table w-full text-left"><thead><tr><th>Item</th><th className="text-right">Actions</th></tr></thead><tbody>{paginatedList.map((item,idx)=>{const label=typeof item==='object' ? item.name || item.title || item.label || 'Configuration' : item;return <tr key={typeof item==='object' ? item._id || idx : item} {...rowViewProps(()=>showListRecord(item))} className="cursor-pointer hover:bg-slate-50"><td className="font-semibold">{label}</td><td className="text-right"><RowActions><ActionButton className="rounded-lg px-3 py-2 text-left text-xs font-semibold hover:bg-slate-50" onClick={()=>showListRecord(item)}>View item</ActionButton>{activeSubTab==='settings-intake' && listSetter && <ActionButton className="rounded-lg px-3 py-2 text-left text-xs font-semibold hover:bg-slate-50" onClick={()=>openEditIntakeModal(item)}>Edit intake</ActionButton>}{listSetter && <ActionButton className="rounded-lg px-3 py-2 text-left text-xs font-semibold hover:bg-slate-50" onClick={()=>handleDeleteSettingItem(item,listSetter,activeSubTab.replace('settings-',''))}>Delete item</ActionButton>}</RowActions></td></tr>})}</tbody></table></div>
+              <div className="overflow-x-auto"><table className="workspace-table w-full text-left"><thead><tr><th>Item</th><th className="text-right">Actions</th></tr></thead><tbody>{paginatedList.length === 0 ? (<tr><td colSpan={2} className="px-6 py-12 text-center">{serverList.loading ? <UnigatherLoader variant="inline" text="Loading configuration..." /> : <span className="text-slate-400 text-xs italic font-semibold">No configuration items found.</span>}</td></tr>) : paginatedList.map((item,idx)=>{const label=typeof item==='object' ? item.name || item.title || item.label || 'Configuration' : item;return <tr key={typeof item==='object' ? item._id || idx : item} {...rowViewProps(()=>showListRecord(item))} className="cursor-pointer hover:bg-slate-50"><td className="font-semibold">{label}</td><td className="text-right"><RowActions><ActionButton className="rounded-lg px-3 py-2 text-left text-xs font-semibold hover:bg-slate-50" onClick={()=>showListRecord(item)}>View item</ActionButton>{activeSubTab==='settings-intake' && listSetter && <ActionButton className="rounded-lg px-3 py-2 text-left text-xs font-semibold hover:bg-slate-50" onClick={()=>openEditIntakeModal(item)}>Edit intake</ActionButton>}{listSetter && <ActionButton className="rounded-lg px-3 py-2 text-left text-xs font-semibold hover:bg-slate-50" onClick={()=>handleDeleteSettingItem(item,listSetter,activeSubTab.replace('settings-',''))}>Delete item</ActionButton>}</RowActions></td></tr>})}</tbody></table></div>
               <PaginationFooter
                 totalItems={serverList.totalCount}
                 currentPage={currentPage}
@@ -1803,13 +2100,23 @@ if (!token) throw new Error('Please sign in to save changes.');
                       onChange={(e) => setUnivCountry(e.target.value)}
                       className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-semibold focus:outline-none focus:bg-white focus:border-[#D99A1C]"
                     >
-                      <option value="United Kingdom">United Kingdom</option>
-                      <option value="Canada">Canada</option>
-                      <option value="United States">United States</option>
-                      <option value="Australia">Australia</option>
-                      <option value="Germany">Germany</option>
-                      <option value="Singapore">Singapore</option>
-                      <option value="India">India</option>
+                      <option value="">-- Select Country --</option>
+                      {(countries && countries.length > 0 ? countries : [
+                        { name: 'United Kingdom' },
+                        { name: 'Canada' },
+                        { name: 'United States' },
+                        { name: 'Australia' },
+                        { name: 'Germany' },
+                        { name: 'Singapore' },
+                        { name: 'India' }
+                      ]).map((c) => {
+                        const cName = typeof c === 'object' ? (c.name || c.title) : c;
+                        return (
+                          <option key={c._id || cName} value={cName}>
+                            {cName}
+                          </option>
+                        );
+                      })}
                     </SearchableSelect>
                   </div>
                 </div>
@@ -2188,9 +2495,83 @@ if (!token) throw new Error('Please sign in to save changes.');
               </ActionForm>
             )}
 
+            {modalType === 'settings-country' && (
+              <ActionForm onSubmit={handleSaveCountry} className="space-y-4">
+                <h3 className="text-xs font-black text-slate-800 uppercase tracking-wider border-b pb-2">
+                  {editingCountry ? 'Edit Country Details' : 'Add New Destination Country'}
+                </h3>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <label className="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">Country Name *</label>
+                    <input
+                      type="text"
+                      required
+                      value={countryName}
+                      onChange={(e) => setCountryName(e.target.value)}
+                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-semibold focus:outline-none focus:bg-white focus:border-[#D99A1C]"
+                      placeholder="e.g. United Kingdom"
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">ISO Code (Optional)</label>
+                    <input
+                      type="text"
+                      maxLength={4}
+                      value={countryCode}
+                      onChange={(e) => setCountryCode(e.target.value.toUpperCase())}
+                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-semibold focus:outline-none focus:bg-white focus:border-[#D99A1C]"
+                      placeholder="e.g. GB or UK"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">Description / Regional Notes</label>
+                  <textarea
+                    rows={2}
+                    value={countryDesc}
+                    onChange={(e) => setCountryDesc(e.target.value)}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-semibold focus:outline-none focus:bg-white focus:border-[#D99A1C]"
+                    placeholder="e.g. European destination for higher studies..."
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">Status</label>
+                  <select
+                    value={countryStatus}
+                    onChange={(e) => setCountryStatus(e.target.value)}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-semibold focus:outline-none focus:bg-white focus:border-[#D99A1C]"
+                  >
+                    <option value="Active">Active</option>
+                    <option value="Inactive">Inactive</option>
+                  </select>
+                </div>
+                
+                <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
+                  <ActionButton type="button" onClick={() => setModalType(null)} className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-extrabold text-xs rounded-xl">Cancel</ActionButton>
+                  <ActionButton
+                    type="submit" 
+                    disabled={isSubmitting}
+                    className="px-5 py-2 bg-[#D99A1C] hover:bg-[#F5B025] disabled:opacity-50 disabled:cursor-not-allowed text-white font-extrabold text-xs rounded-xl shadow-md inline-flex items-center justify-center gap-1.5"
+                  >
+                    {isSubmitting && (
+                      <svg className="animate-spin h-3.5 w-3.5 text-current shrink-0" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                      </svg>
+                    )}
+                    <span>{isSubmitting ? (editingCountry ? 'Saving Changes...' : 'Adding Country...') : (editingCountry ? 'Save Changes' : 'Add Country')}</span>
+                  </ActionButton>
+                </div>
+              </ActionForm>
+            )}
+
             {modalType !== 'doc' && modalType !== 'agent' && modalType !== 'stage' && 
              modalType !== 'settings-university' && modalType !== 'settings-course' && modalType !== 'settings-intake' && 
-             modalType !== 'edit-intake' && (
+             modalType !== 'edit-intake' && modalType !== 'settings-country' && (
               <ActionForm
                 onSubmit={(e) => {
                   let setter = null;
@@ -2458,6 +2839,85 @@ if (!token) throw new Error('Please sign in to save changes.');
               </ActionButton>
               <ActionButton
                 onClick={() => setViewingIntake(null)}
+                className="px-5 py-2 bg-[#D99A1C] hover:bg-[#F5B025] text-white text-xs font-extrabold rounded-xl shadow-md cursor-pointer"
+              >
+                Close
+              </ActionButton>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* Single View Country Modal */}
+      {viewingCountry && createPortal(
+        <div className="fixed inset-0 z-[9999] bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 animate-fade-in overflow-y-auto">
+          <div className="bg-white border border-slate-200 rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-5 relative max-h-[90vh] overflow-y-auto my-auto">
+            <ActionButton
+              onClick={() => setViewingCountry(null)}
+              className="absolute top-4 right-4 text-slate-400 hover:text-slate-700 text-lg font-bold w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center cursor-pointer"
+            >
+              ✕
+            </ActionButton>
+
+            <div className="flex items-start gap-4 border-b pb-4">
+              <div className="w-12 h-12 rounded-xl bg-amber-50 border border-amber-200 text-amber-600 flex items-center justify-center text-2xl shrink-0">
+                🌍
+              </div>
+              <div>
+                <h3 className="text-base font-black text-slate-900">{viewingCountry.name}</h3>
+                <div className="flex items-center gap-2 mt-1">
+                  {viewingCountry.code && (
+                    <span className="bg-slate-100 border border-slate-200 text-slate-700 text-[10px] font-mono font-black px-2 py-0.5 rounded">
+                      {viewingCountry.code}
+                    </span>
+                  )}
+                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
+                    viewingCountry.status === 'Inactive' ? 'bg-slate-100 text-slate-600 border-slate-200' : 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                  }`}>
+                    {viewingCountry.status || 'Active'}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-3 text-xs">
+              <div>
+                <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider block">Description / Region</span>
+                <p className="text-slate-700 font-semibold mt-1">
+                  {viewingCountry.description || 'No detailed description provided for this country.'}
+                </p>
+              </div>
+
+              <div>
+                <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider block">Linked Institutions</span>
+                <div className="mt-1 space-y-1 max-h-36 overflow-y-auto">
+                  {universities.filter(u => (u.country || '').trim().toLowerCase() === (viewingCountry.name || '').trim().toLowerCase()).map((u, idx) => (
+                    <div key={u._id || u.id || idx} className="bg-slate-50 p-2 rounded-lg border border-slate-200 flex justify-between items-center text-xs">
+                      <span className="font-bold text-slate-800">🏛️ {u.name}</span>
+                      <span className="text-[10px] text-slate-500 font-semibold">{u.city || ''}</span>
+                    </div>
+                  ))}
+                  {universities.filter(u => (u.country || '').trim().toLowerCase() === (viewingCountry.name || '').trim().toLowerCase()).length === 0 && (
+                    <p className="text-xs text-slate-400 italic">No institutions currently registered under this country</p>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <div className="flex justify-between items-center pt-4 border-t">
+              <ActionButton
+                onClick={() => {
+                  const target = viewingCountry;
+                  setViewingCountry(null);
+                  openEditCountryModal(target);
+                }}
+                className="px-4 py-2 bg-amber-50 border border-amber-200 hover:bg-amber-100 text-amber-800 text-xs font-extrabold rounded-xl cursor-pointer"
+              >
+                ✏️ Edit Country
+              </ActionButton>
+              <ActionButton
+                onClick={() => setViewingCountry(null)}
                 className="px-5 py-2 bg-[#D99A1C] hover:bg-[#F5B025] text-white text-xs font-extrabold rounded-xl shadow-md cursor-pointer"
               >
                 Close

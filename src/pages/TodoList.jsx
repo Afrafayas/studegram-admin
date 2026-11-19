@@ -7,6 +7,7 @@ import { ActionButton, ActionForm } from '../components/ActionControls';
 import React, { useState, useEffect } from 'react';
 import API from '../api/axios';
 import { useToast } from '../context/ToastContext';
+import UnigatherLoader from '../components/UnigatherLoader';
 
 export default function TodoList({ todoList = [], setTodoList }) {
   const [listRecord, setListRecord] = React.useState(null);
@@ -302,6 +303,8 @@ export default function TodoList({ todoList = [], setTodoList }) {
                 ))}
               </tbody>
             </table>
+          ) : serverList.loading ? (
+            <UnigatherLoader variant="inline" text="Loading tasks..." />
           ) : (
             <div className="p-12 text-center space-y-2">
               <svg className="w-12 h-12 text-slate-300 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
