@@ -409,12 +409,12 @@ export default function AdminPortal({ onLogout }) {
           }}
           onNavigateToApplications={(filterType) => {
             setDashboardFilter(filterType || null);
-            handleSelectTab('applications');
+            handleSelectTab('applications', { preserveDashboardFilter: true });
           }}
           onOpenApplicationDetail={(appId) => {
-            handleSelectTab('applications');
             setSelectedAppIdForSingleView(appId);
             localStorage.setItem('studegram_admin_single_view_app_id', String(appId));
+            handleSelectTab('applications', { preserveSingleView: true });
           }}
 
         />
@@ -594,7 +594,7 @@ export default function AdminPortal({ onLogout }) {
     };
   }, []);
 
-  const handleSelectTab = (tabId) => {
+  const handleSelectTab = (tabId, options = {}) => {
     if (tabId === 'notices') setSelectedNoticeId(null);
 
     const url = new URL(window.location.href);
@@ -608,20 +608,25 @@ export default function AdminPortal({ onLogout }) {
         urlChanged = true;
       }
       setSelectedAppIdForSingleView(null);
+      setDashboardFilter(null);
       localStorage.removeItem('studegram_admin_single_view_app_id');
       localStorage.removeItem('studegram_admin_single_view_app');
       window.dispatchEvent(new CustomEvent('clear_single_view_app'));
     } else {
-      setSelectedAppIdForSingleView(null);
-      setDashboardFilter(null);
-      localStorage.removeItem('studegram_admin_single_view_app_id');
-      localStorage.removeItem('studegram_admin_single_view_app');
-      if (url.searchParams.has('appId') || url.searchParams.has('applicationId')) {
-        url.searchParams.delete('appId');
-        url.searchParams.delete('applicationId');
-        urlChanged = true;
+      if (!options.preserveSingleView) {
+        setSelectedAppIdForSingleView(null);
+        localStorage.removeItem('studegram_admin_single_view_app_id');
+        localStorage.removeItem('studegram_admin_single_view_app');
+        if (url.searchParams.has('appId') || url.searchParams.has('applicationId')) {
+          url.searchParams.delete('appId');
+          url.searchParams.delete('applicationId');
+          urlChanged = true;
+        }
+        window.dispatchEvent(new CustomEvent('clear_single_view_app'));
       }
-      window.dispatchEvent(new CustomEvent('clear_single_view_app'));
+      if (!options.preserveDashboardFilter) {
+        setDashboardFilter(null);
+      }
     }
 
     // 2. Become Partner / Agent cleanup

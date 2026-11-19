@@ -14,16 +14,32 @@ export default function DailyReport({ applications,
   // Compute stats dynamically based on scoped applications to demonstrate RBAC scoping
   // Compute stats dynamically based on actual applications
   // Filtered lists for each card
-  const todayApps = (applications || []).filter(app => new Date(app.createdAt || app.dateAdded).toDateString() === new Date().toDateString());
-  const activeLeadsApps = (applications || []).filter(app => !/closed|enrolled|rejected|withdrawn/i.test(app.status || app.secondaryStatus || ''));
+  const todayApps = (applications || []).filter(app => {
+    const created = new Date(app.createdAt || app.dateAdded);
+    return !Number.isNaN(created.getTime()) && created.toDateString() === new Date().toDateString();
+  });
+
+  const activeLeadsApps = (applications || []).filter(app => {
+    const s = String(app.status || app.secondaryStatus || '').trim().toLowerCase();
+    return !/closed|rejected|withdrawn|enrolled/i.test(s);
+  });
+
   const successfulApps = (applications || []).filter(app => {
     const s = String(app.status || app.secondaryStatus || '').trim().toLowerCase();
-    if (/withdrawn|rejected|not processed|under review|received|offer issued|cas|visa/i.test(s)) {
-      return false;
-    }
-    return /enrolled|fees paid|paid student/i.test(s);
+    const isPaid = app.paymentStatus === 'Paid' || app.universityPaymentStatus === 'Paid' || app.paidStatus === 'Paid';
+    return isPaid || /enrolled|fees paid|paid student/i.test(s);
   });
-  const pendingApps = (applications || []).filter(a => a.secondaryStatus === 'Pending' || a.secondaryStatus === 'Document Verification' || a.status === 'Submitted');
+
+  const pendingApps = (applications || []).filter(a => {
+    const s = String(a.status || a.secondaryStatus || '').trim().toLowerCase();
+    return s === 'application received' ||
+           s === 'application under review' ||
+           s === 'additional documents required' ||
+           s === 'application not processed' ||
+           s === 'pending' ||
+           s === 'submitted' ||
+           s === 'document verification';
+  });
 
   // Counts
   const totalAppsToday = todayApps.length;
@@ -33,8 +49,18 @@ export default function DailyReport({ applications,
   const successRate = `${successRateValue}%`;
   const pendingVerification = pendingApps.length;
 
-  // Generic click handler for cards - always navigate to applications list with filter
+  // Generic click handler for cards:
+  // Exactly 1 -> redirect to application detail page
+  // 0 or > 1 -> redirect to applications list page with filter
   const handleCardClick = (filteredList, filterType) => {
+    if (filteredList && filteredList.length === 1) {
+      const singleApp = filteredList[0];
+      const appId = singleApp.id || singleApp._id || singleApp.applicationId || singleApp.camsId;
+      if (onOpenApplicationDetail && appId) {
+        onOpenApplicationDetail(appId);
+        return;
+      }
+    }
     if (onNavigateToApplications) {
       onNavigateToApplications(filterType);
     }
@@ -59,6 +85,14 @@ export default function DailyReport({ applications,
   });
 
   const handleTimelinePointClick = (point) => {
+    if (point.apps && point.apps.length === 1) {
+      const singleApp = point.apps[0];
+      const appId = singleApp.id || singleApp._id || singleApp.applicationId || singleApp.camsId;
+      if (onOpenApplicationDetail && appId) {
+        onOpenApplicationDetail(appId);
+        return;
+      }
+    }
     if (onNavigateToApplications) {
       onNavigateToApplications({
         type: 'date',
@@ -90,6 +124,14 @@ export default function DailyReport({ applications,
     }));
 
   const handleUniversityClick = (univ) => {
+    if (univ.apps && univ.apps.length === 1) {
+      const singleApp = univ.apps[0];
+      const appId = singleApp.id || singleApp._id || singleApp.applicationId || singleApp.camsId;
+      if (onOpenApplicationDetail && appId) {
+        onOpenApplicationDetail(appId);
+        return;
+      }
+    }
     if (onNavigateToApplications) {
       onNavigateToApplications({
         type: 'university',

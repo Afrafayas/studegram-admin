@@ -1041,19 +1041,32 @@ export default function Applications({ applications, referralAgents = [], intake
     if (!dashboardFilter) return null;
     let apps = applications || [];
     if (dashboardFilter === 'today') {
-      apps = apps.filter(app => new Date(app.createdAt || app.dateAdded).toDateString() === new Date().toDateString());
+      apps = apps.filter(app => {
+        const created = new Date(app.createdAt || app.dateAdded);
+        return !Number.isNaN(created.getTime()) && created.toDateString() === new Date().toDateString();
+      });
     } else if (dashboardFilter === 'active') {
-      apps = apps.filter(app => !/closed|enrolled|rejected|withdrawn/i.test(app.status || app.secondaryStatus || ''));
+      apps = apps.filter(app => {
+        const s = String(app.status || app.secondaryStatus || '').trim().toLowerCase();
+        return !/closed|rejected|withdrawn|enrolled/i.test(s);
+      });
     } else if (dashboardFilter === 'success' || dashboardFilter === 'paid') {
       apps = apps.filter(app => {
         const s = String(app.status || app.secondaryStatus || '').trim().toLowerCase();
-        if (/withdrawn|rejected|not processed|under review|received|offer issued|cas|visa/i.test(s)) {
-          return false;
-        }
-        return /enrolled|fees paid|paid student/i.test(s);
+        const isPaid = app.paymentStatus === 'Paid' || app.universityPaymentStatus === 'Paid' || app.paidStatus === 'Paid';
+        return isPaid || /enrolled|fees paid|paid student/i.test(s);
       });
     } else if (dashboardFilter === 'pending') {
-      apps = apps.filter(a => a.secondaryStatus === 'Pending' || a.secondaryStatus === 'Document Verification' || a.status === 'Submitted');
+      apps = apps.filter(a => {
+        const s = String(a.status || a.secondaryStatus || '').trim().toLowerCase();
+        return s === 'application received' ||
+               s === 'application under review' ||
+               s === 'additional documents required' ||
+               s === 'application not processed' ||
+               s === 'pending' ||
+               s === 'submitted' ||
+               s === 'document verification';
+      });
     } else if (typeof dashboardFilter === 'object' && dashboardFilter?.type === 'date') {
       apps = apps.filter(app => {
         const created = new Date(app.createdAt || app.dateAdded);
@@ -1094,7 +1107,7 @@ export default function Applications({ applications, referralAgents = [], intake
   const partnerOptions = useMemo(() => {
     const set = new Set(serverList.facets.partner || []);
     (applications || []).forEach(a => {
-      const p = a.partnerName || a.partner?.companyName || a.partner?.name || (typeof a.partner === 'string' ? a.partner : '') || a.referralAgent;
+      const p = a.partnerName || a.partner?.companyName || a.partner?.name || (typeof a.partner === 'string' ? a.partner : '') || a.referralAgent || (a.partner ? '' : 'Direct');
       if (p) set.add(p);
     });
     return Array.from(set).filter(Boolean);
@@ -1142,7 +1155,7 @@ export default function Applications({ applications, referralAgents = [], intake
     if (partnerFilter && partnerFilter !== 'All') {
       const targetPartner = partnerFilter.toLowerCase().trim();
       apps = apps.filter(app => {
-        const p = String(app.partnerName || app.partner?.companyName || app.partner?.name || (typeof app.partner === 'string' ? app.partner : '') || app.referralAgent || app.channel || '').toLowerCase().trim();
+        const p = String(app.partnerName || app.partner?.companyName || app.partner?.name || (typeof app.partner === 'string' ? app.partner : '') || app.referralAgent || app.channel || (app.partner ? '' : 'direct')).toLowerCase().trim();
         return p === targetPartner;
       });
     }
@@ -1196,7 +1209,7 @@ export default function Applications({ applications, referralAgents = [], intake
       }
       if (partnerFilter && partnerFilter !== 'All') {
         const targetPartner = partnerFilter.toLowerCase().trim();
-        const p = String(app.partnerName || app.partner?.companyName || app.partner?.name || (typeof app.partner === 'string' ? app.partner : '') || app.referralAgent || app.channel || '').toLowerCase().trim();
+        const p = String(app.partnerName || app.partner?.companyName || app.partner?.name || (typeof app.partner === 'string' ? app.partner : '') || app.referralAgent || app.channel || (app.partner ? '' : 'direct')).toLowerCase().trim();
         if (p !== targetPartner) return false;
       }
       if (searchTerm && searchTerm.trim()) {
