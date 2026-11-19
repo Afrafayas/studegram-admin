@@ -1,4 +1,4 @@
-export const REMINDER_INTERVAL = 8 * 60 * 1000;
+export const REMINDER_INTERVAL = 8 * 60 * 60 * 1000;
 export function reminderDue(notice, closed, now) {
   return notice.shouldRemind === true && !notice.isRead && notice.status === 'Active' &&
     (!notice.expiresOn || now <= Date.parse(notice.expiresOn + 'T23:59:59.999+05:30')) &&
