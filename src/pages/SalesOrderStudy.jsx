@@ -13,6 +13,7 @@ export default function SalesOrderStudy({
   universities = [], 
   courses = [], 
   intakes = [], 
+  countryList = [],
   partners = [],
   staffList = [],
   students = [],
@@ -60,8 +61,8 @@ export default function SalesOrderStudy({
 
   const availableCountries = Array.from(
     new Set([
+      ...(countryList || []).map(c => (typeof c === 'object' ? (c.name || c.title || '') : c).trim()).filter(Boolean),
       ...(universities || []).map(u => (typeof u === 'object' ? (u.country || '') : '').trim()).filter(Boolean),
-
     ])
   ).sort();
 

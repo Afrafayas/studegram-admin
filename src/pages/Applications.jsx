@@ -80,7 +80,7 @@ const formatAppDob = (rawDob) => {
   return String(rawDob).trim();
 };
 
-export default function Applications({ applications, referralAgents = [], intakes = [], staffList = [], universities = [], courses = [], clients = [], initialSelectedAppId = null, onAddClick, onRefresh, onApplicationUpdated, dashboardFilter = null,
+export default function Applications({ applications, referralAgents = [], intakes = [], countries = [], staffList = [], universities = [], courses = [], clients = [], initialSelectedAppId = null, onAddClick, onRefresh, onApplicationUpdated, dashboardFilter = null,
   onClearDashboardFilter, }) {
   const toast = useToast();
   const handleDownloadAppDocument = async (url, fileName) => {
@@ -175,6 +175,7 @@ export default function Applications({ applications, referralAgents = [], intake
 
   const availableCountries = Array.from(
     new Set([
+      ...(countries || []).map(c => (typeof c === 'object' ? (c.name || c.title || '') : c).trim()).filter(Boolean),
       ...(universities || []).map(u => (typeof u === 'object' ? u.country : '').trim()).filter(Boolean),
       'United Kingdom',
       'Canada',
@@ -471,7 +472,7 @@ export default function Applications({ applications, referralAgents = [], intake
         const url = new URL(window.location.href);
         if (appId && url.searchParams.get('appId') !== String(appId)) {
           url.searchParams.set('appId', String(appId));
-          window.history.pushState({ appView: String(appId) }, '', url.toString());
+          window.history.replaceState({ appView: String(appId) }, '', url.pathname + (url.search ? url.search : ''));
         }
       } catch (e) { }
     } else {
@@ -482,7 +483,7 @@ export default function Applications({ applications, referralAgents = [], intake
         if (url.searchParams.has('appId') || url.searchParams.has('applicationId')) {
           url.searchParams.delete('appId');
           url.searchParams.delete('applicationId');
-          window.history.replaceState({}, '', url.toString());
+          window.history.replaceState({}, '', url.pathname + (url.search ? url.search : ''));
         }
       } catch (e) { }
     }

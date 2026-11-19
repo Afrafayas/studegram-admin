@@ -248,7 +248,7 @@ export default function BecomePartner({ clients = [], setClients, applications =
         const url = new URL(window.location.href);
         if (partnerId && url.searchParams.get('agentId') !== String(partnerId)) {
           url.searchParams.set('agentId', String(partnerId));
-          window.history.replaceState({}, '', url.toString());
+          window.history.replaceState({}, '', url.pathname + (url.search ? url.search : ''));
         }
       } catch (e) {}
     } else {
@@ -259,7 +259,7 @@ export default function BecomePartner({ clients = [], setClients, applications =
         if (url.searchParams.has('agentId') || url.searchParams.has('partnerId')) {
           url.searchParams.delete('agentId');
           url.searchParams.delete('partnerId');
-          window.history.replaceState({}, '', url.toString());
+          window.history.replaceState({}, '', url.pathname + (url.search ? url.search : ''));
         }
       } catch (e) {}
     }

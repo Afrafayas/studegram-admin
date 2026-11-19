@@ -309,7 +309,7 @@ support@unigather.app`;
         const url = new URL(window.location.href);
         if (url.searchParams.get('studentId') !== String(studentId)) {
           url.searchParams.set('studentId', String(studentId));
-          window.history.pushState({ studentView: String(studentId) }, '', url.toString());
+          window.history.replaceState({ studentView: String(studentId) }, '', url.pathname + (url.search ? url.search : ''));
         }
       } catch (e) {}
     } else {
@@ -320,7 +320,7 @@ support@unigather.app`;
         const url = new URL(window.location.href);
         if (url.searchParams.has('studentId')) {
           url.searchParams.delete('studentId');
-          window.history.replaceState({}, '', url.toString());
+          window.history.replaceState({}, '', url.pathname + (url.search ? url.search : ''));
         }
       } catch (e) {}
     }
@@ -336,7 +336,7 @@ support@unigather.app`;
       try {
         const url = new URL(window.location.href);
         url.searchParams.delete('studentId');
-        window.history.replaceState({}, '', url.toString());
+        window.history.replaceState({}, '', url.pathname + (url.search ? url.search : ''));
       } catch (e) {}
     };
 
@@ -521,7 +521,7 @@ support@unigather.app`;
     try {
       const url = new URL(window.location.href);
       url.searchParams.delete('studentId');
-      window.history.replaceState({}, '', url.toString());
+      window.history.replaceState({}, '', url.pathname + (url.search ? url.search : ''));
     } catch (e) {}
     window.dispatchEvent(new CustomEvent('clear_student_expanded'));
   };

@@ -321,6 +321,7 @@ export default function AdminSidebar({
                       { id: 'settings-university', label: 'University' },
                       { id: 'settings-course', label: 'Course' },
                       { id: 'settings-intake', label: 'Intake' },
+                      { id: 'settings-country', label: 'Country' },
                       // { id: 'settings-formats', label: 'File Formats' },
                       // { id: 'settings-course-docs', label: 'Course Documents' },
                       // { id: 'settings-documents', label: 'Documents' },

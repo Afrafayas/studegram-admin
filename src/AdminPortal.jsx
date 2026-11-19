@@ -47,17 +47,18 @@ export default function AdminPortal({ onLogout }) {
     setDataLoadError('');
     try {
       // Execute all API requests concurrently in parallel
-      const [intakeRes, univRes, courseRes, partnerRes, studentRes, appRes, userRes] = await Promise.all([
+      const [intakeRes, univRes, courseRes, partnerRes, studentRes, appRes, userRes, countryRes] = await Promise.all([
         API.get('/intakes').catch(err => ({ error: err })),
         API.get('/universities').catch(err => ({ error: err })),
         API.get('/courses').catch(err => ({ error: err })),
         API.get('/partners').catch(err => ({ error: err })),
         API.get('/students').catch(err => ({ error: err })),
         API.get('/applications').catch(err => ({ error: err })),
-        API.get('/users').catch(err => ({ error: err }))
+        API.get('/users').catch(err => ({ error: err })),
+        API.get('/countries').catch(err => ({ error: err }))
       ]);
 
-      const failed = [intakeRes, univRes, courseRes, partnerRes, studentRes, appRes, userRes]
+      const failed = [intakeRes, univRes, courseRes, partnerRes, studentRes, appRes, userRes, countryRes]
         .some(result => result.error && result.error.response?.status !== 403);
       if (failed) setDataLoadError('Some records could not be loaded. Please refresh to retry.');
 
@@ -85,6 +86,10 @@ export default function AdminPortal({ onLogout }) {
 
       if (intakeRes.data?.success && Array.isArray(intakeRes.data.data)) {
         setIntakes(intakeRes.data.data);
+      }
+
+      if (countryRes.data?.success && Array.isArray(countryRes.data.data)) {
+        setCountries(countryRes.data.data);
       }
 
       if (univRes.data?.success && Array.isArray(univRes.data.data)) {
@@ -271,7 +276,7 @@ export default function AdminPortal({ onLogout }) {
     const prevPosition = navigationHistory[navigationHistory.length - 1];
     if (prevPosition) {
       isBackNavRef.current = true;
-      setActiveTab(prevPosition.tab);
+      handleSelectTab(prevPosition.tab);
       setActiveSubTab(prevPosition.subTab);
       prevActiveTabRef.current = prevPosition.tab;
       prevActiveSubTabRef.current = prevPosition.subTab;
@@ -287,6 +292,7 @@ export default function AdminPortal({ onLogout }) {
   const [universities, setUniversities] = useState([]);
   const [courses, setCourses] = useState([]);
   const [intakes, setIntakes] = useState([]);
+  const [countries, setCountries] = useState([]);
   const [fileFormats, setFileFormats] = useState([]);
   const [qualifications, setQualifications] = useState([]);
   const [verificationDocuments, setVerificationDocuments] = useState([]);
@@ -395,34 +401,20 @@ export default function AdminPortal({ onLogout }) {
         <DailyReport
           applications={scopedApplications}
           onNavigateToBecomePartner={() => {
-            setSelectedPartnerForSingleView(null);
-            localStorage.removeItem('studegram_admin_single_view_partner_id');
-            localStorage.removeItem('studegram_admin_single_view_partner');
-            window.dispatchEvent(new CustomEvent('clear_single_view_partner'));
-            setActiveTab('become-partner');
+            handleSelectTab('become-partner');
           }}
           onNavigateToCreateApplication={() => {
-            setActiveTab('sales-order');
+            handleSelectTab('sales-order');
             setActiveSubTab('study');
           }}
           onNavigateToApplications={(filterType) => {
-            setSelectedAppIdForSingleView(null);
             setDashboardFilter(filterType || null);
-            localStorage.removeItem('studegram_admin_single_view_app_id');
-            localStorage.removeItem('studegram_admin_single_view_app');
-            try {
-              const url = new URL(window.location.href);
-              url.searchParams.delete('appId');
-              url.searchParams.delete('applicationId');
-              window.history.replaceState({}, '', url.pathname + (url.search ? url.search : ''));
-            } catch (e) {}
-            window.dispatchEvent(new CustomEvent('clear_single_view_app'));
-            setActiveTab('applications');
+            handleSelectTab('applications');
           }}
           onOpenApplicationDetail={(appId) => {
+            handleSelectTab('applications');
             setSelectedAppIdForSingleView(appId);
             localStorage.setItem('studegram_admin_single_view_app_id', String(appId));
-            setActiveTab('applications');
           }}
 
         />
@@ -430,7 +422,7 @@ export default function AdminPortal({ onLogout }) {
     }
 
     if (activeTab === 'become-partner' || activeTab === 'partners') {
-      return <BecomePartner clients={scopedClients} setClients={setClients} applications={scopedApplications} onPartnerOnboarded={fetchInitialData} onBack={() => setActiveTab('daily-report')} initialSelectedPartnerId={selectedPartnerForSingleView} />;
+      return <BecomePartner clients={scopedClients} setClients={setClients} applications={scopedApplications} onPartnerOnboarded={fetchInitialData} onBack={() => handleSelectTab('daily-report')} initialSelectedPartnerId={selectedPartnerForSingleView} />;
     }
 
     if (activeTab === 'applications') {
@@ -442,12 +434,13 @@ export default function AdminPortal({ onLogout }) {
           clients={scopedClients}
           referralAgents={referralAgents}
           intakes={intakes}
+          countries={countries}
           staffList={staffList}
           universities={universities}
           courses={courses}
           initialSelectedAppId={selectedAppIdForSingleView}
           onAddClick={() => {
-            setActiveTab('sales-order');
+            handleSelectTab('sales-order');
             setActiveSubTab('study');
           }}
           onRefresh={fetchInitialData}
@@ -461,7 +454,11 @@ export default function AdminPortal({ onLogout }) {
     if (activeTab === 'admin-report') {
       return (
         <AdminReport
-          onOpenApplication={appId => { setSelectedAppIdForSingleView(appId); setActiveTab('applications'); }}
+          onOpenApplication={appId => {
+            handleSelectTab('applications');
+            setSelectedAppIdForSingleView(appId);
+            localStorage.setItem('studegram_admin_single_view_app_id', String(appId));
+          }}
           applications={scopedApplications}
           activeSubTab={activeSubTab}
           referralAgents={referralAgents}
@@ -483,9 +480,9 @@ export default function AdminPortal({ onLogout }) {
           intakes={intakes}
           initialSelectedStudentId={selectedStudentForSingleView}
           onNavigateToApplication={(appId) => {
+            handleSelectTab('applications');
             setSelectedAppIdForSingleView(appId);
             localStorage.setItem('studegram_admin_single_view_app_id', String(appId));
-            setActiveTab('applications');
           }}
         />
       );
@@ -518,6 +515,7 @@ export default function AdminPortal({ onLogout }) {
             universities={universities}
             courses={courses}
             intakes={intakes}
+            countryList={countries}
             partners={referralAgents}
             staffList={staffList}
             students={clients.filter(c => c.type === 'Student')}
@@ -539,6 +537,7 @@ export default function AdminPortal({ onLogout }) {
           universities={universities} setUniversities={setUniversities}
           courses={courses} setCourses={setCourses}
           intakes={intakes} setIntakes={setIntakes}
+          countries={countries} setCountries={setCountries}
           fileFormats={fileFormats} setFileFormats={setFileFormats}
           courseDocuments={courseDocuments} setCourseDocuments={setCourseDocuments}
           referralAgents={referralAgents} setReferralAgents={setReferralAgents}
@@ -576,8 +575,9 @@ export default function AdminPortal({ onLogout }) {
     const handleNavigateApp = (e) => {
       const appId = e.detail?.appId;
       if (appId) {
+        handleSelectTab('applications');
         setSelectedAppIdForSingleView(appId);
-        setActiveTab('applications');
+        localStorage.setItem('studegram_admin_single_view_app_id', String(appId));
       }
     };
 
@@ -596,72 +596,110 @@ export default function AdminPortal({ onLogout }) {
 
   const handleSelectTab = (tabId) => {
     if (tabId === 'notices') setSelectedNoticeId(null);
-    if (tabId === 'applications') {
+
+    const url = new URL(window.location.href);
+    let urlChanged = false;
+
+    // 1. Applications cleanup
+    if (tabId !== 'applications') {
+      if (url.searchParams.has('appId') || url.searchParams.has('applicationId')) {
+        url.searchParams.delete('appId');
+        url.searchParams.delete('applicationId');
+        urlChanged = true;
+      }
+      setSelectedAppIdForSingleView(null);
+      localStorage.removeItem('studegram_admin_single_view_app_id');
+      localStorage.removeItem('studegram_admin_single_view_app');
+      window.dispatchEvent(new CustomEvent('clear_single_view_app'));
+    } else {
       setSelectedAppIdForSingleView(null);
       setDashboardFilter(null);
       localStorage.removeItem('studegram_admin_single_view_app_id');
       localStorage.removeItem('studegram_admin_single_view_app');
-      // Clear the URL before Applications mounts and restores a saved detail view.
-      try {
-        const url = new URL(window.location.href);
+      if (url.searchParams.has('appId') || url.searchParams.has('applicationId')) {
         url.searchParams.delete('appId');
         url.searchParams.delete('applicationId');
-        window.history.replaceState({}, '', url.pathname + (url.search ? url.search : ''));
-      } catch (e) {}
-      window.dispatchEvent(new CustomEvent('clear_single_view_app'));
-    } else {
-      setSelectedAppIdForSingleView(null);
-      localStorage.removeItem('studegram_admin_single_view_app_id');
-      localStorage.removeItem('studegram_admin_single_view_app');
-      try {
-        const url = new URL(window.location.href);
-        if (url.searchParams.has('appId') || url.searchParams.has('applicationId')) {
-          url.searchParams.delete('appId');
-          url.searchParams.delete('applicationId');
-          window.history.replaceState({}, '', url.pathname + (url.search ? url.search : ''));
-        }
-      } catch (e) {}
+        urlChanged = true;
+      }
       window.dispatchEvent(new CustomEvent('clear_single_view_app'));
     }
-    if (tabId === 'become-partner' || tabId === 'partners') {
+
+    // 2. Become Partner / Agent cleanup
+    if (tabId !== 'become-partner' && tabId !== 'partners') {
+      if (url.searchParams.has('agentId') || url.searchParams.has('partnerId')) {
+        url.searchParams.delete('agentId');
+        url.searchParams.delete('partnerId');
+        urlChanged = true;
+      }
+      setSelectedPartnerForSingleView(null);
+      localStorage.removeItem('studegram_admin_single_view_partner_id');
+      localStorage.removeItem('studegram_admin_single_view_partner');
+      window.dispatchEvent(new CustomEvent('clear_single_view_partner'));
+    } else {
       fetchInitialData();
       setSelectedPartnerForSingleView(null);
       localStorage.removeItem('studegram_admin_single_view_partner_id');
       localStorage.removeItem('studegram_admin_single_view_partner');
       localStorage.setItem('studegram_admin_partner_subview', 'directory');
-      try {
-        const url = new URL(window.location.href);
+      if (url.searchParams.has('agentId') || url.searchParams.has('partnerId')) {
         url.searchParams.delete('agentId');
         url.searchParams.delete('partnerId');
-        window.history.replaceState({}, '', url.pathname + (url.search ? url.search : ''));
-      } catch (e) { }
+        urlChanged = true;
+      }
       window.dispatchEvent(new CustomEvent('clear_single_view_partner'));
     }
-    if (tabId === 'staff-activity-logs' || tabId === 'activity-logs') {
-      localStorage.removeItem('studegram_admin_selected_staff_id');
-      const url = new URL(window.location.href);
-      url.searchParams.delete('staffId');
-      window.history.replaceState(window.history.state, '', url.toString());
-      window.dispatchEvent(new CustomEvent('clear_single_view_staff'));
-    }
-    if (tabId === 'students') {
+
+    // 3. Students cleanup
+    if (tabId !== 'students') {
+      if (url.searchParams.has('studentId')) {
+        url.searchParams.delete('studentId');
+        urlChanged = true;
+      }
       setSelectedStudentForSingleView(null);
       localStorage.removeItem('studegram_admin_expanded_student_id');
       localStorage.removeItem('studegram_admin_single_view_student_id');
       localStorage.removeItem('studegram_admin_single_view_student');
-      const url = new URL(window.location.href);
-      url.searchParams.delete('studentId');
-      window.history.replaceState(window.history.state, '', url.toString());
+      window.dispatchEvent(new CustomEvent('clear_student_expanded'));
+    } else {
+      setSelectedStudentForSingleView(null);
+      localStorage.removeItem('studegram_admin_expanded_student_id');
+      localStorage.removeItem('studegram_admin_single_view_student_id');
+      localStorage.removeItem('studegram_admin_single_view_student');
+      if (url.searchParams.has('studentId')) {
+        url.searchParams.delete('studentId');
+        urlChanged = true;
+      }
       window.dispatchEvent(new CustomEvent('clear_student_expanded'));
     }
-    try {
-      const url = new URL(window.location.href);
-      if (url.searchParams.has('adminStaffId')) {
-        url.searchParams.delete('adminStaffId');
-        window.history.replaceState(window.history.state, '', url.pathname + (url.search ? url.search : ''));
-        window.dispatchEvent(new CustomEvent('clear_single_view_admin_staff'));
+
+    // 4. Staff Management cleanup (adminStaffId)
+    if (url.searchParams.has('adminStaffId')) {
+      url.searchParams.delete('adminStaffId');
+      urlChanged = true;
+    }
+    window.dispatchEvent(new CustomEvent('clear_single_view_admin_staff'));
+
+    // 5. Staff Activity Logs cleanup (staffId)
+    if (tabId !== 'staff-activity-logs' && tabId !== 'activity-logs') {
+      if (url.searchParams.has('staffId')) {
+        url.searchParams.delete('staffId');
+        urlChanged = true;
       }
-    } catch (e) {}
+      localStorage.removeItem('studegram_admin_selected_staff_id');
+      window.dispatchEvent(new CustomEvent('clear_single_view_staff'));
+    } else {
+      localStorage.removeItem('studegram_admin_selected_staff_id');
+      if (url.searchParams.has('staffId')) {
+        url.searchParams.delete('staffId');
+        urlChanged = true;
+      }
+      window.dispatchEvent(new CustomEvent('clear_single_view_staff'));
+    }
+
+    if (urlChanged) {
+      window.history.replaceState(window.history.state, '', url.pathname + (url.search ? url.search : ''));
+    }
+
     setActiveTab(tabId);
   };
 
@@ -676,7 +714,7 @@ export default function AdminPortal({ onLogout }) {
         isSyncing={isDataSyncing}
         onRefreshData={fetchInitialData}
         onNavigate={(tab, subTab, targetId, notification) => {
-          setActiveTab(tab);
+          handleSelectTab(tab);
           setActiveSubTab(subTab || null);
           const payload = { targetId, notification, timestamp: Date.now() };
           if (tab === 'become-partner' || tab === 'partners') {
@@ -707,7 +745,7 @@ export default function AdminPortal({ onLogout }) {
         </main>
       </div>
 
-      <NoticePopup onViewNotice={id => { setSelectedNoticeId(id); setActiveSubTab(null); setActiveTab('notices'); }} />
+      <NoticePopup onViewNotice={id => { setSelectedNoticeId(id); setActiveSubTab(null); handleSelectTab('notices'); }} />
       {/* Logout Confirmation Modal */}
       <LogoutConfirmModal
         isOpen={showLogoutConfirmModal}

@@ -35,9 +35,13 @@ export default function Staff({ staffList, setStaffList, applications }) {
   }, []);
   const navigateToStaff = (staffId) => {
     const url = new URL(window.location.href);
-    if (staffId) url.searchParams.set('adminStaffId', String(staffId));
-    else url.searchParams.delete('adminStaffId');
-    window.history.pushState({ ...window.history.state }, '', url);
+    if (staffId) {
+      url.searchParams.set('adminStaffId', String(staffId));
+      window.history.pushState({ ...window.history.state }, '', url.pathname + (url.search ? url.search : ''));
+    } else {
+      url.searchParams.delete('adminStaffId');
+      window.history.replaceState({ ...window.history.state }, '', url.pathname + (url.search ? url.search : ''));
+    }
     setSelectedStaffId(staffId ? String(staffId) : null);
     document.getElementById('admin-main-content')?.scrollTo({ top: 0 });
   };
