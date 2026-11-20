@@ -8,7 +8,7 @@ import { getDisplayId } from '../utils/displayId';
 import { parseFee, formatFee } from '../utils/courseFee';
 import { ActionButton } from '../components/ActionControls';
 import Pagination from '../components/Pagination';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
@@ -103,7 +103,15 @@ export default function CommissionManagement({ clients = [], referralAgents = []
     return true;
   });
 
-  const serverList = useServerList('/commissions', { search: searchQuery, filters: { status: filterStatus, country: countryFilter, partner: partnerFilter }, page: currentPage, limit: itemsPerPage, onPageChange: setCurrentPage, reloadKey: JSON.stringify(commissions) });
+  const tabFilter = useMemo(() => {
+    if (filterStatus === 'Enrolled') return { commissionTab: 'Enrolled' };
+    if (filterStatus === 'Claimed') return { commissionTab: 'Claimed' };
+    if (filterStatus === 'Pending Approval') return { status: 'Pending Approval' };
+    if (filterStatus === 'Paid') return { status: 'Paid' };
+    return { status: 'All' };
+  }, [filterStatus]);
+
+  const serverList = useServerList('/commissions', { search: searchQuery, filters: { ...tabFilter, country: countryFilter, partner: partnerFilter }, page: currentPage, limit: itemsPerPage, onPageChange: setCurrentPage, reloadKey: JSON.stringify(commissions) });
   // Filtered by status and search query
   const displayCommissions = restoreListRows(serverList.data, commissions, 'commissions');
 
@@ -126,7 +134,7 @@ export default function CommissionManagement({ clients = [], referralAgents = []
 
     let exportedCount = 0;
     try {
-      const response = await API.get('/commissions', { params: { list: 'true', export: 'true', search: searchQuery, filters: JSON.stringify({ status: filterStatus, country: countryFilter, partner: partnerFilter }) } });
+      const response = await API.get('/commissions', { params: { list: 'true', export: 'true', search: searchQuery, filters: JSON.stringify({ ...tabFilter, country: countryFilter, partner: partnerFilter }) } });
       if (!response.data?.success) throw new Error(response.data?.message || 'Unable to export commissions.');
       const exportRows = restoreListRows(response.data.data, commissions, 'commissions');
       exportedCount = exportRows.length;
@@ -354,10 +362,33 @@ export default function CommissionManagement({ clients = [], referralAgents = []
     ? agentList.length 
     : (commissions.length > 0 ? new Set(commissions.map(c => c.partnerName)).size : 0);
 
-  // Calculate stats
+  // Calculate stats & tab counts
   const totalAmount = scopedCommissions.reduce((acc, c) => acc + (c.amount || 0), 0);
   const paidAmount = scopedCommissions.filter(c => c.status === 'Paid').reduce((acc, c) => acc + (c.amount || 0), 0);
   const pendingAmount = scopedCommissions.filter(c => c.status === 'Pending Approval' || c.status === 'Claimed').reduce((acc, c) => acc + (c.amount || 0), 0);
+
+  const enrolledStudentsCount = useMemo(() => {
+    const fromApps = applications.filter(a => {
+      if (currentUser?.role === 'Country Head' && a.country !== currentUser.country) return false;
+      const s = (a.status || a.secondaryStatus || '').toLowerCase();
+      return s.includes('enrolled') || s.includes('visa approved') || s.includes('visa received');
+    }).length;
+    return fromApps || scopedCommissions.length;
+  }, [applications, scopedCommissions, currentUser]);
+
+  const totalCommissionsCount = scopedCommissions.length;
+
+  const claimedCommissionsCount = useMemo(() => {
+    return scopedCommissions.filter(c => 
+      c.status === 'Paid' || c.status === 'Pending Approval' || c.status === 'Claimed'
+    ).length;
+  }, [scopedCommissions]);
+
+  const pendingCommissionsCount = useMemo(() => {
+    return scopedCommissions.filter(c => 
+      c.status === 'Pending Approval' || c.status === 'Claimed'
+    ).length;
+  }, [scopedCommissions]);
 
   const activeCommission = viewCommission
     ? scopedCommissions.find(record => String(record._id || record.id) === String(viewCommission._id || viewCommission.id)) || viewCommission
@@ -415,11 +446,39 @@ export default function CommissionManagement({ clients = [], referralAgents = []
         </div>
       </div>
 
-<ListFilterTabs value={filterStatus} onChange={value => { setFilterStatus(value); setCurrentPage(1); }} options={[{value:'All',label:'All commissions',filters:{status:'All'}},{value:'Paid',label:'Paid',filters:{status:'Paid'}},{value:'Pending Approval',label:'Pending approval',filters:{status:'Pending Approval'}},{value:'Under Review',label:'Under review',filters:{status:'Under Review'}}]} query={{endpoint:'/commissions',search:searchQuery,filters:{country:countryFilter,partner:partnerFilter},reloadKey:JSON.stringify(commissions)}} />
+      <ListFilterTabs 
+        value={filterStatus} 
+        onChange={value => { setFilterStatus(value); setCurrentPage(1); }} 
+        options={[
+          { value: 'Enrolled', label: 'Total enrolled student', filters: { commissionTab: 'Enrolled' }, count: enrolledStudentsCount },
+          { value: 'All', label: 'Total commission', filters: { status: 'All' }, count: totalCommissionsCount },
+          { value: 'Claimed', label: 'Commission claimed', filters: { commissionTab: 'Claimed' }, count: claimedCommissionsCount },
+          { value: 'Pending Approval', label: 'Commission pending', filters: { status: 'Pending Approval' }, count: pendingCommissionsCount }
+        ]} 
+        query={{ endpoint: '/commissions', search: searchQuery, filters: { country: countryFilter, partner: partnerFilter }, reloadKey: JSON.stringify(commissions) }} 
+      />
 
       {/* Table */}
       <div className="workspace-panel workspace-list-frame bg-white border border-[#E2E8F0] rounded-2xl shadow-xs overflow-hidden">
-<ListToolbar search={searchQuery} onSearchChange={setSearchQuery} filters={[{ key: 'status', label: 'statuses', value: filterStatus, onChange: setFilterStatus, options: ['Paid', 'Pending Approval', 'Under Review'] },{ key: 'country', label: 'countries', value: countryFilter, onChange: setCountryFilter, options: serverList.facets.country || [] },{ key: 'partner', label: 'partners', value: partnerFilter, onChange: setPartnerFilter, options: serverList.facets.partner || [] }]} onReset={() => { setSearchQuery(''); setFilterStatus('All'); setCountryFilter('All'); setPartnerFilter('All'); setCurrentPage(1); }} loading={serverList.loading} error={serverList.error} onRetry={serverList.reload} />
+        <ListToolbar 
+          search={searchQuery} 
+          onSearchChange={setSearchQuery} 
+          filters={[
+            { 
+              key: 'status', 
+              label: 'statuses', 
+              value: ['Enrolled', 'Claimed'].includes(filterStatus) ? 'All' : filterStatus, 
+              onChange: setFilterStatus, 
+              options: ['Paid', 'Pending Approval', 'Under Review'] 
+            },
+            { key: 'country', label: 'countries', value: countryFilter, onChange: setCountryFilter, options: serverList.facets.country || [] },
+            { key: 'partner', label: 'partners', value: partnerFilter, onChange: setPartnerFilter, options: serverList.facets.partner || [] }
+          ]} 
+          onReset={() => { setSearchQuery(''); setFilterStatus('All'); setCountryFilter('All'); setPartnerFilter('All'); setCurrentPage(1); }} 
+          loading={serverList.loading} 
+          error={serverList.error} 
+          onRetry={serverList.reload} 
+        />
         
         <div className="overflow-x-auto">
           {displayCommissions.length > 0 ? (
